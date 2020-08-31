@@ -1,0 +1,9 @@
+[submodule "obstacle_detector/script/lucky_utility"]
+	path = obstacle_detector/script/lucky_utility
+	url = https://github.com/spiderkiller13/lucky_utility.git
+[submodule "rap_controller/script/lucky_utility"]
+	path = rap_controller/script/lucky_utility
+	url = https://github.com/spiderkiller13/lucky_utility.git
+[submodule "solamr/scripts/lucky_utility"]
+	path = solamr/scripts/lucky_utility
+	url = https://github.com/spiderkiller13/lucky_utility.git
