@@ -1,0 +1,29 @@
+global_costmap:
+  global_frame: carB/map
+  robot_base_frame: carB/base_link
+  update_frequency: 3.0
+  publish_frequency: 2.0
+  static_map: true
+  
+
+  # rolling_window: false
+  # track_unknown_space: true
+  # min_obstacle_height: -10.0
+  # max_obstacle_height: 0.2
+  # obstacle_range: 4.0
+  # raytrace_range: 4.5
+
+
+  # The "static_map" parameter determines whether or not the costmap 
+  # should initialize itself based on a map served by the map_server.
+ 
+  transform_tolerance: 0.5
+  plugins:
+    - {name: static_layer,            type: "costmap_2d::StaticLayer"}
+#     - {name: obstacle_layer,          type: "costmap_2d::VoxelLayer"}
+    - {name: smartobstacle_layer,          type: "costmap_2d::SmartobstacleLayer"}
+    - {name: inflation_layer,         type: "costmap_2d::InflationLayer"}
+
+
+
+

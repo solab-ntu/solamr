@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<launch>
+    <node pkg="ros_mqtt_bridge" type="slave.py" name="slave" output='screen'/>
+    <node pkg="ros_mqtt_bridge" type="master.py"  name="master" output='screen'/>
+</launch>

@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="robot_name" default="car1"/>
+    <node pkg="rap_controller" type="rap_planner.py" name="rap_planner" output='screen'>
+        <!-- Kinematic -->
+        <param name="crab_kp_vel" value="0.1"/>
+        <param name="diff_kp_vel" value="0.2"/>
+        <param name="rota_kp_vel" value="0.2"/> <!-- radian/s-->
+        <param name="look_ahead_dist" value="0.8"/>
+        <param name="goal_tolerance_xy" value="0.1"/>
+        <param name="goal_tolerance_t" value="10"/> <!-- degree-->
+        <param name="aside_goal_ang" value="60"/> <!-- degree-->
+        <!-- System -->
+        <param name="ctl_frequency" value="30"/>
+        <param name="sim" value="false"/>
+        <param name="reverse_omega" value="false"/>
+        <param name="ignore_heading" value="false"/>
+        <param name="mode_switch_latch" value="2"/> <!--sec-->
+        <!-- Tf Frame-->
+        <param name="map_frame" value="carB/map"/>
+        <param name="map_peer_frame" value="car2/map"/>
+        <param name="big_car_frame" value="carB/base_link"/>
+        <param name="big_car_peer_frame" value="car2/center_big_car"/>
+        <param name="base_link_frame" value="car1/base_link"/>
+        <param name="base_peer_frame" value="car2/base_link"/>
+        <!-- Topic -->
+        <param name="global_path_topic" value="/$(arg robot_name)/move_base/GlobalPlanner/plan"/>
+        <param name="cmd_vel_topic_leader" value="/car1/cmd_vel"/>
+        <param name="cmd_vel_topic_follower" value="/car2/cmd_vel"/>
+        <param name="goal_topic" value="/$(arg robot_name)/move_base_simple/goal"/>
+        <param name="costmap_topic" value="/move_base/local_costmap/costmap"/>
+    </node>
+</launch>

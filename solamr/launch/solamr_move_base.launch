@@ -1,0 +1,92 @@
+<?xml version="1.0"?>
+
+<launch>
+    <arg name="robot_name" default="car1" />
+    <arg name="role" default="leader" />
+    <arg name="auto_plan" default="false" />
+    <arg name="is_use_rap_planner" default="false" />
+    
+    <arg name="init_x" default="0.0" />
+    <arg name="init_y" default="0.0" />
+    <arg name="init_a" default="0.0" />
+    <arg name="car_length" default="0.44" />
+    <arg name="l_half" default="$(eval arg('car_length')/2)" />
+    <arg name="l_half_neg" default="$(eval -arg('car_length')/2)" />
+
+    <rosparam command="load" file="$(find solamr_unique_parameters)/params/car.yaml" ns="unique_parameter"/>
+
+    <group ns="$(arg robot_name)">
+        <!-- Map server -->
+        <node name="map_server" pkg="map_server" type="map_server" args="$(find solamr)/maps/sqare.yaml">
+            <!-- <param name="frame_id" value="$(arg robot_name)/map"/> -->
+            <param name="frame_id" value="carB/map"/>
+        </node>
+        
+        <!--  Navigation single AMR  -->
+        <!--include file="$(find solamr)/launch/includes/move_base_dwa.xml">
+            <arg name="robot_name" value="$(arg robot_name)"/>
+            <arg name="car_length" value="$(arg car_length)"/>
+            <arg name="l_half" value="$(arg l_half)"/>
+            <arg name="l_half_neg" value="$(arg l_half_neg)"/>
+        </include-->
+        <!-- <include file="$(find solamr)/launch/includes/move_base_big_car_teb.xml">
+            <arg name="robot_name" value="$(arg robot_name)"/>
+            <arg name="car_length" value="$(arg car_length)"/>
+            <arg name="l_half" value="$(arg l_half)"/>
+            <arg name="l_half_neg" value="$(arg l_half_neg)"/>
+        </include> -->
+        <group if="$(arg auto_plan)">
+            <!-- MQTT car1<->car2 communication -->
+            <node pkg="ros_mqtt_bridge" type="$(arg role).py"  name="ros_mqtt_bridge" output='screen'/>
+            
+            <group if="$(eval arg('role')=='leader')">
+                <!-- YC -->
+                <!-- <include file="$(find docking_sim)/launch/_mb_link.launch">
+                    <arg name="use_fake_local_planner" value="true" />
+                </include> -->
+                <!-- mWu412 -->
+                <node pkg="solamr" type="odom_big_car.py" name="odom_big_car" output="screen"/>
+                <include file="$(find solamr)/launch/includes/move_base_rap_planner.xml"/>
+                <group if="$(arg is_use_rap_planner)">
+                    <include file="$(find rap_controller)/launch/run_planner.launch">
+                        <arg name="robot_name" value="$(arg robot_name)"/>
+                    </include>
+                </group>
+            </group>
+            <group if="$(eval arg('role')=='follower')">
+                <node pkg="solamr" type="tf_forward_from_nano.py"  name="tf_forwarder" output='screen'/>
+            </group>
+        </group>
+
+        <include file="$(find solamr)/launch/includes/multi_laser.launch.xml">
+            <arg name="robot_name" value="$(arg robot_name)"/>
+        </include>
+
+        <!-- Forwarding topics for PC rviz -->
+        <node pkg="solamr" type="tf_rviz_forwarder.py"  name="tf_rviz_forwarder">
+            <param name="robot_name" value="$(arg robot_name)"/>
+        </node>
+        <!--node pkg='topic_tools' type='relay' name='relay_initialpose' args='/initialpose /zed/initialpose'/-->
+
+        <node pkg="rosserial_python" type="serial_node.py" args="/dev/stm32" name="serial_node">
+            <remap from="/cmd_vel" to="/$(arg robot_name)/cmd_vel"/>
+            <remap from="/STM32_twist" to="/$(arg robot_name)/STM32_twist"/>
+        </node>   
+        <!-- <node pkg="solamr" type="docking_controller.py"  name="docking_controller" output='screen'/> -->
+        <!-- <node pkg="tf" type="static_transform_publisher" name="s_front_2_s_standby" args="0 0 0.4 -0.5 0.5 0.5 0.5 $(arg robot_name)/s_front $(arg robot_name)/s_standby_camera 100" />
+        <node pkg="tf" type="static_transform_publisher" name="s_center_laser_2_s_standby_laser" args="-0.7 0 0 0 0 0 1 $(arg robot_name)/s_center_laser $(arg robot_name)/s_standby_laser 100" /> -->
+        <!-- <include file="$(find obstacle_detector)/launch/run.launch">
+            <arg name="robot_name" value="$(arg robot_name)" />
+            <arg name="role" value="$(arg role)" />
+        </include> -->
+        <include file="$(find obstacle_detector)/launch/run.launch">
+            <arg name="robot_name" value="$(arg robot_name)" />
+            <arg name="role" value="$(arg role)" />
+        </include>
+        <!--rosrun urg_node urg_node _serial_port:=/dev/laser_urg -->
+        <include file="$(find solamr)/launch/fkie/master_discovery.launch"/>
+        <include file="$(find solamr)/launch/fkie/master_sync.launch">
+            <arg name="robot_name" value="$(arg robot_name)"/>
+        </include>
+    </group>
+</launch>

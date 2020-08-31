@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+    <node pkg='topic_tools' type='relay' name='relay_odom_path' args='/zed/zed2/zed_node/path_map /rviz/odom_path'/>
+    <node pkg='topic_tools' type='relay' name='relay_zed_pose' args='/zed/zed2/zed_node/pose /rviz/zed_pose'/>
+    <node pkg='topic_tools' type='relay' name='relay_zed_odom' args='/zed/zed2/zed_node/odom /rviz/zed_odom'/>
+    
+    <node pkg="rosserial_python" type="serial_node.py" args="/dev/stm32" name="serial_node" output='screen'/>
+    <node pkg="solamr" type="odom_test.py"  name="odom_test" output='screen'/>
+    <node pkg="solamr" type="tf_forwarding.py"  name="tf_forwarding" output='screen'/>
+		<node pkg="robot_localization" type="ekf_localization_node" name="ekf_se" clear_params="true">
+			<rosparam command="load" file="$(find solamr)/params/ekf_params.yaml" />
+		</node>
+</launch>
