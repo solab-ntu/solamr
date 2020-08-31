@@ -4,10 +4,10 @@
 			A dummy local planner
 		</description>
 	</class>
-	<class name="fake_local_planner/FakeLocalPlannerROS" type="fake_local_planner::FakeLocalPlannerROS" base_class_type="mbf_costmap_core::CostmapController">
+	<!-- <class name="fake_local_planner/FakeLocalPlannerROS" type="fake_local_planner::FakeLocalPlannerROS" base_class_type="mbf_costmap_core::CostmapController">
 		<description>
 			Same plugin implemented MBF CostmapController's extended interface.
 		</description>
-	</class>
+	</class> -->
 </library>
 

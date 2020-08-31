@@ -5,7 +5,7 @@
 
 // base local planner base class and utilities
 #include <nav_core/base_local_planner.h>
-#include <mbf_costmap_core/costmap_controller.h>
+//#include <mbf_costmap_core/costmap_controller.h>
 #include <base_local_planner/goal_functions.h>
 #include <base_local_planner/odometry_helper_ros.h>
 #include <base_local_planner/costmap_model.h>
@@ -44,7 +44,8 @@ namespace fake_local_planner
   * interfaces, so the teb_local_planner plugin can be used both in move_base and move_base_flex (MBF).
   * @todo Escape behavior, more efficient obstacle handling
   */
-class FakeLocalPlannerROS : public nav_core::BaseLocalPlanner, public mbf_costmap_core::CostmapController
+//class FakeLocalPlannerROS : public nav_core::BaseLocalPlanner, public mbf_costmap_core::CostmapController
+class FakeLocalPlannerROS : public nav_core::BaseLocalPlanner
 {
 
 public:
@@ -64,7 +65,7 @@ public:
     * @param tf Pointer to a tf buffer
     * @param costmap_ros Cost map representing occupied and free space
     */
-  void initialize(std::string name, tf2_ros::Buffer *tf, costmap_2d::Costmap2DROS* costmap_ros);
+  void initialize(std::string name, tf::TransformListener* tf, costmap_2d::Costmap2DROS* costmap_ros);
 
   /**
     * @brief Set the plan that the teb local planner is following
@@ -122,7 +123,7 @@ public:
   /**
     * @brief Dummy version to satisfy MBF API
     */
-  bool isGoalReached(double xy_tolerance, double yaw_tolerance) { return isGoalReached(); };
+  //bool isGoalReached(double xy_tolerance, double yaw_tolerance) { return isGoalReached(); };
 
   /**
     * @brief Requests the planner to cancel, e.g. if it takes too much time
