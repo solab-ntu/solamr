@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<launch>
+    <node name="fsm_test_single_AMR" pkg="solamr" type="fsm_test_single_AMR.py" output="screen"/>
+</launch>

@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+
+<launch>
+    <arg name="robot_name" default="car1" />
+    <arg name="role" default="leader" />
+
+    <group ns="$(arg robot_name)">
+        <!-- SMACH -->
+        
+        <!-- 2D Lidar -->
+        <include file="$(find solamr)/launch/includes/multi_laser.launch.xml">
+            <arg name="robot_name" value="$(arg robot_name)"/>
+        </include>
+        
+        <!-- STM32 -->
+        <node pkg="rosserial_python" type="serial_node.py" args="/dev/stm32" name="serial_node">
+            <remap from="/cmd_vel" to="/$(arg robot_name)/cmd_vel"/>
+            <remap from="/STM32_twist" to="/$(arg robot_name)/STM32_twist"/>
+        </node>
+        <!-- Shelf Detector -->
+        <include file="$(find obstacle_detector)/launch/run.launch">
+            <arg name="robot_name" value="$(arg robot_name)" />
+            <arg name="role" value="$(arg role)" />
+        </include>
+        <!-- Forwarding topics for PC rviz -->
+        <node pkg="solamr" type="tf_rviz_forwarder.py"  name="tf_rviz_forwarder">
+            <param name="robot_name" value="$(arg robot_name)"/>
+        </node>
+        <!-- FKIE -->
+        <include file="$(find solamr)/launch/fkie/master_discovery.launch"/>
+        <include file="$(find solamr)/launch/fkie/master_sync.launch">
+            <arg name="robot_name" value="$(arg robot_name)"/>
+        </include>
+    </group>
+</launch>

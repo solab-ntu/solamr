@@ -75,10 +75,6 @@
         <!-- <node pkg="solamr" type="docking_controller.py"  name="docking_controller" output='screen'/> -->
         <!-- <node pkg="tf" type="static_transform_publisher" name="s_front_2_s_standby" args="0 0 0.4 -0.5 0.5 0.5 0.5 $(arg robot_name)/s_front $(arg robot_name)/s_standby_camera 100" />
         <node pkg="tf" type="static_transform_publisher" name="s_center_laser_2_s_standby_laser" args="-0.7 0 0 0 0 0 1 $(arg robot_name)/s_center_laser $(arg robot_name)/s_standby_laser 100" /> -->
-        <!-- <include file="$(find obstacle_detector)/launch/run.launch">
-            <arg name="robot_name" value="$(arg robot_name)" />
-            <arg name="role" value="$(arg role)" />
-        </include> -->
         <include file="$(find obstacle_detector)/launch/run.launch">
             <arg name="robot_name" value="$(arg robot_name)" />
             <arg name="role" value="$(arg role)" />

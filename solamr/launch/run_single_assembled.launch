@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+
+<launch>
+    <rosparam>
+        run_single_assembled: YESYESYESYES
+    </rosparam>
+</launch>
