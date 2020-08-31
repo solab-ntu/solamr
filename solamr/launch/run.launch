@@ -13,7 +13,7 @@
     <arg name="l_half" default="$(eval arg('car_length')/2)" />
     <arg name="l_half_neg" default="$(eval -arg('car_length')/2)" />
 
-    <rosparam command="load" file="$(find solamr_unique_parameters)/params/car.yaml" ns="unique_parameter"/>
+    <!-- <rosparam command="load" file="$(find solamr_unique_parameters)/params/car.yaml" ns="unique_parameter"/> -->
 
     <group ns="$(arg robot_name)">
         <!-- Map server -->
