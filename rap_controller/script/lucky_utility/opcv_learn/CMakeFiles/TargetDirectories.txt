@@ -1,3 +1,0 @@
-/home/lucky/opcv_learn/CMakeFiles/edit_cache.dir
-/home/lucky/opcv_learn/CMakeFiles/rebuild_cache.dir
-/home/lucky/opcv_learn/CMakeFiles/test.dir
