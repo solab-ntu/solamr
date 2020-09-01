@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <launch>
+    <arg name="use_spiderkiller_joy_stick" default="false"/>
     <include file="$(find rviz_monitor)/launch/fkie/master_discovery.launch"/>
     <include file="$(find rviz_monitor)/launch/fkie/master_sync_run.launch"/>
     
@@ -14,25 +15,11 @@
         <!--remap from='/initialpose' to='/zed/initialpose'/-->
         <remap from='/tf' to='/tf_rviz'/>
     </node>
-
-    <node pkg="rap_controller" type="teleop_joy.py" name="teleop_joy" output="screen">
+    <node pkg="rap_controller" type="teleop_joy.py" name="teleop_joy" output='screen'>
         <param name="vx_max" value="0.2"/>
         <param name="vy_max" value="0.2"/>
         <param name="wz_max" value="0.5"/>
-
-        <param name="vx_axe" value="3"/>
-        <param name="vy_axe" value="2"/>
-        <param name="wz_axe" value="0"/>
-        <param name="switch_mode_button" value="1"/>
-        <param name="speed_axe" value="5"/>
-        <param name="turn_axe" value="4"/>
-
-        <!--param name="vx_axe" value="4"/>
-        <param name="vy_axe" value="3"/>
-        <param name="wz_axe" value="0"/>
-        <param name="speed_axe" value="7"/>
-        <param name="turn_axe" value="6"/>
-        <param name="switch_mode_button" value="0"/-->
+        <param name="use_spiderkiller_joy_stick" value="$(arg use_spiderkiller_joy_stick)"/>
     </node>
     <node pkg="joy" type="joy_node" name="joy">
         <param name="autorepeat_rate" value="2.0" />
