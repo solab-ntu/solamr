@@ -66,7 +66,8 @@
 
         <!-- Forwarding topics for PC rviz -->
         <node pkg="solamr" type="tf_rviz_forwarder.py"  name="tf_rviz_forwarder">
-            <param name="robot_name" value="$(arg robot_name)"/>
+            <!-- <param name="robot_name" value="$(arg robot_name)"/> -->
+            <rosparam command="load" file="$(find solamr)/params/tf_rviz/$(arg role).yaml"/>
         </node>
         <!--node pkg='topic_tools' type='relay' name='relay_initialpose' args='/initialpose /zed/initialpose'/-->
 
