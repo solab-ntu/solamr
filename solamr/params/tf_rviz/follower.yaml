@@ -1,4 +1,4 @@
 tf_rviz_list: [
-  [car2/base_link, car1/laser_front],
-  [car2/base_link, car1/laser_rear]
+  [car2/base_link, car2/laser_front],
+  [car2/base_link, car2/laser_rear]
 ]
