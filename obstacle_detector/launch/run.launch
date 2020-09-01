@@ -36,6 +36,8 @@
     <!-- Tolerance -->
     <param name="sheft_length_tolerance" value="0.1"/> <!-- 0.1-->
     <param name="angle_tolerance" value="6"/> <!-- 6 degree -->
+    <!-- FRAME -->
+    <param name="base_link_frame" value="$(arg robot_name)/base_link"/>
   </node>
   
   <node name="obstacle_extractor" pkg="obstacle_detector" type="obstacle_extractor_node" output="screen">

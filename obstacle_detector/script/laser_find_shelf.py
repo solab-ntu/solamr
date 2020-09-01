@@ -57,6 +57,10 @@ class Shelf_finder():
         # Name of this node, anonymous means name will be auto generated.
         rospy.init_node('laser_find_shelf', anonymous=False)
         #----- Subscriber -------# 
+        self.viz_marker = Marker_Manager("obstacle_detector/markers/" + name)
+        self.viz_marker.register_marker("corners_"+name, 7, BASE_LINK_FRAME, (0,0,255) , 0.1)
+        self.viz_marker.register_marker("edges_"+name, 5  , BASE_LINK_FRAME, (255,255,0), 0.02)
+        '''
         if ROLE == "leader":
             self.viz_marker = Marker_Manager("obstacle_detector/markers/" + name)
             self.viz_marker.register_marker("corners_"+name, 7, "car1/base_link", (0,0,255) , 0.1)
@@ -65,6 +69,7 @@ class Shelf_finder():
             self.viz_marker = Marker_Manager("obstacle_detector/markers/" + name)
             self.viz_marker.register_marker("corners_"+name, 7, ROBOT_NAME+"/map", (0,0,255) , 0.1)
             self.viz_marker.register_marker("edges_"+name, 5  , ROBOT_NAME+"/map", (255,255,0), 0.02)
+        '''
 
     def set_mode(self,sheft_length_tolerance, angle_tolerance, max_circle_radius, search_radius):
         '''
@@ -350,7 +355,7 @@ class Two_shelf_finder():
 
             #Publish peer shelf
             if self.shelf_finder_peer.corner_dict == {}:
-                rospy.logdebug("[laser_finder] Can't find peer shelft center.")
+                rospy.logdebug("[Shelf Detector] Can't find peer shelft center.")
             else:
                 # Publish peer
                 self.shelf_finder_peer.publish_viz()
@@ -361,7 +366,9 @@ class Two_shelf_finder():
                                     (self.shelf_finder_base.center[1] + self.shelf_finder_peer.center[1])/2.0,
                                     atan2(vec_big_car[1], vec_big_car[0]))
             return True #We need base.center only, big_car_xyt is for ref_ang
-        return False
+        else:
+            rospy.logerr("[Shelf Detector] Can't find base shelft cneter.")
+            return False
     
     def publish_theta(self):
         # Get theta1 or theta2
@@ -390,6 +397,8 @@ if __name__ == '__main__':
     # Tolerance
     SHEFT_LENGTH_TOLERANCE = rospy.get_param(param_name="~sheft_length_tolerance", default="0.1")
     ANGLE_TOLERANCE =  rospy.get_param(param_name="~angle_tolerance", default="5")*pi/180 # Degree
+    # Frame
+    BASE_LINK_FRAME = rospy.get_param(param_name="~base_link_frame", default="car1/base_link")
 
     SHELF_LEN_DIAGONAL = SHELF_LEN * sqrt(2)
     TWO_SHELF_FINDER = Two_shelf_finder()
