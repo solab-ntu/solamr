@@ -54,8 +54,6 @@ class Rap_planner():
         # Init RVIZ markers
         self.viz_marker.register_marker("local_goal", 2, 
                                          BIG_CAR_FRAME, (0,255,255), 0.1)
-        # self.viz_marker.register_marker("goal_head", 4,
-        #                                 BIG_CAR_FRAME, (255,255,255), 0.02)
         self.viz_marker.register_marker("mode_text", 9,
                                          BIG_CAR_FRAME, (0,0,0),  0.2)
         # Circle ARC
@@ -71,6 +69,7 @@ class Rap_planner():
                     angle_range = (-pi/2 - ASIDE_GOAL_ANG/2, -pi/2 + ASIDE_GOAL_ANG/2))
         self.viz_marker.update_marker("a2_crab", (0,0), radius = LOOK_AHEAD_DIST,
                     angle_range = ( pi/2 - ASIDE_GOAL_ANG/2,  pi/2 + ASIDE_GOAL_ANG/2))
+        self.viz_marker.publish()
 
     def goal_cb(self, data):
         '''
