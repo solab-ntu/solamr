@@ -7,3 +7,6 @@
 [submodule "solamr/scripts/lucky_utility"]
 	path = solamr/scripts/lucky_utility
 	url = https://github.com/spiderkiller13/lucky_utility.git
+[submodule "ros_mqtt_bridge/script/lucky_utility"]
+	path = ros_mqtt_bridge/script/lucky_utility
+	url = https://github.com/spiderkiller13/lucky_utility.git

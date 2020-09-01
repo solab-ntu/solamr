@@ -11,19 +11,10 @@ if __name__ == '__main__':
     tfBuffer = tf2_ros.Buffer()
     listener = tf2_ros.TransformListener(tfBuffer)
     
-    is_parameters_set = False
-    while not is_parameters_set:
-        try:
-            robot_name = rospy.get_param("/unique_parameter/robot_name") # Find paramters in ros server
-            is_parameters_set = True
-        except:
-            rospy.loginfo("robot_name are not found in rosparam server, keep on trying...")
-            rospy.sleep(0.2) # Sleep 0.2 seconds for waiting the parameters loading
-            continue
+    ROBOT_NAME = rospy.get_param(param_name="~robot_name")
     
-    
-    tf_request_list = [(robot_name+"/raw/map", robot_name+"/raw/odom"),
-                       (robot_name+"/raw/odom", robot_name+"/raw/base_link")]
+    tf_request_list = [(ROBOT_NAME+"/raw/map", ROBOT_NAME+"/raw/odom"),
+                       (ROBOT_NAME+"/raw/odom", ROBOT_NAME+"/raw/base_link")]
     br = tf2_ros.TransformBroadcaster()
     rate = rospy.Rate(10.0)
     while not rospy.is_shutdown():

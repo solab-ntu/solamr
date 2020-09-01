@@ -54,7 +54,9 @@
                 </group>
             </group>
             <group if="$(eval arg('role')=='follower')">
-                <node pkg="solamr" type="tf_forward_from_nano.py"  name="tf_forwarder" output='screen'/>
+                <node pkg="solamr" type="tf_forward_from_nano.py" name="tf_forwarder" output='screen'>
+                    <param name="robot_name" value="$(arg robot_name)"/>
+                </node>
             </group>
         </group>
 
