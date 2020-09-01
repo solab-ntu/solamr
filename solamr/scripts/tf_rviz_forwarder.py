@@ -44,8 +44,8 @@ if __name__ == '__main__':
         for i in TF_RVIZ_LIST:
             try:
                 t = tfBuffer.lookup_transform(i[0], i[1], rospy.Time())
-            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-                pass
+            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+                rospy.logwarn("[tf_rviz_forwarder] Can't get " + str(i[0] + "->" + str(i[1])) + ", " + str(e))
             else:
                 tf_list.append(t)
         

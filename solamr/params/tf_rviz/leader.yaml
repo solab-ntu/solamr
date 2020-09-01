@@ -4,7 +4,7 @@ tf_rviz_list: [
   [carB/map, carB/odom],
   [carB/odom, carB/base_link],
   [carB/base_link, car1/base_link],
-  [carB/base_link", car2/base_link],
+  [carB/base_link, car2/base_link],
   [car1/base_link, car1/laser_front],
   [car1/base_link, car1/laser_rear]
 ]
