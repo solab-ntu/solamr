@@ -1,4 +1,16 @@
 <?xml version="1.0"?>
 <launch>
-    <node name="fsm_test_single_AMR" pkg="solamr" type="fsm_test_single_AMR.py" output="screen"/>
+    <arg name="robot_name" default="car1"/>
+    <arg name="car_length" default="0.44" />
+    <arg name="l_half" default="$(eval arg('car_length')/2)" />
+    <arg name="l_half_neg" default="$(eval -arg('car_length')/2)" />
+    
+    <!-- <node name="fsm_test_single_AMR" pkg="solamr" type="fsm_test_single_AMR.py" output="screen"/> -->
+    <!-- Move Base -->
+    <include file="$(find solamr)/launch/includes/move_base_dwa.xml">
+        <arg name="robot_name" value="$(arg robot_name)"/>
+        <arg name="car_length" value="$(arg car_length)"/>
+        <arg name="l_half" value="$(arg l_half)"/>
+        <arg name="l_half_neg" value="$(arg l_half_neg)"/>
+    </include>
 </launch>

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # Python 
 import time
+import os 
 from math import radians
 # ROS
 import rospy
@@ -17,35 +18,96 @@ def init_roslaunch(file_path):
     roslaunch.configure_logging(uuid=uuid)
     return roslaunch.parent.ROSLaunchParent(run_id=uuid, roslaunch_files=((file_path,)))
 
-
 class Single_AMR(smach.State):
 
     def __init__(self, file_path):
-        super(Single_AMR, self).__init__(outcomes=('Single_Assembled', 'done'), output_keys=["target"])
-        self.file_path = file_path
+        super(Single_AMR, self).__init__(outcomes=('Find_Shelf', 'done'), output_keys=["target"])
+        self.launch_file = file_path
 
     def execute(self, userdata):
-        rospy.loginfo('fsm/Single_AMR')
+        rospy.loginfo('[fsm] Execute Single_AMR')
+        # TODO Dark Magic, Change footprint back to single AMR
+        os.system("rostopic pub --once /move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.22,-0.22,0.0], [-0.22,0.22,0.0], [0.22,0.22,0.0], [0.22,-0.22,0.0]]'")
         
-        roslaunch = init_roslaunch(self.file_path)
+        roslaunch = init_roslaunch(self.launch_file)
         roslaunch.start()
         time.sleep(5)
         roslaunch.shutdown()
+        return 'Find_Shelf'
+
+
+class Find_Shelf(smach.State):
+
+    def __init__(self):
+        super(Find_Shelf, self).__init__(outcomes=('abort', 'done'), input_keys=["tagID", "proximity_goal"])
+
+    def execute(self, userdata):
+        '''
+        userdata.tagID -> find shelf
+        userdata.proximity_goal -> A fuszy goal that shelf prababaly nearby
+        '''
+        # TODO Listen to service abort
+        rospy.loginfo('[fsm] Execute Find_Shelf')
+        # TODO send_goal (userdata.proximity_goal)
+        # Keep checking tagid, and make sure standby tf is published
+        time.sleep(1)
+        return 'done'
+
+class Go_Dock_Standby(smach.State):
+
+    def __init__(self):
+        super(Go_Dock_Standby, self).__init__(outcomes=('abort','done'), output_keys=[])
+
+    def execute(self, userdata):
+        '''
+        '''
+        rospy.loginfo('[fsm] Execute Go_Dock_Standby')
+        time.sleep(1)
+        # TODO Go to standby point , if navi goal is 
+        # Send_goal()
+        return 'done'
+
+class Dock_In(smach.State):
+
+    def __init__(self):
+        super(Dock_In, self).__init__(outcomes=('Single_Assembled', 'Double_Assembled', 'abort'), output_keys=["target"])
+
+    def execute(self, userdata):
+        rospy.loginfo('[fsm] Execute Dock_In')
+        # TODO # Switch launch file, You have to know you're car1/car2 at this point
+        # TODO How to decide goto Single_Assembled or Double_Assembled
+        # If IR said it's done or navigation goal is reached
+        time.sleep(1)
         return 'Single_Assembled'
 
+class Dock_Out(smach.State):
+
+    def __init__(self):
+        super(Dock_Out, self).__init__(outcomes=('abort', 'done'), output_keys=["target"])
+
+    def execute(self, userdata):
+        '''
+        '''
+        rospy.loginfo('[fsm] Execute Dock_Out')
+        
+        # Switch launch file 
+        # TODO How to decide goto Single_Assembled or Double_Assembled
+        # TODO reached dock_out navi goal
+        time.sleep(1)
+        return 'done'
 
 class Single_Assembled(smach.State):
 
-    def __init__(self, file_path):
-        super(Single_Assembled, self).__init__(outcomes=['Single_AMR', 'done'], input_keys=["target"], output_keys=["behavior"])
-        # self.action_move_base = action_move_base
-        # self.status = None
+    def __init__(self):
+        super(Single_Assembled, self).__init__(outcomes=['Dock_Out'], input_keys=["target"], output_keys=["behavior"])
 
     def execute(self, userdata):
-        rospy.loginfo('fsm/Single_Assembled')
-        # userdata.target = None
-        time.sleep(2)
-        return 'Single_AMR'
+        rospy.loginfo('[fsm] Execute Single_Assembled')
+        
+        # TODO Dark Magic, Change footprint to single Assembled
+        os.system("rostopic pub --once /move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.37,-0.37,0.0], [-0.37,0.37,0.0], [0.37,0.37,0.0], [0.37,-0.37,0.0]]'")
+        time.sleep(5)
+        return 'Dock_Out'
         '''
         x_m, y_m, rz_deg, behavior = userdata.target
         userdata.behavior = behavior
@@ -73,6 +135,22 @@ class Single_Assembled(smach.State):
     def done_cb(self, status, result):
         # -- http://docs.ros.org/kinetic/api/actionlib_msgs/html/msg/GoalStatus.html
         self.status = status
+
+
+class Double_Assembled(smach.State):
+
+    def __init__(self, file_path):
+        super(Double_Assembled, self).__init__(outcomes=['Dock_Out'], output_keys=["target"])
+        self.launch_file = file_path
+
+    def execute(self, userdata):
+        rospy.loginfo('[fsm] Execute Double_Assembled')
+
+        roslaunch = init_roslaunch(self.launch_file)
+        roslaunch.start()
+        time.sleep(5)
+        # roslaunch.shutdown()
+        return 'Dock_Out'
 
 
 # class BehaviorState(smach.State):

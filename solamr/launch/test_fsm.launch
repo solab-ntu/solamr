@@ -1,10 +1,14 @@
 <?xml version="1.0"?>
 
 <launch>
+    <arg name="robot_name" default="car1" />
+    <arg name="role" default="leader" />
     <!-- FSM -->
     <node pkg="solamr" type="fsm.py" name="fsm">
         <param name="file_path_single_amr" value="$(find solamr)/launch/run_single_AMR.launch"/>
-        <param name="file_path_single_assembled" value="$(find solamr)/launch/run_single_assembled.launch"/>
+        <param name="file_path_double_amr" value="$(find solamr)/launch/run_double_AMR.launch"/>
+        <param name="robot_name" value="$(arg robot_name)"/>
+        <param name="role" value="$(arg role)"/>
     </node>
     <node pkg="smach_viewer" type="smach_viewer.py" name="smach_viewer"/>
     <node pkg="rqt_console" type="rqt_console" name="rqt_console"/>

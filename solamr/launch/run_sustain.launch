@@ -17,15 +17,23 @@
             <remap from="/cmd_vel" to="/$(arg robot_name)/cmd_vel"/>
             <remap from="/STM32_twist" to="/$(arg robot_name)/STM32_twist"/>
         </node>
+
         <!-- Shelf Detector -->
         <include file="$(find obstacle_detector)/launch/run.launch">
             <arg name="robot_name" value="$(arg robot_name)" />
             <arg name="role" value="$(arg role)" />
         </include>
+
+        <!-- MAP -->
+        <node name="map_server" pkg="map_server" type="map_server" args="$(find solamr)/maps/sqare.yaml">
+            <param name="frame_id" value="$(arg robot_name)/map"/>
+        </node>
+        
         <!-- Forwarding topics for PC rviz -->
         <node pkg="solamr" type="tf_rviz_forwarder.py"  name="tf_rviz_forwarder">
             <param name="robot_name" value="$(arg robot_name)"/>
         </node>
+
         <!-- FKIE -->
         <include file="$(find solamr)/launch/fkie/master_discovery.launch"/>
         <include file="$(find solamr)/launch/fkie/master_sync.launch">
