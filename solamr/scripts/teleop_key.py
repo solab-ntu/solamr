@@ -92,17 +92,8 @@ if __name__=="__main__":
 
     rospy.init_node('teleop_key')
     
-    # GLOBAL paramters loading from rosparam server, to determinant topic name of cmd_vel
-    is_parameters_set = False
-    while not is_parameters_set:
-        try:
-            robot_name = rospy.get_param("/unique_parameter/robot_name") # Find paramters in ros server
-            is_parameters_set = True
-        except:
-            rospy.loginfo("robot_name are not found in rosparam server, keep on trying...")
-            rospy.sleep(0.2) # Sleep 0.2 seconds for waiting the parameters loading
-            continue
-    pub = rospy.Publisher(robot_name+"/cmd_vel", Twist, queue_size=5)
+    pub_car1 = rospy.Publisher("car1/cmd_vel", Twist, queue_size=5)
+    pub_car2 = rospy.Publisher("car2/cmd_vel", Twist, queue_size=5)
     
     x = 0
     th = 0
@@ -165,7 +156,8 @@ if __name__=="__main__":
             twist.linear.x = control_speed; twist.linear.y = 0; twist.linear.z = 0
             twist.angular.x = 0; twist.angular.y = 0; twist.angular.z = control_turn
             # Lucky added, let cmd_vel don't publish while no keyboard input
-            pub.publish(twist)
+            pub_car1.publish(twist)
+            pub_car2.publish(twist)
 
             #print("loop: {0}".format(count))
             #print("target: vx: {0}, wz: {1}".format(target_speed, target_turn))
@@ -178,6 +170,7 @@ if __name__=="__main__":
         twist = Twist()
         twist.linear.x = 0; twist.linear.y = 0; twist.linear.z = 0
         twist.angular.x = 0; twist.angular.y = 0; twist.angular.z = 0
-        pub.publish(twist)
+        pub_car1.publish(twist)
+        pub_car2.publish(twist)
 
     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)

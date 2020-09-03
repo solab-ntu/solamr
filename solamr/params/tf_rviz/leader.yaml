@@ -6,5 +6,11 @@ tf_rviz_list: [
   [carB/base_link, car1/base_link],
   [carB/base_link, car2/base_link],
   [car1/base_link, car1/laser_front],
-  [car1/base_link, car1/laser_rear]
+  [car1/base_link, car1/laser_rear],
+  # Apriltag 
+  [car1/base_link, car1/shelf_one],
+  [car1/base_link, car1/shelf_two],
+  [car1/base_link, car1/home],
+  [car1/base_link, car1/A_site],
+  [car1/base_link, car1/B_site]
 ]

@@ -8,6 +8,10 @@ find_package(Armadillo REQUIRED)
 find_package(Boost 1.54.0 REQUIRED system)
 
 add_message_files(FILES CircleObstacle.msg SegmentObstacle.msg Obstacles.msg)
+add_service_files(
+   FILES
+   StringSrv.srv
+)
 generate_messages(DEPENDENCIES std_msgs geometry_msgs)
 
 catkin_package(

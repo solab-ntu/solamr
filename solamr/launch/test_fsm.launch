@@ -5,8 +5,8 @@
     <arg name="role" default="leader" />
     <!-- FSM -->
     <node pkg="solamr" type="fsm.py" name="fsm">
-        <param name="file_path_single_amr" value="$(find solamr)/launch/run_single_AMR.launch"/>
-        <param name="file_path_double_amr" value="$(find solamr)/launch/run_double_AMR.launch"/>
+        <param name="roslaunch_path_single_amr" value="$(find solamr)/launch/run_single_AMR.launch"/>
+        <param name="roslaunch_path_double_amr" value="$(find solamr)/launch/run_double_AMR.launch"/>
         <param name="robot_name" value="$(arg robot_name)"/>
         <param name="role" value="$(arg role)"/>
     </node>

@@ -12,8 +12,33 @@ from move_base_msgs.msg import MoveBaseGoal
 # SMACH
 import smach
 
+shelf_id: 87
+tag_location: [1,2,3]
+wait_location: [4,5,6]
+goal_location: [7,8,9]
+home_location: [9,9,9]
+class Task(object):
+    def __init__(self, mode, shelf_id, tag_location,
+                 wait_location = None, goal_location = None, home_location = None):
+        self.mode = mode
+        self.shelf_id = shelf_id
+        self.tag_location = tag_location
+        self.wait_location = wait_location
+        self.goal_location = goal_location
+        self.home_location = home_location
+
+#######################
+### Global Function ###
+#######################
 
 def init_roslaunch(file_path):
+    '''
+    Let it able to switch roslaunch 
+    Argument:
+        file_path: string - the roslaunch file path you want to launch
+    Return:
+        parent of roslaunch process
+    '''
     uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
     roslaunch.configure_logging(uuid=uuid)
     return roslaunch.parent.ROSLaunchParent(run_id=uuid, roslaunch_files=((file_path,)))
@@ -21,7 +46,7 @@ def init_roslaunch(file_path):
 class Single_AMR(smach.State):
 
     def __init__(self, file_path):
-        super(Single_AMR, self).__init__(outcomes=('Find_Shelf', 'done'), output_keys=["target"])
+        super(Single_AMR, self).__init__(outcomes=('Find_Shelf', 'done'), output_keys=["task"])
         self.launch_file = file_path
 
     def execute(self, userdata):
@@ -31,15 +56,15 @@ class Single_AMR(smach.State):
         
         roslaunch = init_roslaunch(self.launch_file)
         roslaunch.start()
+        userdata.task = TASK
         time.sleep(5)
         roslaunch.shutdown()
         return 'Find_Shelf'
 
-
 class Find_Shelf(smach.State):
 
     def __init__(self):
-        super(Find_Shelf, self).__init__(outcomes=('abort', 'done'), input_keys=["tagID", "proximity_goal"])
+        super(Find_Shelf, self).__init__(outcomes=('abort', 'done'), input_keys=["task"])
 
     def execute(self, userdata):
         '''
@@ -48,6 +73,7 @@ class Find_Shelf(smach.State):
         '''
         # TODO Listen to service abort
         rospy.loginfo('[fsm] Execute Find_Shelf')
+        rospy.loginfo(str(userdata.task.mode))
         # TODO send_goal (userdata.proximity_goal)
         # Keep checking tagid, and make sure standby tf is published
         time.sleep(1)
@@ -99,7 +125,7 @@ class Dock_Out(smach.State):
 class Single_Assembled(smach.State):
 
     def __init__(self):
-        super(Single_Assembled, self).__init__(outcomes=['Dock_Out'], input_keys=["target"], output_keys=["behavior"])
+        super(Single_Assembled, self).__init__(outcomes=['Dock_Out', 'Go_Way_Point'], input_keys=["target"], output_keys=["behavior"])
 
     def execute(self, userdata):
         rospy.loginfo('[fsm] Execute Single_Assembled')
@@ -107,7 +133,7 @@ class Single_Assembled(smach.State):
         # TODO Dark Magic, Change footprint to single Assembled
         os.system("rostopic pub --once /move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.37,-0.37,0.0], [-0.37,0.37,0.0], [0.37,0.37,0.0], [0.37,-0.37,0.0]]'")
         time.sleep(5)
-        return 'Dock_Out'
+        return 'Go_Way_Point'
         '''
         x_m, y_m, rz_deg, behavior = userdata.target
         userdata.behavior = behavior
@@ -132,10 +158,32 @@ class Single_Assembled(smach.State):
             return 'failed'
         '''
 
-    def done_cb(self, status, result):
-        # -- http://docs.ros.org/kinetic/api/actionlib_msgs/html/msg/GoalStatus.html
-        self.status = status
+class Go_Way_Point(smach.State):
+    def __init__(self):
+        super(Go_Way_Point, self).__init__(outcomes=['done', 'abort'], input_keys=["target"], output_keys=["behavior"])
 
+    def execute(self, userdata):
+        rospy.loginfo('[fsm] Execute Go_Way_Point')
+        time.sleep(1)
+        return 'done'
+
+class Go_Goal(smach.State):
+    def __init__(self):
+        super(Go_Goal, self).__init__(outcomes=['done', 'abort'], input_keys=["target"], output_keys=["behavior"])
+
+    def execute(self, userdata):
+        rospy.loginfo('[fsm] Execute Go_Goal')
+        time.sleep(1)
+        return 'done'
+
+class Go_Home(smach.State):
+    def __init__(self):
+        super(Go_Home, self).__init__(outcomes=['done', 'abort'], input_keys=["target"], output_keys=["behavior"])
+
+    def execute(self, userdata):
+        rospy.loginfo('[fsm] Execute Go_Home')
+        time.sleep(1)
+        return 'done'
 
 class Double_Assembled(smach.State):
 
@@ -151,57 +199,3 @@ class Double_Assembled(smach.State):
         time.sleep(5)
         # roslaunch.shutdown()
         return 'Dock_Out'
-
-
-# class BehaviorState(smach.State):
-
-#     def __init__(self, pub_cmd_vel):
-#         super(BehaviorState, self).__init__(outcomes=['done'], input_keys=["behavior"])
-#         self.pub_cmd_vel = pub_cmd_vel
-
-#     def execute(self, userdata):
-#         if userdata.behavior == 1:
-#             rospy.loginfo("fsm/BehaviorState : rotating")
-#             self.rotate(wz=1.0, sec=2.0)
-#             self.rotate(wz=-1.0, sec=4.0)
-#             self.rotate(wz=1.0, sec=2.0)
-#         else:
-#             rospy.loginfo("fsm/BehaviorState : just a waypoint")
-#             time.sleep(1)
-#         return 'done'
-
-#     def rotate(self, wz, sec):
-#         rate = rospy.Rate(hz=5)
-#         t_start = rospy.get_rostime().to_sec()
-#         while True:
-#             twist = Twist()
-#             t_now = rospy.get_rostime().to_sec()
-#             if t_now - t_start < sec:
-#                 twist.angular.z = wz
-#                 self.pub_cmd_vel.publish(twist)
-#             else:
-#                 self.pub_cmd_vel.publish(twist)  # zero cmd
-#                 break
-#             rate.sleep()
-
-
-def parse_file(path_file):
-
-    with open(name=path_file, mode="r") as fileIO:
-        _lines = fileIO.readlines()
-
-    waypoints = list()
-    for line in _lines:
-        if line and not line.isspace():
-            target = tuple(float(i) for i in line.split(","))  # (x_m, y_m, rz_deg, behavior)
-            waypoints.append(target)
-
-    return waypoints
-
-if __name__ == "__main__":
-
-    path_file = "../file/waypoints.csv"
-    waypoints = parse_file(path_file=path_file)
-
-    for p in waypoints:
-        print(p)

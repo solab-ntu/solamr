@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import rospy
+import yaml
+import time
 # ROS msg and libraries
 from nav_msgs.msg import OccupancyGrid, Path # Global map 
 from geometry_msgs.msg import TransformStamped, Point, PoseArray, PoseStamped, Pose2D, Pose,PoseWithCovarianceStamped, Quaternion# Global path
@@ -13,6 +15,7 @@ from math import atan2,acos,sqrt,pi,sin,cos
 from lucky_utility.ros.rospy_utility import Marker_Manager, get_tf, send_tf,\
                                             normalize_angle,cal_ang_distance,\
                                             cal_avg_angle, vec_trans_coordinate
+from obstacle_detector.srv import StringSrv
 
 class Corner():
     def __init__(self, corner, neighbor1, neighbor2):
@@ -37,47 +40,20 @@ class Corner():
     
 
 class Shelf_finder():
-    def __init__(self,
-                 sheft_length_tolerance,
-                 angle_tolerance,
-                 max_circle_radius,
-                 search_radius,
-                 name):
-        self.scan = None
+    def __init__(self, name):
+        self.obstacle = None
         self.center = (None, None, None) # (x,y,theta) - centers of shelf
-        self.search_center = None# (x,y)
+        # self.search_center = None# (x,y)
         self.corner_dict = {}
         #------ Parameters --------#
-        self.sheft_length_tolerance = sheft_length_tolerance # Meter, Tolerance of detecing shelf's length
-        self.angle_tolerance = angle_tolerance # Radian, Tolerance of detecing right angle
-        self.max_circle_radius = max_circle_radius # Meter, Ignore clusters's radius bigger than MAX_CIRCLE_RADIUS
-        self.search_radius = search_radius
+        # self.sheft_length_tolerance = sheft_length_tolerance # Meter, Tolerance of detecing shelf's length
+        # self.angle_tolerance = angle_tolerance # Radian, Tolerance of detecing right angle
+        # self.max_circle_radius = max_circle_radius # Meter, Ignore clusters's radius bigger than MAX_CIRCLE_RADIUS
+        # self.search_radius = search_radius
         self.name = name # "base" or "peer"
-        #----- Init node ------#
-        # Name of this node, anonymous means name will be auto generated.
-        rospy.init_node('laser_find_shelf', anonymous=False)
-        #----- Subscriber -------# 
         self.viz_marker = Marker_Manager("obstacle_detector/markers/" + name)
         self.viz_marker.register_marker("corners_"+name, 7, BASE_LINK_FRAME, (0,0,255) , 0.1)
         self.viz_marker.register_marker("edges_"+name, 5  , BASE_LINK_FRAME, (255,255,0), 0.02)
-        '''
-        if ROLE == "leader":
-            self.viz_marker = Marker_Manager("obstacle_detector/markers/" + name)
-            self.viz_marker.register_marker("corners_"+name, 7, "car1/base_link", (0,0,255) , 0.1)
-            self.viz_marker.register_marker("edges_"+name, 5  , "car1/base_link", (255,255,0), 0.02)
-        else:
-            self.viz_marker = Marker_Manager("obstacle_detector/markers/" + name)
-            self.viz_marker.register_marker("corners_"+name, 7, ROBOT_NAME+"/map", (0,0,255) , 0.1)
-            self.viz_marker.register_marker("edges_"+name, 5  , ROBOT_NAME+"/map", (255,255,0), 0.02)
-        '''
-
-    def set_mode(self,sheft_length_tolerance, angle_tolerance, max_circle_radius, search_radius):
-        '''
-        '''
-        self.sheft_length_tolerance = sheft_length_tolerance 
-        self.angle_tolerance = angle_tolerance 
-        self.max_circle_radius = max_circle_radius 
-        self.search_radius = search_radius
 
     def cal_distance(self,c1,c2):
         '''
@@ -139,8 +115,8 @@ class Shelf_finder():
         c_list = []
         for c in raw_data.circles:
             c_point = (c.center.x, c.center.y)
-            if c.true_radius <= self.max_circle_radius and\
-               self.check_search_region(search_center, self.search_radius, c_point):
+            if c.true_radius <= MAX_CIRCLE_RADIUS and\
+               self.check_search_region(search_center, SEARCH_RADIUS, c_point):
                 c_list.append(c_point)
 
         # Get adj_dict, indicate adjecency relationship between pionts.
@@ -148,8 +124,8 @@ class Shelf_finder():
         for c1 in c_list:
             for c2 in c_list:
                 l = self.cal_distance(c1,c2)
-                if  abs(l - SHELF_LEN)          < self.sheft_length_tolerance or\
-                    abs(l - SHELF_LEN_DIAGONAL) < self.sheft_length_tolerance :
+                if  abs(l - SHELF_LEN)          < SHEFT_LENGTH_TOLERANCE or\
+                    abs(l - SHELF_LEN_DIAGONAL) < SHEFT_LENGTH_TOLERANCE :
                     if c1 not in adj_dict: # New circle
                         adj_dict[c1] = []
                     adj_dict[c1].append( (l , c2) )
@@ -162,10 +138,10 @@ class Shelf_finder():
             # Find two edge that has 90 degree and both with lenth L 
             for e1 in adj_dict[c]:
                 for e2 in adj_dict[c]:
-                    if  abs(e1[0] - SHELF_LEN) < self.sheft_length_tolerance and\
-                        abs(e2[0] - SHELF_LEN) < self.sheft_length_tolerance: # Both edge has length L
+                    if  abs(e1[0] - SHELF_LEN) < SHEFT_LENGTH_TOLERANCE and\
+                        abs(e2[0] - SHELF_LEN) < SHEFT_LENGTH_TOLERANCE: # Both edge has length L
                         angle = self.cal_angle(c , e1[1] ,e2[1] )
-                        if abs(angle - pi/2) < self.angle_tolerance and c not in corner_dict:# Angle is 90 degree
+                        if abs(angle - pi/2) < ANGLE_TOLERANCE and c not in corner_dict:# Angle is 90 degree
                             # Found coner!!!
                             corner_dict[c] = Corner(c, e1[1] ,e2[1])
         return corner_dict
@@ -237,14 +213,18 @@ class Shelf_finder():
         avg_center[2] = cal_avg_angle(heading_list)
         return avg_center
 
-    def publish_viz(self):
-        self.viz_marker.publish()
+    def publish(self):
+        # 
+        if MODE == "double_AMR":
+            self.viz_marker.publish()
+        elif MODE == "single_AMR":
+            send_tf(self.center, BASE_LINK_FRAME, "shelf_center")
     
-    def run_once(self, ref_ang):
+    def run_once(self, ref_ang, search_center):
         '''
         return True: Allow publish
         '''
-        self.corner_dict = self.cal_corner(self.scan, self.search_center)
+        self.corner_dict = self.cal_corner(self.obstacle, search_center)
         if self.corner_dict == {}:
             return False # Can't find any corner
 
@@ -265,89 +245,43 @@ class Two_shelf_finder():
     def __init__(self):
         self.big_car_xyt = [None, None, None]
         # 
-        self.scan = None
+        self.obstacle = None
         # Init laser_finder
-        self.shelf_finder_base = Shelf_finder(sheft_length_tolerance = SHEFT_LENGTH_TOLERANCE,
-                                                angle_tolerance = ANGLE_TOLERANCE,
-                                                max_circle_radius = MAX_CIRCLE_RADIUS,
-                                                search_radius = SEARCH_RADIUS,
-                                                name="base")
-        self.shelf_finder_peer = Shelf_finder(sheft_length_tolerance = SHEFT_LENGTH_TOLERANCE,
-                                                angle_tolerance = ANGLE_TOLERANCE,
-                                                max_circle_radius = MAX_CIRCLE_RADIUS,
-                                                search_radius = SEARCH_RADIUS,
-                                                name="peer") # After combine # TODO Use topic or service
+        self.shelf_finder_base = Shelf_finder(name="base")
+        self.shelf_finder_peer = Shelf_finder(name="peer")
         
         self.direction_list = [(TOW_CAR_LENGTH, 0),
                                (-TOW_CAR_LENGTH, 0),
                                (0, TOW_CAR_LENGTH),
                                (0, -TOW_CAR_LENGTH)]
-        #----- TF -----------#
-        # For getting Tf map -> base_link
-        self.tfBuffer = tf2_ros.Buffer()
-        tf2_ros.TransformListener(self.tfBuffer)
-        self.base_link_xy = None
-        # Subscrieer 
-        rospy.Subscriber("raw_obstacles", Obstacles, self.obstacle_cb)
         # Publisher
         self.pub_theta = rospy.Publisher("/"+ ROBOT_NAME +"/theta", Float64, queue_size = 1,latch=False)
         self.theta = 0.0
     
-    def obstacle_cb(self,data):
-        '''
-        This callback will be called when /raw_obstacle is published
-        Get self.center - center of shelft neer base_link
-        and self.center_peer - center of shelft neer base_link_peer
-        std_msgs/Header header
-            uint32 seq
-            time stamp
-            string frame_id
-        obstacle_detector/SegmentObstacle[] segments
-            geometry_msgs/Point first_point
-                    float64 x
-                    float64 y
-                    float64 z
-            geometry_msgs/Point last_point
-                    float64 x
-                    float64 y
-                    float64 z
-        obstacle_detector/CircleObstacle[] circles
-            geometry_msgs/Point center
-                float64 x
-                float64 y
-                float64 z
-            geometry_msgs/Vector3 velocity
-                float64 x
-                float64 y
-                float64 z
-            float64 radius
-            float64 true_radius
-        '''
-        self.scan = data
-    
     def run_once(self):
-        # Update scan
-        if self.scan == None: # No scan data
+        # Update obstacle
+        if self.obstacle == None: # No obstacle data
+            rospy.logwarn("[shelf_detector] Can't get obstacle detector data")
             return False
         else:
-            self.shelf_finder_base.scan = self.scan
-            self.shelf_finder_peer.scan = self.scan
+            self.shelf_finder_base.obstacle = self.obstacle
+            self.shelf_finder_peer.obstacle = self.obstacle
         
         # Calculate base center
-        self.shelf_finder_base.search_center = (0,0)
-        if self.shelf_finder_base.run_once(self.big_car_xyt[2]):
+        if self.shelf_finder_base.run_once(self.big_car_xyt[2], (0,0)):
             # Publish base shelf
-            self.shelf_finder_base.publish_viz()
+            self.shelf_finder_base.publish()
 
             # Calculate peer center
             marker_tmp_list = []
             for p_tem in self.direction_list:
                 theta = self.shelf_finder_base.center[2]
                 (x, y) = vec_trans_coordinate(p_tem, (0, 0, theta))
-                self.shelf_finder_peer.search_center = (x,y)
+                # self.shelf_finder_peer.search_center = (x,y)
                 marker_tmp_list.append((x,y))
                 
-                if self.shelf_finder_peer.run_once(self.big_car_xyt[2]):# Found the center of peer
+                if self.shelf_finder_peer.run_once(self.big_car_xyt[2], (x,y)):
+                    # Found the center of peer
                     # Cache the direction
                     self.direction_list.remove(p_tem)
                     self.direction_list.insert(0,p_tem)
@@ -358,7 +292,7 @@ class Two_shelf_finder():
                 rospy.logdebug("[Shelf Detector] Can't find peer shelft center.")
             else:
                 # Publish peer
-                self.shelf_finder_peer.publish_viz()
+                self.shelf_finder_peer.publish()
                 # Calculate big car
                 vec_big_car = (self.shelf_finder_base.center[0] - self.shelf_finder_peer.center[0], 
                                self.shelf_finder_base.center[1] - self.shelf_finder_peer.center[1])
@@ -370,7 +304,7 @@ class Two_shelf_finder():
             rospy.logerr("[Shelf Detector] Can't find base shelft cneter.")
             return False
     
-    def publish_theta(self):
+    def publish(self):
         # Get theta1 or theta2
         if ROLE == "leader": # Theta1
             self.theta = normalize_angle(-self.shelf_finder_base.center[2]) 
@@ -380,38 +314,150 @@ class Two_shelf_finder():
 
         # Send tf
         if ROLE == "leader":
-           send_tf((TOW_CAR_LENGTH/2.0, 0, self.theta), "carB/base_link", "car1/base_link")
+           send_tf((TOW_CAR_LENGTH/2.0, 0, self.theta), BASE_BIG_CAR_FRAME, BASE_LINK_FRAME)
 
+# global function 
+def mode_switch_cb(req):
+    '''
+    Load yaml file and change parameter by req.data file path
+    '''
+    global MODE, TOW_CAR_LENGTH, SHELF_LEN, MAX_CIRCLE_RADIUS, SEARCH_RADIUS,\
+           SHEFT_LENGTH_TOLERANCE, ANGLE_TOLERANCE, SHELF_LEN_DIAGONAL, SHELF_MAIN_FINDER,\
+           SEARCH_CENTER_SINGLE_AMR
+    try:
+        with open(req.data) as file:
+            rospy.loginfo("[shelf_detector] Load yaml file from " + req.data)
+            params = yaml.load(file, Loader=yaml.FullLoader)
+            # Mode 
+            MODE = params['MODE']
+            # Kinematics
+            TOW_CAR_LENGTH = params['TOW_CAR_LENGTH']
+            SHELF_LEN      = params['SHELF_LEN']
+            MAX_CIRCLE_RADIUS = params['MAX_CIRCLE_RADIUS']
+            SEARCH_RADIUS = params['SEARCH_RADIUS']
+            # Tolerance
+            SHEFT_LENGTH_TOLERANCE = params['SHEFT_LENGTH_TOLERANCE']
+            ANGLE_TOLERANCE = params['ANGLE_TOLERANCE']  *pi/180
+            # Frame
+            # BASE_LINK_FRAME = params['BASE_LINK_FRAME']
+            # 
+            SHELF_LEN_DIAGONAL = SHELF_LEN * sqrt(2)
+            SEARCH_CENTER_SINGLE_AMR = None
+            # Init object
+            if MODE == "single_AMR":
+                SHELF_MAIN_FINDER = Shelf_finder("base")
+            elif MODE == "double_AMR":
+                SHELF_MAIN_FINDER = Two_shelf_finder()
+            rospy.loginfo("[shelf_detector] Switch mode to " + MODE )
+            return "OK"
+    except OSError:
+        rospy.logerr("[shelf_detector] Yaml file not found at " + req.data)
+        return "Yaml file not found"
+
+def obstacle_cb(data):
+    '''
+    This callback will be called when /raw_obstacle is published
+    Get self.center - center of shelft neer base_link
+    and self.center_peer - center of shelft neer base_link_peer
+    std_msgs/Header header
+        uint32 seq
+        time stamp
+        string frame_id
+    obstacle_detector/SegmentObstacle[] segments
+        geometry_msgs/Point first_point
+                float64 x
+                float64 y
+                float64 z
+        geometry_msgs/Point last_point
+                float64 x
+                float64 y
+                float64 z
+    obstacle_detector/CircleObstacle[] circles
+        geometry_msgs/Point center
+            float64 x
+            float64 y
+            float64 z
+        geometry_msgs/Vector3 velocity
+            float64 x
+            float64 y
+            float64 z
+        float64 radius
+        float64 true_radius
+    '''
+    global OBSTACLE_DATA
+    OBSTACLE_DATA = data
+
+def search_center_cb(data):
+    '''
+    This callback will be called when /search_center is published
+    float64 x
+    float64 y
+    float64 z
+    '''
+    global SEARCH_CENTER_SINGLE_AMR
+    if MODE == "single_AMR":
+        SEARCH_CENTER_SINGLE_AMR = (data.x, data.y)
+    elif MODE == "double_AMR":
+        pass
+    
 if __name__ == '__main__':
-    rospy.init_node('laser_find_shelf',anonymous=False)
+    rospy.init_node('shelf_detector',anonymous=False)
+    # Service
+    service = rospy.Service('StringSrv', StringSrv, mode_switch_cb)
+    # Subscirber
+    rospy.Subscriber("raw_obstacles", Obstacles, obstacle_cb)
+    OBSTACLE_DATA = None
+    # For single AMR search center
+    rospy.Subscriber("search_center", Point, search_center_cb)
+    
     # Get launch file parameters
-    # System
+    # System, unchangable parameters
     ROBOT_NAME    = rospy.get_param(param_name="~robot_name", default="car1")
     ROLE          = rospy.get_param(param_name="~role", default="leader")
     FREQUENCY     = rospy.get_param(param_name="~frequency", default="10")
-    # Kinematics
-    TOW_CAR_LENGTH =rospy.get_param(param_name="~two_car_length", default="0.93")
-    SHELF_LEN      =rospy.get_param(param_name="~shelf_length", default="0.73")
-    MAX_CIRCLE_RADIUS = rospy.get_param(param_name="~max_circle_radius", default="0.20")
-    SEARCH_RADIUS = rospy.get_param(param_name="~search_radius", default="0.55")
-    # Tolerance
-    SHEFT_LENGTH_TOLERANCE = rospy.get_param(param_name="~sheft_length_tolerance", default="0.1")
-    ANGLE_TOLERANCE =  rospy.get_param(param_name="~angle_tolerance", default="5")*pi/180 # Degree
     # Frame
     BASE_LINK_FRAME = rospy.get_param(param_name="~base_link_frame", default="car1/base_link")
+    BASE_BIG_CAR_FRAME = rospy.get_param(param_name="~base_big_car_frame", default="carB/base_link")
+    # Changable parameters
 
-    SHELF_LEN_DIAGONAL = SHELF_LEN * sqrt(2)
-    TWO_SHELF_FINDER = Two_shelf_finder()
-    INIT = False
-    rate = rospy.Rate(FREQUENCY)
+    # Mode 
+    MODE = None
+    # Kinematics
+    TOW_CAR_LENGTH = None
+    SHELF_LEN      = None
+    MAX_CIRCLE_RADIUS = None
+    SEARCH_RADIUS = None
+    # Tolerance
+    SHEFT_LENGTH_TOLERANCE = None
+    ANGLE_TOLERANCE = None
+    SHELF_LEN_DIAGONAL = None
+    # 
+    SHELF_MAIN_FINDER = None
+    SEARCH_CENTER_SINGLE_AMR = None
+
+    # Wait Changable parameters loading...
+    
     while not rospy.is_shutdown():
-        if TWO_SHELF_FINDER.run_once():
-            TWO_SHELF_FINDER.publish_theta()
-            INIT = True
-        elif ROLE == "leader":
-            if INIT == False : # TODO test dont' init
-                send_tf((TOW_CAR_LENGTH/2.0, 0, 0), "carB/base_link", "car1/base_link")
-                rospy.logerr("[laser_finder] NOt init yet")
+        if MODE == None: 
+            rospy.loginfo("[shelf_detector] Waiting for parameters...")
+        elif OBSTACLE_DATA == None:
+            rospy.loginfo("[shelf_detector] Waiting for obstacle data...")
+        else:
+            break
+        time.sleep(1)
+
+    RATE = rospy.Rate(FREQUENCY)
+    while not rospy.is_shutdown():
+        SHELF_MAIN_FINDER.obstacle = OBSTACLE_DATA
+        if MODE == "single_AMR":
+            # TODO ref_ang need to be passed
+            if SHELF_MAIN_FINDER.run_once(0, SEARCH_CENTER_SINGLE_AMR): # Pass center searchj
+                SHELF_MAIN_FINDER.publish()
+        elif MODE == "double_AMR":
+            if SHELF_MAIN_FINDER.run_once():
+                SHELF_MAIN_FINDER.publish()
             else:
-                send_tf((TOW_CAR_LENGTH/2.0, 0, TWO_SHELF_FINDER.theta), "carB/base_link", "car1/base_link")
-        rate.sleep()
+                if ROLE == "leader":
+                    send_tf((TOW_CAR_LENGTH/2.0, 0, SHELF_MAIN_FINDER.theta), BASE_BIG_CAR_FRAME, BASE_LINK_FRAME)
+        RATE.sleep()
+        

@@ -13,6 +13,13 @@ find_package(catkin REQUIRED COMPONENTS
 	move_base
 	    )
 
+add_service_files(
+   FILES
+   StringSrv.srv
+)
+generate_messages(DEPENDENCIES std_msgs geometry_msgs)
+
+
 ### Add support for c++11, supported in ROS Kinetic and later version ###
 #add_definitions(-std=c+11)
 
@@ -27,6 +34,8 @@ catkin_package(
 ###########
 ## Build ##
 ###########
+
+
 
 ###--=============--###
 ###--pp_controller--###

@@ -9,36 +9,17 @@ from lucky_utility.ros.rospy_utility import get_tf, send_tf, vec_trans_coordinat
 if __name__ == '__main__':
     rospy.init_node('tf2_listener')
 
+    # TF listener
     tfBuffer = tf2_ros.Buffer()
     listener = tf2_ros.TransformListener(tfBuffer)
-
+    
+    # Publisher
     pub_tf = rospy.Publisher("/tf_rviz", tf.msg.tfMessage, queue_size = 10)
     
     # Get launch file parameters
-    # ROBOT_NAME = rospy.get_param(param_name="~robot_name", default="car1")
     TF_RVIZ_LIST = rospy.get_param(param_name="~tf_rviz_list")
-    # rospy.logerr("[tf_rviz_forwarder] " + str(TF_RVIZ_LIST))
     rate = rospy.Rate(10.0)
-
-    # tf_request_list = ((ROBOT_NAME + "/map", ROBOT_NAME + "/odom"),
-    #                    (ROBOT_NAME + "/odom", ROBOT_NAME + "/base_link"),
-    #                    (ROBOT_NAME + "/base_link", ROBOT_NAME + "/laser_front"),
-    #                    (ROBOT_NAME + "/base_link", ROBOT_NAME + "/laser_rear"),
-
-    #                    #(ROBOT_NAME + "map", ROBOT_NAME + "s_center_laser"),
-    #                    #(ROBOT_NAME + "map", ROBOT_NAME + "center_peer"),
-    #                    #(ROBOT_NAME + "map", ROBOT_NAME + "center_big_car"),
-    #                    #(ROBOT_NAME + "s_center_laser", ROBOT_NAME + "s_standby_laser"),
-    #                    ("carB/map", "carB/odom"),
-    #                    ("carB/odom", "carB/base_link"),
-    #                    ("carB/base_link", "car1/base_link"),
-    #                    ("carB/base_link", "car2/base_link"),
-
-    #                    (ROBOT_NAME + "/base_link", ROBOT_NAME + "/s_front"),
-    #                    (ROBOT_NAME + "/s_front", ROBOT_NAME + "/s_standby_camera"),
-    #                    (ROBOT_NAME + "/s_front", ROBOT_NAME + "/s_center_camera"))
-
-
+    
     while not rospy.is_shutdown():
         tf_list = []
         for i in TF_RVIZ_LIST:
