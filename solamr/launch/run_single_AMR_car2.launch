@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="robot_name" default="car2"/>
+    <arg name="car_length" default="0.44" />
+    <arg name="l_half" default="$(eval arg('car_length')/2)" />
+    <arg name="l_half_neg" default="$(eval -arg('car_length')/2)" />
+    
+    <!-- Move Base -->
+    <include file="$(find solamr)/launch/includes/move_base_dwa.xml">
+        <arg name="robot_name" value="$(arg robot_name)"/>
+        <arg name="car_length" value="$(arg car_length)"/>
+        <arg name="l_half" value="$(arg l_half)"/>
+        <arg name="l_half_neg" value="$(arg l_half_neg)"/>
+    </include>
+</launch>

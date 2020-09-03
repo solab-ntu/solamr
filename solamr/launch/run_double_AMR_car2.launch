@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="robot_name" default="car2" />
+    <arg name="role" default="follower" />
+    <!-- MQTT -->
+    <node pkg="ros_mqtt_bridge" type="$(arg role).py"  name="ros_mqtt_bridge" output='screen'/>
+</launch>
