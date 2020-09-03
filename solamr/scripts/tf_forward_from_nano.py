@@ -15,10 +15,15 @@ if __name__ == '__main__':
     
     tf_request_list = [(ROBOT_NAME+"/raw/map", ROBOT_NAME+"/raw/odom"),
                        (ROBOT_NAME+"/raw/odom", ROBOT_NAME+"/raw/base_link")]
+
+    tf_apriltag_list = [(ROBOT_NAME+"/raw/zed2_left_camera_optical_frame", ROBOT_NAME+"/raw/shelf_one"),
+                        (ROBOT_NAME+"/raw/zed2_left_camera_optical_frame", ROBOT_NAME+"/raw/shelf_two"),
+                        (ROBOT_NAME+"/raw/zed2_left_camera_optical_frame", ROBOT_NAME+"/raw/home"),
+                        (ROBOT_NAME+"/raw/zed2_left_camera_optical_frame", ROBOT_NAME+"/raw/A_site"),
+                        (ROBOT_NAME+"/raw/zed2_left_camera_optical_frame", ROBOT_NAME+"/raw/B_site")]
     br = tf2_ros.TransformBroadcaster()
     rate = rospy.Rate(10.0)
     while not rospy.is_shutdown():
-        tf_list = []
         for i in tf_request_list:
             try:
                 trans = tfBuffer.lookup_transform(i[0], i[1], rospy.Time(0))
@@ -34,6 +39,24 @@ if __name__ == '__main__':
                 trans.child_frame_id = s_list[0] + "/" + s_list[2]
                 # Z = 0.0
                 trans.transform.translation.z = 0.05
+                br.sendTransform(trans)
+        # Apriltag forward
+        for i in tf_apriltag_list:
+            try:
+                trans = tfBuffer.lookup_transform(i[0], i[1], rospy.Time(0))
+            except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+                continue
+            else:
+                # Reset time stamp
+                trans.header.stamp = rospy.Time.now()
+                # Get rid of /raw/
+
+                trans.header.frame_id = ROBOT_NAME + "/base_link"
+                s_list = i[1].split('/')
+                trans.child_frame_id = s_list[0] + "/" + s_list[2]
+                # Hack frame, from camera -> base_link
+                trans.transform.translation.x += 0.22
+                trans.transform.translation.y += 0.06
                 br.sendTransform(trans)
         rate.sleep()
 
