@@ -13,8 +13,7 @@ if __name__ == '__main__':
     
     ROBOT_NAME = rospy.get_param(param_name="~robot_name")
     
-    tf_request_list = [#(ROBOT_NAME+"/raw/map", ROBOT_NAME+"/raw/odom"),
-                       #(ROBOT_NAME+"/raw/odom", ROBOT_NAME+"/raw/base_link"),
+    tf_request_list = [
                        (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/shelf_one"),
                        (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/shelf_two"),
                        (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/home"),
@@ -31,7 +30,7 @@ if __name__ == '__main__':
                 continue
             else:
                 # Reset time stamp
-                trans.header.stamp = rospy.Time.now()
+                # trans.header.stamp = rospy.Time.now()
                 # Get rid of /raw/
                 s_list = i[0].split('/')
                 trans.header.frame_id = s_list[0] + "/" + s_list[2]

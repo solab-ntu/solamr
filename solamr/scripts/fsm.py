@@ -16,6 +16,8 @@ import smach_ros
 # ROS
 import rospkg
 import roslaunch
+import tf2_ros
+from math import pi
 from tf.transformations import quaternion_from_euler
 from geometry_msgs.msg import Twist, Point
 from move_base_msgs.msg import MoveBaseGoal
@@ -24,15 +26,14 @@ from actionlib_msgs.msg import GoalStatusArray
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from solamr.srv import StringSrv
 import roslaunch
-# Custom 
-from lucky_utility.ros.rospy_utility import get_tf
-
+# Custom
+from lucky_utility.ros.rospy_utility import get_tf, vec_trans_coordinate, send_tf
 
 class Task(object):
-    def __init__(self, mode, shelf_id, tag_location,
+    def __init__(self, mode,  tag_location,
                  wait_location = None, goal_location = None, home_location = None):
         self.mode = mode
-        self.shelf_id = shelf_id
+        # self.shelf_id = shelf_id
         self.tag_location = tag_location
         self.wait_location = wait_location
         self.goal_location = goal_location
@@ -81,6 +82,10 @@ def task_cb(req):
     '''
     global TASK
 
+    if req.data == "abort":
+        TASK = None
+        return 'abort OK'
+
     # Check Task is busy
     if TASK != None:
         rospy.logerr("[fsm] Reject task, because I'm busy now.")
@@ -94,7 +99,7 @@ def task_cb(req):
             # params = yaml.load(file, Loader=yaml.FullLoader)
             params = yaml.safe_load(file)
             TASK = Task(params['mode'],
-                        params['shelf_id'],
+                        # params['shelf_id'],
                         params['tag_location'],
                         params['wait_location'],
                         params['goal_location'],
@@ -105,11 +110,10 @@ def task_cb(req):
         rospy.logerr("[fsm] Yaml file not found at " + req.data)
         return "Yaml file not found"
 
-
 class Goal_Manager(object):
     def __init__(self):
         self.action = actionlib.SimpleActionClient('move_base', MoveBaseAction)
-        self.action.wait_for_server()
+        # self.action.wait_for_server()
         self.is_reached = False
         self.goal = None
     
@@ -128,10 +132,10 @@ class Goal_Manager(object):
          self.goal.target_pose.pose.orientation.w) = quaternion
         self.action.send_goal(goal=self.goal, feedback_cb=self.feedback_cb, done_cb=self.reached_cb)
 
-    def feedback_cb(self):
+    def feedback_cb(self, feedback):
         pass
     
-    def reached_cb(self):
+    def reached_cb(self,status, result):
         self.is_reached = True
 
 class Initial_State(smach.State):
@@ -200,31 +204,48 @@ class Go_Dock_Standby(smach.State):
         rospy.loginfo('[fsm] Execute Go_Dock_Standby')
 
         while not rospy.is_shutdown():
+            if TASK == None:
+                return 'abort'
+
             # Get apriltag shelf location
             if ROBOT_NAME == "car1":
-                shelf_xyt = get_tf(TFBUFFER, "car1/base_link", "car1/shelf_one")
+                shelf_xyt = get_tf(TFBUFFER, "car1/map", "car1/shelf_one")
             elif ROBOT_NAME == "car2":
-                shelf_xyt = get_tf(TFBUFFER, "car2/base_link", "car2/shelf_two")
+                shelf_xyt = get_tf(TFBUFFER, "car2/map", "car2/shelf_two")
             
             
             if shelf_xyt != None:
-                # Update goal by camera apriltag 
-                GOAL_MANAGER.send_goal(shelf_xyt, ROBOT_NAME + "/base_link")# TODO add a distance
-                # goal_xyt = shelf_xyt 
+                # Update goal by camera apriltag
+                (x1,y1) = vec_trans_coordinate((-0.5, 0), (shelf_xyt[0], shelf_xyt[1], shelf_xyt[2] + pi/2))
+                GOAL_MANAGER.send_goal((x1, y1, shelf_xyt[2] + pi/2),
+                                        ROBOT_NAME + "/map")
+                
 
-                # Update search center for shelf detector
-                point = Point()
-                point.x = shelf_xyt[0]
-                point.y = shelf_xyt[1]
-                PUB_SEARCH_CENTER.publish(point)
+                # TODO dark nessitie
+                if ROBOT_NAME == "car1":
+                    shelf_xyt_base_link = get_tf(TFBUFFER, "car1/base_link", "car1/shelf_one")
+                elif ROBOT_NAME == "car2":
+                    shelf_xyt_base_link = get_tf(TFBUFFER, "car2/base_link", "car2/shelf_two")
+
+                if shelf_xyt_base_link != None:
+                    (x2,y2) = vec_trans_coordinate(( 0.3, 0),
+                    (shelf_xyt_base_link[0], shelf_xyt_base_link[1], shelf_xyt_base_link[2] + pi/2))
+                    send_tf((x2,y2,shelf_xyt_base_link[2] + pi/2), "car2/base_link", "car2/B_site")
+
+                    # Update search center for shelf detector
+                    point = Point()
+                    point.x = x2
+                    point.y = y2
+                    PUB_SEARCH_CENTER.publish(point)
 
             # Check goal reached or not 
             if GOAL_MANAGER.is_reached:
-                return 'done'
+                # TODO TMP test
+                pass
+                # return 'done'
             
             time.sleep(0.1)
 
-        time.sleep(1)
         # TODO Go to standby point , if navi goal is 
         # Send_goal()
         return 'done'
@@ -331,9 +352,8 @@ class Double_Assembled(smach.State):
             time.sleep(1)
 
 if __name__ == "__main__":
-
     rospy.init_node(name='fsm', anonymous=False)
-
+    
     #-- Get parameters
     ROSLAUNCH_PATH_SINGLE_AMR = rospy.get_param(param_name="~roslaunch_path_single_amr")
     ROSLAUNCH_PATH_DOUBLE_AMR = rospy.get_param(param_name="~roslaunch_path_double_amr")
@@ -345,7 +365,7 @@ if __name__ == "__main__":
     rospy.Service(name="~task", service_class=StringSrv, handler=task_cb)
 
     # Publisher
-    PUB_SEARCH_CENTER = rospy.Publisher(ROBOT_NAME + "/search_center", Point, queue_size = 1)
+    PUB_SEARCH_CENTER = rospy.Publisher("search_center", Point, queue_size = 1)
 
     # Global variable 
     TASK = None # store task information
@@ -427,6 +447,7 @@ if __name__ == "__main__":
             transitions={'Dock_Out': 'Dock_Out', 'Go_Way_Point': 'Go_Way_Point'})
     
     # -- FSM VIEWER
+    
     sis = smach_ros.IntrospectionServer('smach_server', SM, '/ROOT')
     sis.start()
     SM.execute() # start FSM
