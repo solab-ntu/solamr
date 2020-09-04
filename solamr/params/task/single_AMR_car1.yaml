@@ -1,6 +1,5 @@
 mode: "single_AMR" # double_AMR
-# shelf_id: 46
-tag_location: [2, 0.8, 1.5707963267948966]
-wait_location: [3.0, 2.1, 1.5707963267948966]
-goal_location: [0.6, 3.0, 1.5707963267948966]
+tag_location: [2, 0.8, 3.1415926]
+wait_location: [3.0, 2.1, 3.1415926]
+goal_location: [0.6, 3.0, 3.1415926]
 home_location: [5.4, 2.1, 0.0]

@@ -2,30 +2,28 @@
 from __future__ import print_function
 from __future__ import division
 
-import actionlib
-import rospy
-import roslib
+# Python 
 import yaml
 import os
 import time
-
-from geometry_msgs.msg import Twist
-from move_base_msgs.msg import MoveBaseAction
-import smach
-import smach_ros
+from math import pi
 # ROS
+import rospy
+import roslib
 import rospkg
 import roslaunch
 import tf2_ros
-from math import pi
+import actionlib
+import roslaunch
+import smach
+import smach_ros
+# Ros message
 from tf.transformations import quaternion_from_euler
 from geometry_msgs.msg import Twist, Point
-from move_base_msgs.msg import MoveBaseGoal
-import actionlib
 from actionlib_msgs.msg import GoalStatusArray
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from solamr.srv import StringSrv
-import roslaunch
+from std_msgs.msg import String, Bool
 # Custom
 from lucky_utility.ros.rospy_utility import get_tf, vec_trans_coordinate, send_tf
 
@@ -110,6 +108,13 @@ def task_cb(req):
         rospy.logerr("[fsm] Yaml file not found at " + req.data)
         return "Yaml file not found"
 
+def gate_reply_cb(data):
+    '''
+    Bool
+    '''
+    global GATE_REPLY
+    GATE_REPLY = data.data
+
 class Goal_Manager(object):
     def __init__(self):
         self.action = actionlib.SimpleActionClient('move_base', MoveBaseAction)
@@ -137,7 +142,6 @@ class Goal_Manager(object):
     
     def reached_cb(self,status, result):
         self.is_reached = True
-
 class Initial_State(smach.State):
     def __init__(self):
         super(Initial_State, self).__init__(outcomes=('Single_AMR', 'Single_Assembled', 'Double_Assembled'))
@@ -177,7 +181,7 @@ class Find_Shelf(smach.State):
         # Send goal
         GOAL_MANAGER.send_goal(TASK.tag_location, ROBOT_NAME + "/base_link")
 
-        while not rospy.is_shutdown():
+        while not rospy.is_shutdown() and TASK != None:
             # Get apriltag shelf location
             if ROBOT_NAME == "car1":
                 shelf_xyt = get_tf(TFBUFFER, "car1/base_link", "car1/shelf_one")
@@ -191,8 +195,9 @@ class Find_Shelf(smach.State):
             # Check goal reached or not 
             if GOAL_MANAGER.is_reached:
                 return 'done'
-            time.sleep(0.1)
-
+            time.sleep(TIME_INTERVAL)
+        rospy.logwarn('[fsm] task abort')
+        return 'abort'
 class Go_Dock_Standby(smach.State):
 
     def __init__(self):
@@ -203,9 +208,7 @@ class Go_Dock_Standby(smach.State):
         '''
         rospy.loginfo('[fsm] Execute Go_Dock_Standby')
 
-        while not rospy.is_shutdown():
-            if TASK == None:
-                return 'abort'
+        while not rospy.is_shutdown() and TASK != None:
 
             # Get apriltag shelf location
             if ROBOT_NAME == "car1":
@@ -213,14 +216,12 @@ class Go_Dock_Standby(smach.State):
             elif ROBOT_NAME == "car2":
                 shelf_xyt = get_tf(TFBUFFER, "car2/map", "car2/shelf_two")
             
-            
             if shelf_xyt != None:
                 # Update goal by camera apriltag
                 (x1,y1) = vec_trans_coordinate((-0.5, 0), (shelf_xyt[0], shelf_xyt[1], shelf_xyt[2] + pi/2))
                 GOAL_MANAGER.send_goal((x1, y1, shelf_xyt[2] + pi/2),
                                         ROBOT_NAME + "/map")
                 
-
                 # TODO dark nessitie
                 if ROBOT_NAME == "car1":
                     shelf_xyt_base_link = get_tf(TFBUFFER, "car1/base_link", "car1/shelf_one")
@@ -244,28 +245,37 @@ class Go_Dock_Standby(smach.State):
                 pass
                 # return 'done'
             
-            time.sleep(0.1)
+            time.sleep(TIME_INTERVAL)
 
-        # TODO Go to standby point , if navi goal is 
-        # Send_goal()
-        return 'done'
+        rospy.logwarn('[fsm] task abort')
+        return 'abort'
 
 class Dock_In(smach.State):
-
+    # TODO need test
     def __init__(self):
         super(Dock_In, self).__init__(outcomes=('Single_Assembled', 'Double_Assembled', 'abort'), output_keys=["target"])
 
     def execute(self, userdata):
+        global GATE_REPLY
         rospy.loginfo('[fsm] Execute Dock_In')
-        # TODO If IR said it's done or navigation goal is reached
-        time.sleep(1)
-        if TASK.mode == "single_AMR":
-            # TODO Dark Magic, Change footprint to single Assembled
-            os.system("rostopic pub --once /move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.37,-0.37,0.0], [-0.37,0.37,0.0], [0.37,0.37,0.0], [0.37,-0.37,0.0]]'")
-            return 'Single_Assembled'
-        elif TASK.mode == "double_AMR":
-            switch_launch_double()
-            return 'Double_Assembled'
+        PUB_GATE_CMD.publish(Bool(True))
+        GATE_REPLY = None
+        while not rospy.is_shutdown() and TASK != None:
+            if GATE_REPLY == True:
+                # Get reply, Dockin successfully
+                rospy.loginfo("[fsm] Get gate reply: " + str(GATE_REPLY))
+                if TASK.mode == 'single_AMR':
+                    os.system("rostopic pub --once /move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.37,-0.37,0.0], [-0.37,0.37,0.0], [0.37,0.37,0.0], [0.37,-0.37,0.0]]'")
+                    return 'Single_Assembled'
+                elif TASK.mode == 'double_AMR':
+                    switch_launch_double()
+                    return 'Double_Assembled'
+            else:
+                # Renew the navigation goal by shelf detector TODO
+                pass
+            time.sleep(TIME_INTERVAL)
+        rospy.logwarn('[fsm] task abort')
+        return 'abort'
 
 class Go_Way_Point(smach.State):
     def __init__(self):
@@ -273,8 +283,14 @@ class Go_Way_Point(smach.State):
 
     def execute(self, userdata):
         rospy.loginfo('[fsm] Execute Go_Way_Point')
-        time.sleep(1)
-        return 'done'
+        GOAL_MANAGER.send_goal(TASK.wait_location, ROBOT_NAME + "/map")
+        while not rospy.is_shutdown() and TASK != None:
+            if GOAL_MANAGER.is_reached:
+                # TODO Wait and evaluate possiability to get to final goal
+                return 'done'
+            time.sleep(TIME_INTERVAL)
+        rospy.logwarn('[fsm] task abort')
+        return 'abort'
 
 class Go_Goal(smach.State):
     def __init__(self):
@@ -282,8 +298,13 @@ class Go_Goal(smach.State):
 
     def execute(self, userdata):
         rospy.loginfo('[fsm] Execute Go_Goal')
-        time.sleep(1)
-        return 'done'
+        GOAL_MANAGER.send_goal(TASK.goal_location, ROBOT_NAME + "/map")
+        while not rospy.is_shutdown() and TASK != None:
+            if GOAL_MANAGER.is_reached:
+                return 'done'
+            time.sleep(TIME_INTERVAL)
+        rospy.logwarn('[fsm] task abort')
+        return 'abort'
 
 class Dock_Out(smach.State):
 
@@ -293,19 +314,22 @@ class Dock_Out(smach.State):
     def execute(self, userdata):
         '''
         '''
+        global GATE_REPLY
         rospy.loginfo('[fsm] Execute Dock_Out')
-        
-        # Switch launch file 
-        # TODO How to decide goto Single_Assembled or Double_Assembled
-        # TODO reached dock_out navi goal
-        if TASK.mode == "single_AMR":
-            # TODO Dark Magic, Change footprint back to single AMR
-            os.system("rostopic pub --once /move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.22,-0.22,0.0], [-0.22,0.22,0.0], [0.22,0.22,0.0], [0.22,-0.22,0.0]]'")
-        elif TASK.mode == "double_AMR":
-            switch_launch_single()
-
-        time.sleep(1)
-        return 'done'
+        PUB_GATE_CMD.publish(Bool(False)) # Release the gate
+        GATE_REPLY = None
+        while not rospy.is_shutdown() and TASK != None:
+            if GATE_REPLY == False:
+                # TODO reached dock_out navi goal
+                # Send Goal # TODO
+                if TASK.mode == "single_AMR":
+                    # TODO Dark Magic, Change footprint back to single AMR
+                    os.system("rostopic pub --once /move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.22,-0.22,0.0], [-0.22,0.22,0.0], [0.22,0.22,0.0], [0.22,-0.22,0.0]]'")
+                elif TASK.mode == "double_AMR":
+                    switch_launch_single()
+            time.sleep(TIME_INTERVAL)
+        rospy.logwarn('[fsm] task abort')
+        return 'abort'
 
 class Go_Home(smach.State):
     def __init__(self):
@@ -314,9 +338,13 @@ class Go_Home(smach.State):
     def execute(self, userdata):
         global TASK
         rospy.loginfo('[fsm] Execute Go_Home')
-        time.sleep(1)
-        TASK = None
-        return 'done'
+        GOAL_MANAGER.send_goal(TASK.home_location, ROBOT_NAME + "/map")
+        while not rospy.is_shutdown() and TASK != None:
+            if GOAL_MANAGER.is_reached:
+                return 'done'
+            time.sleep(TIME_INTERVAL)
+        rospy.logwarn('[fsm] task abort')
+        return 'abort'
 
 class Single_Assembled(smach.State):
 
@@ -360,13 +388,17 @@ if __name__ == "__main__":
     ROBOT_NAME = rospy.get_param(param_name="~robot_name")
     ROLE = rospy.get_param(param_name="~role")
     INIT_STATE = rospy.get_param(param_name="~init_state")
+    TIME_INTERVAL = 1.0/rospy.get_param(param_name="~frequency")
 
     # Service
     rospy.Service(name="~task", service_class=StringSrv, handler=task_cb)
-
+    
+    # Subscriber
+    rospy.Subscriber("/gate_reply", Bool, gate_reply_cb)
+    GATE_REPLY = None
     # Publisher
     PUB_SEARCH_CENTER = rospy.Publisher("search_center", Point, queue_size = 1)
-
+    PUB_GATE_CMD = rospy.Publisher("/gate_cmd", Bool, queue_size = 1)
     # Global variable 
     TASK = None # store task information
     ROSLAUNCH = None

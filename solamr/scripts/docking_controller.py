@@ -7,7 +7,7 @@ import tf
 import tf.msg
 
 import os # For dark magic
-from std_msgs.msg import String,Bool
+from std_msgs.msg import String, Bool
 import time
 from geometry_msgs.msg import PoseStamped,PolygonStamped, Point,Twist
 import actionlib
