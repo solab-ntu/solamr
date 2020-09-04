@@ -12,4 +12,9 @@
         <arg name="l_half" value="$(arg l_half)"/>
         <arg name="l_half_neg" value="$(arg l_half_neg)"/>
     </include>
+
+    <!-- Odom Fuser Single AMR -->
+    <node pkg="solamr" type="odom_fuser_single_AMR.py"  name="odom_fuser_single_AMR">
+        <param name="robot_name" value="$(arg robot_name)"/>
+    </node>
 </launch>

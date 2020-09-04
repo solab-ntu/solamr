@@ -11,15 +11,15 @@
     <group ns="$(arg robot_name)">
         <!-- SMACH -->
         <node pkg="solamr" type="fsm.py" name="fsm" output="screen">
-            <param name="roslaunch_path_single_amr" value="$(find solamr)/launch/run_single_AMR.launch"/>
-            <param name="roslaunch_path_double_amr" value="$(find solamr)/launch/run_double_AMR.launch"/>
+            <param name="roslaunch_path_single_amr" value="$(find solamr)/launch/run_single_AMR_$(arg robot_name).launch"/>
+            <param name="roslaunch_path_double_amr" value="$(find solamr)/launch/run_double_AMR_$(arg robot_name).launch"/>
             <param name="robot_name" value="$(arg robot_name)"/>
             <param name="role" value="$(arg role)"/>
             <param name="init_state" value="$(arg init_state)"/>
         </node>
 
         <!-- SMACH viewer-->
-        <node pkg="smach_viewer" type="smach_viewer.py" name="smach_viewer"/>
+        <!-- <node pkg="smach_viewer" type="smach_viewer.py" name="smach_viewer"/> -->
         
         <!-- 2D Lidar -->
         <include file="$(find solamr)/launch/includes/multi_laser.launch.xml">
@@ -43,14 +43,14 @@
             <param name="frame_id" value="$(arg robot_name)/map"/>
         </node>
         
-        <!-- Forwarding topics from nano rf -->
+        <!-- Forwarding topics from nano tf -->
         <node pkg="solamr" type="tf_forward_from_nano.py" name="tf_forwarder" output='screen'>
             <param name="robot_name" value="$(arg robot_name)"/>
         </node>
 
         <!-- Forwarding topics for PC rviz -->
         <node pkg="solamr" type="tf_rviz_forwarder.py"  name="tf_rviz_forwarder">
-            <param name="robot_name" value="$(arg robot_name)"/>
+            <rosparam command="load" file="$(find solamr)/params/tf_rviz/single_AMR_$(arg role).yaml"/>
         </node>
 
         <!-- FKIE -->

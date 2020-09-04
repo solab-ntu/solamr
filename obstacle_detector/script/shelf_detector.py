@@ -327,7 +327,8 @@ def mode_switch_cb(req):
     try:
         with open(req.data) as file:
             rospy.loginfo("[shelf_detector] Load yaml file from " + req.data)
-            params = yaml.load(file, Loader=yaml.FullLoader)
+            params = yaml.safe_load(file)
+            # params = yaml.load(file, Loader=yaml.FullLoader)
             # Mode 
             MODE = params['MODE']
             # Kinematics

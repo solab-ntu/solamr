@@ -1,0 +1,12 @@
+tf_rviz_list: [
+  [car1/map, car1/odom],
+  [car1/odom, car1/base_link],
+  [car1/base_link, car1/laser_front],
+  [car1/base_link, car1/laser_rear],
+  # Apriltag 
+  [car1/base_link, car1/shelf_one],
+  [car1/base_link, car1/shelf_two],
+  [car1/base_link, car1/home],
+  [car1/base_link, car1/A_site],
+  [car1/base_link, car1/B_site]
+]

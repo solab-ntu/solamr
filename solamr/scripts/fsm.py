@@ -85,7 +85,8 @@ def task_cb(req):
     try:
         with open(path) as file:
             rospy.loginfo("[shelf_detector] Load yaml file from " + path)
-            params = yaml.load(file, Loader=yaml.FullLoader)
+            # params = yaml.load(file, Loader=yaml.FullLoader)
+            params = yaml.safe_load(file)
             TASK = Task(params['mode'],
                         params['shelf_id'],
                         params['tag_location'],
