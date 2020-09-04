@@ -17,10 +17,16 @@ import smach_ros
 import rospkg
 import roslaunch
 from tf.transformations import quaternion_from_euler
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, Point
 from move_base_msgs.msg import MoveBaseGoal
+import actionlib
+from actionlib_msgs.msg import GoalStatusArray
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from solamr.srv import StringSrv
 import roslaunch
+# Custom 
+from lucky_utility.ros.lucky_utility import get_tf
+
 
 class Task(object):
     def __init__(self, mode, shelf_id, tag_location,
@@ -98,6 +104,36 @@ def task_cb(req):
     except OSError:
         rospy.logerr("[fsm] Yaml file not found at " + req.data)
         return "Yaml file not found"
+
+
+class Goal_Manager(object):
+    def __init__(self):
+        self.action = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        self.action.wait_for_server()
+        self.is_reached = False
+        self.goal = None
+    
+    def send_goal(self, xyt, frame_id):
+        self.is_reached = False
+        self.goal = MoveBaseGoal()
+        self.goal.target_pose.header.frame_id = frame_id
+        self.goal.target_pose.header.stamp = rospy.Time.now()
+        self.goal.target_pose.pose.position.x = xyt[0]
+        self.goal.target_pose.pose.position.y = xyt[1]
+        self.goal.target_pose.pose.position.z = 0
+        quaternion = quaternion_from_euler(0.0, 0.0, xyt[2])
+        (self.goal.target_pose.pose.orientation.x,
+         self.goal.target_pose.pose.orientation.y,
+         self.goal.target_pose.pose.orientation.z,
+         self.goal.target_pose.pose.orientation.w) = quaternion
+        self.action.send_goal(goal=self.goal, feedback_cb=self.feedback_cb, done_cb=self.reached_cb)
+
+    def feedback_cb(self):
+        pass
+    
+    def reached_cb(self):
+        self.is_reached = True
+
 class Initial_State(smach.State):
     def __init__(self):
         super(Initial_State, self).__init__(outcomes=('Single_AMR', 'Single_Assembled', 'Double_Assembled'))
@@ -126,22 +162,32 @@ class Single_AMR(smach.State):
         return 'Find_Shelf'
 
 class Find_Shelf(smach.State):
-
     def __init__(self):
         super(Find_Shelf, self).__init__(outcomes=('abort', 'done'))
 
     def execute(self, userdata):
-        '''
-        userdata.tagID -> find shelf
-        userdata.proximity_goal -> A fuszy goal that shelf prababaly nearby
-        '''
-        # TODO Listen to service abort
         rospy.loginfo('[fsm] Execute Find_Shelf')
-        rospy.loginfo(str(TASK.mode))
-        # TODO send_goal
-        # Keep checking tagid, and make sure standby tf is published
-        time.sleep(1)
-        return 'done'
+
+        # TODO Send search radius
+
+        # Send goal
+        GOAL_MANAGER.send_goal(TASK.tag_location, ROBOT_NAME + "/base_link")
+
+        while not rospy.is_shutdown():
+            # Get apriltag shelf location
+            if ROBOT_NAME == "car1":
+                shelf_xyt = get_tf(TFBUFFER, "car1/base_link", "car1/shelf_one")
+            elif ROBOT_NAME == "car2":
+                shelf_xyt = get_tf(TFBUFFER, "car2/base_link", "car2/shelf_two")
+            
+            if shelf_xyt != None:
+                return 'done'
+                # goal_xyt = shelf_xyt # TODO add a distance
+            
+            # Check goal reached or not 
+            if GOAL_MANAGER.is_reached:
+                return 'done'
+            time.sleep(0.1)
 
 class Go_Dock_Standby(smach.State):
 
@@ -152,6 +198,32 @@ class Go_Dock_Standby(smach.State):
         '''
         '''
         rospy.loginfo('[fsm] Execute Go_Dock_Standby')
+
+        while not rospy.is_shutdown():
+            # Get apriltag shelf location
+            if ROBOT_NAME == "car1":
+                shelf_xyt = get_tf(TFBUFFER, "car1/base_link", "car1/shelf_one")
+            elif ROBOT_NAME == "car2":
+                shelf_xyt = get_tf(TFBUFFER, "car2/base_link", "car2/shelf_two")
+            
+            
+            if shelf_xyt != None:
+                # Update goal by camera apriltag 
+                GOAL_MANAGER.send_goal(shelf_xyt, ROBOT_NAME + "/base_link")# TODO add a distance
+                # goal_xyt = shelf_xyt 
+
+                # Update search center for shelf detector
+                point = Point()
+                point.x = shelf_xyt[0]
+                point.y = shelf_xyt[1]
+                PUB_SEARCH_CENTER.publish(point)
+
+            # Check goal reached or not 
+            if GOAL_MANAGER.is_reached:
+                return 'done'
+            
+            time.sleep(0.1)
+
         time.sleep(1)
         # TODO Go to standby point , if navi goal is 
         # Send_goal()
@@ -241,29 +313,6 @@ class Single_Assembled(smach.State):
             else:
                 return 'Go_Way_Point'
             time.sleep(1)
-        '''
-        x_m, y_m, rz_deg, behavior = userdata.target
-        userdata.behavior = behavior
-
-        goal = MoveBaseGoal()
-        goal.target_pose.header.frame_id = 'map'
-        goal.target_pose.header.stamp = rospy.Time.now()
-        goal.target_pose.pose.position.x = x_m
-        goal.target_pose.pose.position.y = y_m
-        q = quaternion_from_euler(0.0, 0.0, radians(rz_deg))
-        goal.target_pose.pose.orientation.z = q[2]
-        goal.target_pose.pose.orientation.w = q[3]
-
-        rospy.loginfo('fsm/Single_Assembled : {} {} {}'.format(x_m, y_m, rz_deg))
-        self.status = None
-        self.action_move_base.send_goal(goal=goal, feedback_cb=None, done_cb=self.done_cb)
-        self.action_move_base.wait_for_result()
-
-        if self.status == 3:
-            return 'done'
-        else:
-            return 'failed'
-        '''
 
 class Double_Assembled(smach.State):
 
@@ -281,8 +330,6 @@ class Double_Assembled(smach.State):
                 return 'Go_Way_Point'
             time.sleep(1)
 
-
-
 if __name__ == "__main__":
 
     rospy.init_node(name='fsm', anonymous=False)
@@ -297,13 +344,18 @@ if __name__ == "__main__":
     # Service
     rospy.Service(name="~task", service_class=StringSrv, handler=task_cb)
 
+    # Publisher
+    PUB_SEARCH_CENTER = rospy.Publisher(ROBOT_NAME + "/search_center", Point, queue_size = 1)
+
     # Global variable 
     TASK = None # store task information
     ROSLAUNCH = None
-    # -- Get service
-    # action_move_base = actionlib.SimpleActionClient(ns=ns_action, ActionSpec=MoveBaseAction)
-    # action_move_base.wait_for_server()
-    
+    # Goal manager
+    GOAL_MANAGER = Goal_Manager()
+    # For getting Tf
+    TFBUFFER = tf2_ros.Buffer()
+    tf2_ros.TransformListener(TFBUFFER)
+
     # -- FSM Config
     SM = smach.StateMachine(outcomes=['completed'])
     with SM:
