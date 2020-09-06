@@ -14,12 +14,11 @@ import rospkg
 import roslaunch
 import tf2_ros
 import actionlib
-import roslaunch
 import smach
 import smach_ros
 # Ros message
 from tf.transformations import quaternion_from_euler
-from geometry_msgs.msg import Twist, Point
+from geometry_msgs.msg import Twist, Point, PoseStamped
 from actionlib_msgs.msg import GoalStatusArray
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from solamr.srv import StringSrv
@@ -139,26 +138,46 @@ class Goal_Manager(object):
         # self.action.wait_for_server()
         self.is_reached = False
         self.goal = None
+        self.pub_simple_goal = rospy.Publisher("move_base_simple/goal", PoseStamped, queue_size = 1)
     
+    def check_reached(self):
+        pass
+
     def send_goal(self, xyt, frame_id):
         self.is_reached = False
-        self.goal = MoveBaseGoal()
-        self.goal.target_pose.header.frame_id = frame_id
-        self.goal.target_pose.header.stamp = rospy.Time.now()
-        self.goal.target_pose.pose.position.x = xyt[0]
-        self.goal.target_pose.pose.position.y = xyt[1]
-        self.goal.target_pose.pose.position.z = 0
+        # Cancel current goal 
+        # self.action.cancel_all_goals()
+
+        # self.goal = MoveBaseGoal()
+        # self.goal.target_pose.header.frame_id = frame_id
+        # self.goal.target_pose.header.stamp = rospy.Time.now()
+        # self.goal.target_pose.pose.position.x = xyt[0]
+        # self.goal.target_pose.pose.position.y = xyt[1]
+        # self.goal.target_pose.pose.position.z = 0
+        # quaternion = quaternion_from_euler(0.0, 0.0, xyt[2])
+        # (self.goal.target_pose.pose.orientation.x,
+        #  self.goal.target_pose.pose.orientation.y,
+        #  self.goal.target_pose.pose.orientation.z,
+        #  self.goal.target_pose.pose.orientation.w) = quaternion
+        # self.action.send_goal(goal=self.goal, feedback_cb=self.feedback_cb, done_cb=self.reached_cb)
+        self.goal = PoseStamped()
+        self.goal.header.frame_id = frame_id
+        self.goal.header.stamp = rospy.Time.now()
+        self.goal.pose.position.x = xyt[0]
+        self.goal.pose.position.y = xyt[1]
+        self.goal.pose.position.z = 0
         quaternion = quaternion_from_euler(0.0, 0.0, xyt[2])
-        (self.goal.target_pose.pose.orientation.x,
-         self.goal.target_pose.pose.orientation.y,
-         self.goal.target_pose.pose.orientation.z,
-         self.goal.target_pose.pose.orientation.w) = quaternion
-        self.action.send_goal(goal=self.goal, feedback_cb=self.feedback_cb, done_cb=self.reached_cb)
+        (self.goal.pose.orientation.x,
+         self.goal.pose.orientation.y,
+         self.goal.pose.orientation.z,
+         self.goal.pose.orientation.w) = quaternion
+        self.pub_simple_goal.publish(self.goal)
 
     def feedback_cb(self, feedback):
         pass
     
     def reached_cb(self,status, result):
+        rospy.logwarn("GGGGGGGGGGGGGGGGGG REcive reached callback")
         self.is_reached = True
    
 class Initial_State(smach.State):
@@ -227,15 +246,19 @@ class Go_Dock_Standby(smach.State):
         '''
         '''
         rospy.loginfo('[fsm] Execute Go_Dock_Standby')
-
+        GOAL_MANAGER.is_reached = False
         while not rospy.is_shutdown() and TASK != None:
-
+            # Check goal reached or not 
+            if GOAL_MANAGER.is_reached:
+                
+                return 'done'
+            
             # Get apriltag shelf location
             if ROBOT_NAME == "car1":
                 shelf_xyt = get_tf(TFBUFFER, "car1/map", "car1/shelf_one")
             elif ROBOT_NAME == "car2":
                 shelf_xyt = get_tf(TFBUFFER, "car2/map", "car2/shelf_two")
-            
+                       
             if shelf_xyt != None:
                 # Update goal by camera apriltag
                 (x1,y1) = vec_trans_coordinate((-0.5, 0), (shelf_xyt[0], shelf_xyt[1], shelf_xyt[2] + pi/2))
@@ -250,10 +273,6 @@ class Go_Dock_Standby(smach.State):
                     point.x = xyt[0]
                     point.y = xyt[1]
                     PUB_SEARCH_CENTER.publish(point)
-
-            # Check goal reached or not 
-            if GOAL_MANAGER.is_reached:
-                return 'done'
             
             time.sleep(TIME_INTERVAL)
 
@@ -265,14 +284,23 @@ class Dock_In(smach.State):
         super(Dock_In, self).__init__(outcomes=('Single_Assembled', 'Double_Assembled', 'abort'), output_keys=["target"])
 
     def execute(self, userdata):
-        global GATE_REPLY
+        # global GATE_REPLY
         rospy.loginfo('[fsm] Execute Dock_In')
-        PUB_GATE_CMD.publish(Bool(True))
-        GATE_REPLY = None
+        # PUB_GATE_CMD.publish(Bool(True))
+        PUB_GATE_CMD.publish(Bool(False))
+        # GATE_REPLY = None
+        # GOAL_MANAGER.action.cancel_all_goals()
+        GOAL_MANAGER.is_reached = False
         while not rospy.is_shutdown() and TASK != None:
-            if GATE_REPLY == True:
+            # # Check goal reached or not
+            # if GOAL_MANAGER.is_reached:
+            #     return 'done'
+            
+            # if GATE_REPLY == True or GOAL_MANAGER.is_reached:
+            if GOAL_MANAGER.is_reached:
+                PUB_GATE_CMD.publish(Bool(True))
                 # Get reply, Dockin successfully
-                rospy.loginfo("[fsm] Get gate reply: " + str(GATE_REPLY))
+                # rospy.loginfo("[fsm] Get gate reply: " + str(GATE_REPLY))
                 if TASK.mode == 'single_AMR':
                     os.system("rostopic pub --once /" + ROBOT_NAME + "/move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.65,-0.65,0.0], [-0.65,0.65,0.0], [0.65,0.65,0.0], [0.65,-0.65,0.0]]'")
                     return 'Single_Assembled'
@@ -283,6 +311,7 @@ class Dock_In(smach.State):
                 xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
                 if xyt != None:
                     GOAL_MANAGER.send_goal(xyt, ROBOT_NAME + "/base_link")
+                    # pub_simple_goal.publish()
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
@@ -324,21 +353,23 @@ class Dock_Out(smach.State):
     def execute(self, userdata):
         '''
         '''
-        global GATE_REPLY
+        global GATE_REPLY, EXTER_CMD
         rospy.loginfo('[fsm] Execute Dock_Out')
         PUB_GATE_CMD.publish(Bool(False)) # Release the gate
+        # TODO Dark Magic, Change footprint back to single AMR
+        os.system("rostopic pub --once /" + ROBOT_NAME + "/move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.22,-0.22,0.0], [-0.22,0.22,0.0], [0.22,0.22,0.0], [0.22,-0.22,0.0]]'")
         GATE_REPLY = None
-        while not rospy.is_shutdown() and TASK != None:
+        while not rospy.is_shutdown() and (TASK != None or EXTER_CMD == 'dockout'):
+            EXTER_CMD = None
             xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
             if xyt != None:
                 send_tf((-0.8, 0, 0), ROBOT_NAME + "/shelf_center", ROBOT_NAME + "/shelf_center/dock_out")
-                goal_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
+                goal_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center/dock_out")
                 GOAL_MANAGER.send_goal(goal_xyt, ROBOT_NAME + "/base_link")
             
             if GATE_REPLY == False:
                 if TASK.mode == "single_AMR":
-                    # TODO Dark Magic, Change footprint back to single AMR
-                    os.system("rostopic pub --once /" + ROBOT_NAME + "/move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.22,-0.22,0.0], [-0.22,0.22,0.0], [0.22,0.22,0.0], [0.22,-0.22,0.0]]'")
+                    pass
                 elif TASK.mode == "double_AMR":
                     switch_launch_single()
             time.sleep(TIME_INTERVAL)
@@ -366,12 +397,14 @@ class Single_Assembled(smach.State):
         super(Single_Assembled, self).__init__(outcomes=['Dock_Out', 'Go_Way_Point'], input_keys=["target"], output_keys=["behavior"])
 
     def execute(self, userdata):
+        global EXTER_CMD
         rospy.loginfo('[fsm] Execute Single_Assembled')
         # TODO rosservice to dock out or accept a task
         while not rospy.is_shutdown():
             if TASK == None:
                 # TODO listen to service to decide
                 if EXTER_CMD == "dockout":
+                    
                     return 'Dock_Out'
             else:
                 return 'Go_Way_Point'
