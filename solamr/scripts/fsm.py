@@ -81,7 +81,7 @@ def task_cb(req):
     '''
     Load yaml file and change parameter by req.data file path
     '''
-    global TASK
+    global TASK, EXTER_CMD
 
     if req.data == "abort":
         TASK = None
@@ -96,7 +96,11 @@ def task_cb(req):
     elif req.data == "gateclose":
         PUB_GATE_CMD.publish(Bool(True)) # Close the gate
         return 'gateclose OK'
-
+    
+    elif req.data == "dockout":
+        EXTER_CMD = "dockout"
+        return 'dockout OK'
+    
     # Check Task is busy
     if TASK != None:
         rospy.logerr("[fsm] Reject task, because I'm busy now.")
@@ -325,9 +329,6 @@ class Dock_Out(smach.State):
         PUB_GATE_CMD.publish(Bool(False)) # Release the gate
         GATE_REPLY = None
         while not rospy.is_shutdown() and TASK != None:
-            # TODO reached dock_out navi goal
-            # Send Goal # TODO
-            # GOAL_MANAGER.send_goal()
             xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
             if xyt != None:
                 send_tf((-0.8, 0, 0), ROBOT_NAME + "/shelf_center", ROBOT_NAME + "/shelf_center/dock_out")
@@ -370,8 +371,8 @@ class Single_Assembled(smach.State):
         while not rospy.is_shutdown():
             if TASK == None:
                 # TODO listen to service to decide
-                continue
-                return 'Dock_Out'
+                if EXTER_CMD == "dockout":
+                    return 'Dock_Out'
             else:
                 return 'Go_Way_Point'
             time.sleep(1)
@@ -415,6 +416,7 @@ if __name__ == "__main__":
     # Global variable 
     TASK = None # store task information
     ROSLAUNCH = None
+    EXTER_CMD = None
     # Goal manager
     GOAL_MANAGER = Goal_Manager()
     # For getting Tf
