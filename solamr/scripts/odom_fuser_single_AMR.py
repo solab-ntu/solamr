@@ -51,8 +51,10 @@ class Odom_Fuser_Single_AMR():
         self.map_xyt = (data.pose.pose.position.x - self.odom_xyt[0],
                         data.pose.pose.position.y - self.odom_xyt[1],
                         normalize_angle(yaw - self.odom_xyt[2]))
-                        
-    
+        rospy.loginfo("[odom_fuser_single_AMR] initpose: " + str((data.pose.pose.position.x, data.pose.pose.position.y, yaw)))
+        rospy.loginfo("[odom_fuser_single_AMR] map_fused: " + str(self.map_xyt))
+
+
     def run_once(self):
         # Update TF
         map_rtabmap_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/raw/map", ROBOT_NAME+"/raw/odom")

@@ -55,6 +55,9 @@
                                    /car1/move_base/GlobalPlanner/plan,
                                    /car1/move_base/DWAPlannerROS/local_plan,
                                    /car1/move_base/TebLocalPlannerROS/local_plan,
+                                   /car1/smach_server/smach/container_init,
+                                   /car1/smach_server/smach/container_status,
+                                   /car1/smach_server/smach/container_structure,
                                    
                                    /car2/scan_merged/filtered,
                                    /car2/zed2/map_rviz,
@@ -66,7 +69,10 @@
                                    /car2/move_base/local_costmap/costmap,
                                    /car2/move_base/local_costmap/footprint,
                                    /car2/move_base/GlobalPlanner/plan,
-                                   /car2/move_base/DWAPlannerROS/local_plan]
+                                   /car2/move_base/DWAPlannerROS/local_plan,
+                                   /car2/smach_server/smach/container_init,
+                                   /car2/smach_server/smach/container_status,
+                                   /car2/smach_server/smach/container_structure]
                                    </rosparam>
 
     <!-- The list of services, which are to be ignored while a synchroniation. The ~ignore_nodes list is processed first.

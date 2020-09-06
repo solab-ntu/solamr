@@ -27,6 +27,9 @@ from std_msgs.msg import String, Bool
 # Custom
 from lucky_utility.ros.rospy_utility import get_tf, vec_trans_coordinate, send_tf
 
+SINGLE_AMR_LEN = 0.44
+
+
 class Task(object):
     def __init__(self, mode,  tag_location,
                  wait_location = None, goal_location = None, home_location = None):
@@ -254,7 +257,6 @@ class Go_Dock_Standby(smach.State):
         return 'abort'
 
 class Dock_In(smach.State):
-    # TODO need test
     def __init__(self):
         super(Dock_In, self).__init__(outcomes=('Single_Assembled', 'Double_Assembled', 'abort'), output_keys=["target"])
 
@@ -268,13 +270,12 @@ class Dock_In(smach.State):
                 # Get reply, Dockin successfully
                 rospy.loginfo("[fsm] Get gate reply: " + str(GATE_REPLY))
                 if TASK.mode == 'single_AMR':
-                    os.system("rostopic pub --once /" + ROBOT_NAME + "/move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.45,-0.45,0.0], [-0.45,0.45,0.0], [0.45,0.45,0.0], [0.45,-0.45,0.0]]'")
+                    os.system("rostopic pub --once /" + ROBOT_NAME + "/move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.65,-0.65,0.0], [-0.65,0.65,0.0], [0.65,0.65,0.0], [0.65,-0.65,0.0]]'")
                     return 'Single_Assembled'
                 elif TASK.mode == 'double_AMR':
                     switch_launch_double()
                     return 'Double_Assembled'
             else:
-                # Test TODO base_link or map 
                 xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
                 if xyt != None:
                     GOAL_MANAGER.send_goal(xyt, ROBOT_NAME + "/base_link")
@@ -324,10 +325,16 @@ class Dock_Out(smach.State):
         PUB_GATE_CMD.publish(Bool(False)) # Release the gate
         GATE_REPLY = None
         while not rospy.is_shutdown() and TASK != None:
+            # TODO reached dock_out navi goal
+            # Send Goal # TODO
+            # GOAL_MANAGER.send_goal()
+            xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
+            if xyt != None:
+                send_tf((-0.8, 0, 0), ROBOT_NAME + "/shelf_center", ROBOT_NAME + "/shelf_center/dock_out")
+                goal_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
+                GOAL_MANAGER.send_goal(goal_xyt, ROBOT_NAME + "/base_link")
+            
             if GATE_REPLY == False:
-                # TODO reached dock_out navi goal
-                # Send Goal # TODO
-                # GOAL_MANAGER.send_goal()
                 if TASK.mode == "single_AMR":
                     # TODO Dark Magic, Change footprint back to single AMR
                     os.system("rostopic pub --once /" + ROBOT_NAME + "/move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.22,-0.22,0.0], [-0.22,0.22,0.0], [0.22,0.22,0.0], [0.22,-0.22,0.0]]'")
