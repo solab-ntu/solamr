@@ -255,8 +255,12 @@ class Go_Dock_Standby(smach.State):
                 return 'done'
             
             # Send search center to shelf detector
-            send_tf((0.0, 0.0, 0.0), "car2/shelf_two", "car2/shelf_two_center", z_offset=-0.3)
-            xyt = get_tf(TFBUFFER, ROBOT_NAME +"/base_link", ROBOT_NAME +"/shelf_two_center")
+            if ROBOT_NAME == "car1":
+                send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_one", ROBOT_NAME + "/shelf_one_center", z_offset=-0.3)
+                xyt = get_tf(TFBUFFER, ROBOT_NAME +"/base_link", ROBOT_NAME +"/shelf_one_center")
+            elif ROBOT_NAME == "car2":
+                send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_two", ROBOT_NAME + "/shelf_two_center", z_offset=-0.3)
+                xyt = get_tf(TFBUFFER, ROBOT_NAME +"/base_link", ROBOT_NAME +"/shelf_two_center")
             if xyt != None:
                 point = Point()
                 point.x = xyt[0]
@@ -279,7 +283,6 @@ class Dock_In(smach.State):
         PUB_GATE_CMD.publish(Bool(False))
         # Send goal 
         GOAL_MANAGER.send_goal((0.1, 0, 0), ROBOT_NAME + "/shelf_center")
-        rospy.loginfo("[fsm] dockin : " + str(GOAL_MANAGER.is_reached))
         while not rospy.is_shutdown() and TASK != None:
             if GOAL_MANAGER.is_reached:
                 # Close gate
@@ -301,7 +304,8 @@ class Go_Way_Point(smach.State):
 
     def execute(self, userdata):
         rospy.loginfo('[fsm] Execute Go_Way_Point')
-        GOAL_MANAGER.send_goal(TASK.wait_location, ROBOT_NAME + "/map")
+        # TODO 
+        # GOAL_MANAGER.send_goal(TASK.wait_location, ROBOT_NAME + "/map")
         while not rospy.is_shutdown() and TASK != None:
             if GOAL_MANAGER.is_reached:
                 # TODO Wait and evaluate possiability to get to final goal
@@ -366,6 +370,7 @@ class Go_Home(smach.State):
         GOAL_MANAGER.send_goal(TASK.home_location, ROBOT_NAME + "/map")
         while not rospy.is_shutdown() and TASK != None:
             if GOAL_MANAGER.is_reached:
+                TASK = None
                 return 'done'
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
@@ -387,8 +392,9 @@ class Single_Assembled(smach.State):
                     
                     return 'Dock_Out'
             else:
-                return 'Dock_Out'
-                #return 'Go_Way_Point'
+                # return 'Dock_Out'
+                return 'Go_Goal'
+                # return 'Go_Way_Point'
             time.sleep(1)
 
 class Double_Assembled(smach.State):

@@ -1,4 +1,5 @@
 tf_rviz_list: [
+  # General
   [car1/map, car1/odom],
   [car1/odom, car1/base_link],
   [car1/base_link, car1/laser_front],
@@ -8,5 +9,9 @@ tf_rviz_list: [
   [car1/base_link, car1/shelf_two],
   [car1/base_link, car1/home],
   [car1/base_link, car1/A_site],
-  [car1/base_link, car1/B_site]
+  [car1/base_link, car1/B_site],
+  # FSM goal 
+  [car2/shelf_two, car2/shelf_two_center],
+  [car2/base_link, car2/shelf_center],
+  [car2/shelf_center, car2/shelf_center/dock_out]
 ]

@@ -41,7 +41,7 @@
     -->
 
     <!-- The list of topics to synchronize. The ~ignore_nodes and ~ignore_topics lists are processed first. -->
-    <rosparam param="sync_topics" subst_value="True">[/$(arg robot_name)/initialpose, /$(arg robot_name)/move_base_simple/goal, /$(arg robot_name)/rap_cmd, /$(arg robot_name)/cmd_vel]</rosparam>
+    <rosparam param="sync_topics" subst_value="True">[/$(arg robot_name)/raw/initialpose, /$(arg robot_name)/move_base_simple/goal, /$(arg robot_name)/rap_cmd, /$(arg robot_name)/cmd_vel]</rosparam>
 
     <!-- The list of services, which are to be ignored while a synchroniation. The ~ignore_nodes list is processed first.
     These are defaults and cannot be removed: ['/*get_loggers', '/*set_logger_level'] -->
