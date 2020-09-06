@@ -19,6 +19,11 @@ if __name__ == '__main__':
                        (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/home"),
                        (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/A_site"),
                        (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/B_site")]
+                    #    (ROBOT_NAME+"/raw/map", ROBOT_NAME+"/raw/shelf_one"),
+                    #    (ROBOT_NAME+"/raw/map", ROBOT_NAME+"/raw/shelf_two"),
+                    #    (ROBOT_NAME+"/raw/map", ROBOT_NAME+"/raw/home"),
+                    #    (ROBOT_NAME+"/raw/map", ROBOT_NAME+"/raw/A_site"),
+                    #    (ROBOT_NAME+"/raw/map", ROBOT_NAME+"/raw/B_site")]
 
     br = tf2_ros.TransformBroadcaster()
     rate = rospy.Rate(10.0)

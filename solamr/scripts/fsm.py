@@ -82,7 +82,17 @@ def task_cb(req):
 
     if req.data == "abort":
         TASK = None
+        # Cacelled all goal
+        GOAL_MANAGER.action.cancel_all_goals()
         return 'abort OK'
+    
+    elif req.data == "gateopen":
+        PUB_GATE_CMD.publish(Bool(False)) # Release the gate
+        return 'gateopen OK'
+
+    elif req.data == "gateclose":
+        PUB_GATE_CMD.publish(Bool(True)) # Close the gate
+        return 'gateclose OK'
 
     # Check Task is busy
     if TASK != None:
@@ -115,6 +125,7 @@ def gate_reply_cb(data):
     global GATE_REPLY
     GATE_REPLY = data.data
 
+
 class Goal_Manager(object):
     def __init__(self):
         self.action = actionlib.SimpleActionClient('move_base', MoveBaseAction)
@@ -142,6 +153,7 @@ class Goal_Manager(object):
     
     def reached_cb(self,status, result):
         self.is_reached = True
+   
 class Initial_State(smach.State):
     def __init__(self):
         super(Initial_State, self).__init__(outcomes=('Single_AMR', 'Single_Assembled', 'Double_Assembled'))
@@ -179,14 +191,14 @@ class Find_Shelf(smach.State):
         # TODO Send search radius
 
         # Send goal
-        GOAL_MANAGER.send_goal(TASK.tag_location, ROBOT_NAME + "/base_link")
+        GOAL_MANAGER.send_goal(TASK.tag_location, ROBOT_NAME + "/map")
 
         while not rospy.is_shutdown() and TASK != None:
             # Get apriltag shelf location
             if ROBOT_NAME == "car1":
-                shelf_xyt = get_tf(TFBUFFER, "car1/base_link", "car1/shelf_one")
+                shelf_xyt = get_tf(TFBUFFER, "car1/map", "car1/shelf_one")
             elif ROBOT_NAME == "car2":
-                shelf_xyt = get_tf(TFBUFFER, "car2/base_link", "car2/shelf_two")
+                shelf_xyt = get_tf(TFBUFFER, "car2/map", "car2/shelf_two")
             
             if shelf_xyt != None:
                 return 'done'
@@ -198,6 +210,7 @@ class Find_Shelf(smach.State):
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
+
 class Go_Dock_Standby(smach.State):
 
     def __init__(self):
@@ -222,28 +235,18 @@ class Go_Dock_Standby(smach.State):
                 GOAL_MANAGER.send_goal((x1, y1, shelf_xyt[2] + pi/2),
                                         ROBOT_NAME + "/map")
                 
-                # TODO dark nessitie
-                if ROBOT_NAME == "car1":
-                    shelf_xyt_base_link = get_tf(TFBUFFER, "car1/base_link", "car1/shelf_one")
-                elif ROBOT_NAME == "car2":
-                    shelf_xyt_base_link = get_tf(TFBUFFER, "car2/base_link", "car2/shelf_two")
-
-                if shelf_xyt_base_link != None:
-                    (x2,y2) = vec_trans_coordinate(( 0.3, 0),
-                    (shelf_xyt_base_link[0], shelf_xyt_base_link[1], shelf_xyt_base_link[2] + pi/2))
-                    send_tf((x2,y2,shelf_xyt_base_link[2] + pi/2), "car2/base_link", "car2/B_site")
-
-                    # Update search center for shelf detector
+                # Send search center to shelf detector
+                send_tf((0.0, 0.0, 0.0), "car2/shelf_two", "car2/shelf_two_center", z_offset=-0.3)
+                xyt = get_tf(TFBUFFER, ROBOT_NAME +"/base_link", ROBOT_NAME +"/shelf_two_center")
+                if xyt != None:
                     point = Point()
-                    point.x = x2
-                    point.y = y2
+                    point.x = xyt[0]
+                    point.y = xyt[1]
                     PUB_SEARCH_CENTER.publish(point)
 
             # Check goal reached or not 
             if GOAL_MANAGER.is_reached:
-                # TODO TMP test
-                pass
-                # return 'done'
+                return 'done'
             
             time.sleep(TIME_INTERVAL)
 
@@ -265,14 +268,16 @@ class Dock_In(smach.State):
                 # Get reply, Dockin successfully
                 rospy.loginfo("[fsm] Get gate reply: " + str(GATE_REPLY))
                 if TASK.mode == 'single_AMR':
-                    os.system("rostopic pub --once /move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.37,-0.37,0.0], [-0.37,0.37,0.0], [0.37,0.37,0.0], [0.37,-0.37,0.0]]'")
+                    os.system("rostopic pub --once /" + ROBOT_NAME + "/move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.45,-0.45,0.0], [-0.45,0.45,0.0], [0.45,0.45,0.0], [0.45,-0.45,0.0]]'")
                     return 'Single_Assembled'
                 elif TASK.mode == 'double_AMR':
                     switch_launch_double()
                     return 'Double_Assembled'
             else:
-                # Renew the navigation goal by shelf detector TODO
-                pass
+                # Test TODO base_link or map 
+                xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
+                if xyt != None:
+                    GOAL_MANAGER.send_goal(xyt, ROBOT_NAME + "/base_link")
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
@@ -322,9 +327,10 @@ class Dock_Out(smach.State):
             if GATE_REPLY == False:
                 # TODO reached dock_out navi goal
                 # Send Goal # TODO
+                # GOAL_MANAGER.send_goal()
                 if TASK.mode == "single_AMR":
                     # TODO Dark Magic, Change footprint back to single AMR
-                    os.system("rostopic pub --once /move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.22,-0.22,0.0], [-0.22,0.22,0.0], [0.22,0.22,0.0], [0.22,-0.22,0.0]]'")
+                    os.system("rostopic pub --once /" + ROBOT_NAME + "/move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.22,-0.22,0.0], [-0.22,0.22,0.0], [0.22,0.22,0.0], [0.22,-0.22,0.0]]'")
                 elif TASK.mode == "double_AMR":
                     switch_launch_single()
             time.sleep(TIME_INTERVAL)

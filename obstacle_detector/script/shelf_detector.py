@@ -218,7 +218,8 @@ class Shelf_finder():
         if MODE == "double_AMR":
             self.viz_marker.publish()
         elif MODE == "single_AMR":
-            send_tf(self.center, BASE_LINK_FRAME, "shelf_center")
+            send_tf(self.center, BASE_LINK_FRAME, ROBOT_NAME + "/shelf_center")
+            self.viz_marker.publish()
     
     def run_once(self, ref_ang, search_center):
         '''
@@ -451,9 +452,11 @@ if __name__ == '__main__':
     while not rospy.is_shutdown():
         SHELF_MAIN_FINDER.obstacle = OBSTACLE_DATA
         if MODE == "single_AMR":
-            # TODO ref_ang need to be passed
-            if SHELF_MAIN_FINDER.run_once(0, SEARCH_CENTER_SINGLE_AMR): # Pass center searchj
-                SHELF_MAIN_FINDER.publish()
+            if SEARCH_CENTER_SINGLE_AMR != None:
+                # TODO ref_ang need to be passed
+                if SHELF_MAIN_FINDER.run_once(0, SEARCH_CENTER_SINGLE_AMR): # Pass center search
+                    SEARCH_CENTER_SINGLE_AMR = SHELF_MAIN_FINDER.center
+                    SHELF_MAIN_FINDER.publish()
         elif MODE == "double_AMR":
             if SHELF_MAIN_FINDER.run_once():
                 SHELF_MAIN_FINDER.publish()
