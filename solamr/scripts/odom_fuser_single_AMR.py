@@ -48,18 +48,15 @@ class Odom_Fuser_Single_AMR():
             data.pose.pose.orientation.z,
             data.pose.pose.orientation.w)
         (_,_,yaw) = tf.transformations.euler_from_quaternion(quaternion)
-        # odom_xy_on_map = vec_trans_coordinate((self.odom_xyt[0], self.odom_xyt[1]), (0, 0, self.map_xyt[2]))
-        # self.map_xyt = (data.pose.pose.position.x - odom_xy_on_map[0],
-        #                 data.pose.pose.position.y - odom_xy_on_map[1],
-        #                 self.map_xyt[2])
         odom = vec_trans_coordinate((self.odom_xyt[0], self.odom_xyt[1]), (0, 0, self.map_xyt[2]))
-        rho = yaw - self.odom_xyt[2]
+        rho = yaw - (self.odom_xyt[2] + self.map_xyt[2])
+        rospy.loginfo(str(rho))
         rota_odom_x = cos(rho)*odom[0] - sin(rho)*odom[1]
-        rota_odom_y = cos(rho)*odom[1] + sin(rho)*odom[0]
+        rota_odom_y = sin(rho)*odom[0] + cos(rho)*odom[1]
         
         self.map_xyt = (data.pose.pose.position.x - rota_odom_x,
                         data.pose.pose.position.y - rota_odom_y,
-                        self.map_xyt[2] - rho)
+                        normalize_angle(self.map_xyt[2] + rho))
         
 
     def run_once(self):
