@@ -11,7 +11,7 @@ tf_rviz_list: [
   [car1/base_link, car1/A_site],
   [car1/base_link, car1/B_site],
   # FSM goal 
-  [car2/shelf_two, car2/shelf_two_center],
-  [car2/base_link, car2/shelf_center],
-  [car2/shelf_center, car2/shelf_center/dock_out]
+  [car1/shelf_two, car1/shelf_two_center],
+  [car1/base_link, car1/shelf_center],
+  [car1/shelf_center, car1/shelf_center/dock_out]
 ]

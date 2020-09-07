@@ -379,7 +379,7 @@ class Go_Home(smach.State):
 class Single_Assembled(smach.State):
 
     def __init__(self):
-        super(Single_Assembled, self).__init__(outcomes=['Dock_Out', 'Go_Way_Point'], input_keys=["target"], output_keys=["behavior"])
+        super(Single_Assembled, self).__init__(outcomes=['Dock_Out', 'Go_Way_Point', 'Go_Goal'], input_keys=["target"], output_keys=["behavior"])
 
     def execute(self, userdata):
         global EXTER_CMD
@@ -488,7 +488,7 @@ if __name__ == "__main__":
         smach.StateMachine.add(
             label='Single_Assembled',
             state=Single_Assembled(),
-            transitions={'Dock_Out': 'Dock_Out', 'Go_Way_Point': 'Go_Way_Point'})
+            transitions={'Dock_Out': 'Dock_Out', 'Go_Way_Point': 'Go_Way_Point', 'Go_Goal': 'Go_Goal'})
 
         smach.StateMachine.add(
             label='Go_Way_Point',

@@ -48,7 +48,7 @@ class Odom_Fuser_Single_AMR():
             data.pose.pose.orientation.z,
             data.pose.pose.orientation.w)
         (_,_,yaw) = tf.transformations.euler_from_quaternion(quaternion)
-        # odom_xy_on_map = vec_trans_coordinate((self.odom_xyt[0], self.odom_xyt[1]), self.map_xyt)
+        odom_xy_on_map = vec_trans_coordinate((self.odom_xyt[0], self.odom_xyt[1]), (0, 0, self.map_xyt[2]))
         # self.odom_xyt[2] + self.map_xyt[2] - 
         #odom_xy_on_map[0] = xy[0] + self.map_xyt[0]
         #odom_xy_on_map[1] = xy[1] + self.map_xyt[1]
@@ -56,19 +56,21 @@ class Odom_Fuser_Single_AMR():
         #                 data.pose.pose.position.y - self.odom_xyt[1],
         #                 normalize_angle(yaw - self.odom_xyt[2]))
         #beta = atan2(data.pose.pose.position.y - odom_xy_on_map[1], data.pose.pose.position.x - odom_xy_on_map[0])
-        #self.map_xyt = (data.pose.pose.position.x - odom_xy_on_map[0],
-        #                data.pose.pose.position.y - odom_xy_on_map[1],
-        #                self.map_xyt[2])
+        self.map_xyt = (data.pose.pose.position.x - odom_xy_on_map[0],
+                        data.pose.pose.position.y - odom_xy_on_map[1],
+                        self.map_xyt[2])
                         # normalize_angle(beta + self.map_xyt[2]))
         #rospy.loginfo("[odom_fuser_single_AMR] initpose: " + str((data.pose.pose.position.x, data.pose.pose.position.y, yaw)))
         #rospy.loginfo("[odom_fuser_single_AMR] map_fused: " + str(self.map_xyt))
-        self.odom_xyt = [0,0,0]
-        self.map_xyt = [data.pose.pose.position.x, data.pose.pose.position.y, yaw]
+        #self.odom_xyt = [0,0,0]
+        #self.map_xyt = [data.pose.pose.position.x, data.pose.pose.position.y, yaw]
+        #self.publish()
 
     def run_once(self):
         # Update TF
         map_rtabmap_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/raw/map", ROBOT_NAME+"/raw/odom")
         odom_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/raw/odom", ROBOT_NAME+"/raw/base_link")
+        # rospy.loginfo(str(odom_xyt))
         
         if odom_xyt != None:
             self.odom_xyt = odom_xyt
