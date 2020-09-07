@@ -14,19 +14,18 @@ if __name__ == '__main__':
     ROBOT_NAME = rospy.get_param(param_name="~robot_name")
     
     tf_request_list = [
-                       (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/shelf_one"),
-                       (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/shelf_two"),
+                       (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/shelf_car1"),
+                       (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/shelf_car2"),
                        (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/home"),
                        (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/A_site"),
-                       (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/B_site")]
-                    #    (ROBOT_NAME+"/raw/map", ROBOT_NAME+"/raw/shelf_one"),
-                    #    (ROBOT_NAME+"/raw/map", ROBOT_NAME+"/raw/shelf_two"),
-                    #    (ROBOT_NAME+"/raw/map", ROBOT_NAME+"/raw/home"),
-                    #    (ROBOT_NAME+"/raw/map", ROBOT_NAME+"/raw/A_site"),
-                    #    (ROBOT_NAME+"/raw/map", ROBOT_NAME+"/raw/B_site")]
+                       (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/B_site"),
+                       (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/marker1"),
+                       (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/marker2"),
+                       (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/marker3")]
 
     br = tf2_ros.TransformBroadcaster()
     rate = rospy.Rate(10.0)
+
     while not rospy.is_shutdown():
         for i in tf_request_list:
             try:
@@ -34,6 +33,10 @@ if __name__ == '__main__':
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 continue
             else:
+                # if i == (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/marker1"):
+                #     print ((rospy.Time.now() - trans.header.stamp).to_sec())
+                #     if (rospy.Time.now() - trans.header.stamp).to_sec() > 0.5:
+                #         continue
                 # Reset time stamp
                 # trans.header.stamp = rospy.Time.now()
                 # Get rid of /raw/

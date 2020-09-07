@@ -48,23 +48,47 @@ class Odom_Fuser_Single_AMR():
             data.pose.pose.orientation.z,
             data.pose.pose.orientation.w)
         (_,_,yaw) = tf.transformations.euler_from_quaternion(quaternion)
+        self.update_global_localization((data.pose.pose.position.x, data.pose.pose.position.y, yaw))
+        # odom = vec_trans_coordinate((self.odom_xyt[0], self.odom_xyt[1]), (0, 0, self.map_xyt[2]))
+        # rho = yaw - (self.odom_xyt[2] + self.map_xyt[2])
+        # rota_odom_x = cos(rho)*odom[0] - sin(rho)*odom[1]
+        # rota_odom_y = sin(rho)*odom[0] + cos(rho)*odom[1]
+        
+        # self.map_xyt = (data.pose.pose.position.x - rota_odom_x,
+        #                 data.pose.pose.position.y - rota_odom_y,
+        #                 normalize_angle(self.map_xyt[2] + rho))
+
+    def update_global_localization(self, update_xyt):
+        '''
+        '''
         odom = vec_trans_coordinate((self.odom_xyt[0], self.odom_xyt[1]), (0, 0, self.map_xyt[2]))
-        rho = yaw - (self.odom_xyt[2] + self.map_xyt[2])
-        rospy.loginfo(str(rho))
+        rho = update_xyt[2] - (self.odom_xyt[2] + self.map_xyt[2])
         rota_odom_x = cos(rho)*odom[0] - sin(rho)*odom[1]
         rota_odom_y = sin(rho)*odom[0] + cos(rho)*odom[1]
         
-        self.map_xyt = (data.pose.pose.position.x - rota_odom_x,
-                        data.pose.pose.position.y - rota_odom_y,
+        self.map_xyt = (update_xyt[0] - rota_odom_x,
+                        update_xyt[1] - rota_odom_y,
                         normalize_angle(self.map_xyt[2] + rho))
-        
 
     def run_once(self):
         # Update TF
         map_rtabmap_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/raw/map", ROBOT_NAME+"/raw/odom")
         odom_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/raw/odom", ROBOT_NAME+"/raw/base_link")
-        # rospy.loginfo(str(odom_xyt))
         
+        # Get Markers,. need to think
+        # marker1_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/base_link", ROBOT_NAME + "/marker1")
+        # if marker1_xyt != None:
+        #     base_link = get_tf(self.tfBuffer, ROBOT_NAME+"/map", ROBOT_NAME + "/base_link")
+        #     if base_link != None:
+        #         print (marker1_xyt[2])
+        #         marker1_on_map = vec_trans_coordinate(marker1_xyt[:2], (0, 0, base_link[2]))
+        #         marker1_coor = (1.75, -1.0, 3.1416926) # x- axis diff
+
+        #         init_pose = (marker1_coor[0] - marker1_on_map[0], 
+        #                      marker1_coor[1] - marker1_on_map[1], 
+        #                      - marker1_xyt[2] - pi)
+        #         self.update_global_localization(init_pose)
+
         if odom_xyt != None:
             self.odom_xyt = odom_xyt
         if map_rtabmap_xyt != None:

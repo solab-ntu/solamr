@@ -77,7 +77,7 @@ def task_cb(req):
     '''
     Load yaml file and change parameter by req.data file path
     '''
-    global TASK, EXTER_CMD
+    global TASK
 
     if req.data == "abort":
         TASK = None
@@ -93,10 +93,6 @@ def task_cb(req):
         PUB_GATE_CMD.publish(Bool(True)) # Close the gate
         return 'gateclose OK'
     
-    elif req.data == "dockout":
-        EXTER_CMD = "dockout"
-        return 'dockout OK'
-    
     # Check Task is busy
     if TASK != None:
         rospy.logerr("[fsm] Reject task, because I'm busy now.")
@@ -110,7 +106,6 @@ def task_cb(req):
             # params = yaml.load(file, Loader=yaml.FullLoader)
             params = yaml.safe_load(file)
             TASK = Task(params['mode'],
-                        # params['shelf_id'],
                         params['tag_location'],
                         params['wait_location'],
                         params['goal_location'],
@@ -135,17 +130,9 @@ class Goal_Manager(object):
         # self.action.wait_for_server()
         self.is_reached = False
         self.goal = None
-        #self.pub_simple_goal = rospy.Publisher("move_base_simple/goal", PoseStamped, queue_size = 1)
-    
-    # def check_reached(self):
-    #     get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
-    #     pass
 
     def send_goal(self, xyt, frame_id):
         self.is_reached = False
-        # Cancel current goal 
-        # self.action.cancel_all_goals()
-
         self.goal = MoveBaseGoal()
         self.goal.target_pose.header.frame_id = frame_id
         self.goal.target_pose.header.stamp = rospy.Time.now()
@@ -158,24 +145,11 @@ class Goal_Manager(object):
          self.goal.target_pose.pose.orientation.z,
          self.goal.target_pose.pose.orientation.w) = quaternion
         self.action.send_goal(goal=self.goal, feedback_cb=self.feedback_cb, done_cb=self.reached_cb)
-        # self.goal = PoseStamped()
-        # self.goal.header.frame_id = frame_id
-        # self.goal.header.stamp = rospy.Time.now()
-        # self.goal.pose.position.x = xyt[0]
-        # self.goal.pose.position.y = xyt[1]
-        # self.goal.pose.position.z = 0
-        # quaternion = quaternion_from_euler(0.0, 0.0, xyt[2])
-        # (self.goal.pose.orientation.x,
-        #  self.goal.pose.orientation.y,
-        #  self.goal.pose.orientation.z,
-        #  self.goal.pose.orientation.w) = quaternion
-        # self.pub_simple_goal.publish(self.goal)
 
     def feedback_cb(self, feedback):
         pass
     
     def reached_cb(self,status, result):
-        rospy.logwarn("GGGGGGGGGGGGGGGGGG REcive reached callback")
         self.is_reached = True
    
 class Initial_State(smach.State):
@@ -201,8 +175,9 @@ class Single_AMR(smach.State):
         rospy.loginfo('[fsm] Execute Single_AMR')
         while not rospy.is_shutdown():
             if TASK != None:
-                break
-            time.sleep(1)
+                if TASK.tag_location != None:
+                    break
+            time.sleep(TIME_INTERVAL)
         return 'Find_Shelf'
 
 class Find_Shelf(smach.State):
@@ -215,11 +190,8 @@ class Find_Shelf(smach.State):
         GOAL_MANAGER.send_goal(TASK.tag_location, ROBOT_NAME + "/map")
         while not rospy.is_shutdown() and TASK != None:
             # Get apriltag shelf location
-            if ROBOT_NAME == "car1":
-                shelf_xyt = get_tf(TFBUFFER, "car1/map", "car1/shelf_one")
-            elif ROBOT_NAME == "car2":
-                shelf_xyt = get_tf(TFBUFFER, "car2/map", "car2/shelf_two")
-            
+            shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
+
             if shelf_xyt != None:
                 return 'done'
             
@@ -239,10 +211,7 @@ class Go_Dock_Standby(smach.State):
         '''
         '''
         rospy.loginfo('[fsm] Execute Go_Dock_Standby')
-        if ROBOT_NAME == "car1":
-            shelf_xyt = get_tf(TFBUFFER, "car1/map", "car1/shelf_one")
-        elif ROBOT_NAME == "car2":
-            shelf_xyt = get_tf(TFBUFFER, "car2/map", "car2/shelf_two")
+        shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
         # 
         if shelf_xyt != None:
             (x1,y1) = vec_trans_coordinate((-0.5, 0), (shelf_xyt[0], shelf_xyt[1], shelf_xyt[2] + pi/2))
@@ -255,12 +224,16 @@ class Go_Dock_Standby(smach.State):
                 return 'done'
             
             # Send search center to shelf detector
-            if ROBOT_NAME == "car1":
-                send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_one", ROBOT_NAME + "/shelf_one_center", z_offset=-0.3)
-                xyt = get_tf(TFBUFFER, ROBOT_NAME +"/base_link", ROBOT_NAME +"/shelf_one_center")
-            elif ROBOT_NAME == "car2":
-                send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_two", ROBOT_NAME + "/shelf_two_center", z_offset=-0.3)
-                xyt = get_tf(TFBUFFER, ROBOT_NAME +"/base_link", ROBOT_NAME +"/shelf_two_center")
+            # if ROBOT_NAME == "car1":
+            #     send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_" + ROBOT_NAME, ROBOT_NAME + "/tag/shelf_center", z_offset=-0.3)
+            #     xyt = get_tf(TFBUFFER, ROBOT_NAME +"/base_link", ROBOT_NAME +"/tag/shelf_center")
+            # elif ROBOT_NAME == "car2":
+            #     send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_two", ROBOT_NAME + "/shelf_two_center", z_offset=-0.3)
+            #     xyt = get_tf(TFBUFFER, ROBOT_NAME +"/base_link", ROBOT_NAME +"/shelf_two_center")
+            
+            send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_" + ROBOT_NAME, ROBOT_NAME + "/tag/shelf_center", z_offset=-0.3)
+            xyt = get_tf(TFBUFFER, ROBOT_NAME +"/base_link", ROBOT_NAME +"/tag/shelf_center")
+            
             if xyt != None:
                 point = Point()
                 point.x = xyt[0]
@@ -382,18 +355,13 @@ class Single_Assembled(smach.State):
         super(Single_Assembled, self).__init__(outcomes=['Dock_Out', 'Go_Way_Point', 'Go_Goal'], input_keys=["target"], output_keys=["behavior"])
 
     def execute(self, userdata):
-        global EXTER_CMD
         rospy.loginfo('[fsm] Execute Single_Assembled')
-        # TODO rosservice to dock out or accept a task
         while not rospy.is_shutdown():
-            if TASK == None:
-                # TODO listen to service to decide
-                if EXTER_CMD == "dockout":
-                    
+            if TASK != None:
+                if TASK.goal_location == None:
                     return 'Dock_Out'
-            else:
-                # return 'Dock_Out'
-                return 'Go_Goal'
+                else:
+                    return 'Go_Goal'
                 # return 'Go_Way_Point'
             time.sleep(1)
 

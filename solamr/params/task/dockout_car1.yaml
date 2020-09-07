@@ -1,0 +1,5 @@
+mode: "single_AMR"
+tag_location: null # [None, None, None]
+wait_location: null # [None, None, None]
+goal_location: null # [None, None, None]
+home_location: [3.3, 2.76, 1.57]

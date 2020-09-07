@@ -10,8 +10,11 @@ tf_rviz_list: [
   [car1/base_link, car1/home],
   [car1/base_link, car1/A_site],
   [car1/base_link, car1/B_site],
+  [car1/base_link, car1/marker1],
+  [car1/base_link, car1/marker2],
+  [car1/base_link, car1/marker3],
   # FSM goal 
-  [car1/shelf_two, car1/shelf_two_center],
+  [car1/shelf_car1, car1/tag/shelf_center],
   [car1/base_link, car1/shelf_center],
   [car1/shelf_center, car1/shelf_center/dock_out]
 ]
