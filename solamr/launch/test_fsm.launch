@@ -14,6 +14,7 @@
         <param name="role" value="$(arg role)"/>
         <param name="init_state" value="$(arg init_state)"/>
         <param name="frequency" value="10"/>
+        <param name="dummy_test" value="true"/>
     </node>
     <node pkg="smach_viewer" type="smach_viewer.py" name="smach_viewer"/>
 </launch>

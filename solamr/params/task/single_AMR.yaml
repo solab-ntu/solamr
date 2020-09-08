@@ -1,0 +1,11 @@
+# First state must be 'Single_AMR' or 'Single_Assembled' or 'Double_Assembled'
+# So does Last state
+task_flow: ['Single_AMR',
+            'Find_Shelf',
+            'Go_Dock_Standby',
+            'Dock_In',
+            'Single_Assembled',
+            'Go_Goal',
+            'Dock_Out',
+            'Go_Home',
+            'Single_AMR']

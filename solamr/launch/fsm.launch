@@ -14,5 +14,6 @@
         <param name="role" value="$(arg role)"/>
         <param name="init_state" value="$(arg init_state)"/>
         <param name="frequency" value="10"/>
+        <param name="dummy_test" value="false"/>
     </node>
 </launch>
