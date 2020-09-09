@@ -514,6 +514,7 @@ class Go_Home(smach.State):
             return 'done'
 
         GOAL_MANAGER.is_reached = False
+        GOAL_MANAGER.send_goal(TASK.home_location, ROBOT_NAME + "/map")
         while IS_RUN and TASK != None:
             # Check goal reached
             if GOAL_MANAGER.is_reached:
@@ -521,8 +522,11 @@ class Go_Home(smach.State):
                 rospy.loginfo("[fsm] task done")
                 return 'done'
             
-            # Send goal 
-            GOAL_MANAGER.send_goal(TASK.home_location, ROBOT_NAME + "/map")
+            # Send goal
+            home_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/home")
+            if home_xyt != None:
+                goal_xy = vec_trans_coordinate((0.5,0), (home_xyt[0], home_xyt[1], home_xyt[2]-pi/2))
+                GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], home_xyt[2]+pi/2), ROBOT_NAME + "/map")
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
