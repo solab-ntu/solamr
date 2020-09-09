@@ -14,6 +14,7 @@ import roslib
 import rospkg
 import roslaunch
 import tf2_ros
+import tf # For tf.transformations.euler_from_quaternion(quaternion)
 import actionlib
 import smach
 import smach_ros
@@ -25,7 +26,10 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from solamr.srv import StringSrv
 from std_msgs.msg import String, Bool
 # Custom
-from lucky_utility.ros.rospy_utility import get_tf, vec_trans_coordinate, send_tf
+from lucky_utility.ros.rospy_utility import get_tf, vec_trans_coordinate, send_tf, normalize_angle
+
+GOAL_XY_TOLERANCE = 0.12 # m
+GOAL_THETA_TOLERANCE = 0.06 # Radian
 
 class Task(object):
     def __init__(self):
@@ -118,6 +122,7 @@ def transit_mode(from_mode, to_mode):
         # TODO change footprint?
 
     else:
+        rospy.logerr("[fsm] Undefine transit mode : " + str(from_mode) + " -> " + str(to_mode))
         pass
 
 def task_cb(req):
@@ -184,9 +189,11 @@ class Goal_Manager(object):
         # self.action.wait_for_server()
         self.is_reached = False
         self.goal = None
+        self.goal_xyt = [None, None, None]
 
     def send_goal(self, xyt, frame_id):
         self.is_reached = False
+        self.goal_xyt = xyt
         self.goal = MoveBaseGoal()
         self.goal.target_pose.header.frame_id = frame_id
         self.goal.target_pose.header.stamp = rospy.Time.now()
@@ -201,11 +208,42 @@ class Goal_Manager(object):
         self.action.send_goal(goal=self.goal, feedback_cb=self.feedback_cb, done_cb=self.reached_cb)
 
     def feedback_cb(self, feedback):
-        pass
+        '''
+        base_position: 
+            header: 
+                seq: 0
+                stamp: 
+                    secs: 1599645575
+                    nsecs: 811315059
+                frame_id: "car2/map"
+            pose: 
+                position: 
+                    x: 3.95221392238
+                    y: 1.52272473913
+                    z: 0.2
+                orientation: 
+                    x: 0.0
+                    y: 0.0
+                    z: 0.999849354686
+                    w: 0.0173570715568
+        '''
+        quaternion = (
+            feedback.base_position.pose.orientation.x,
+            feedback.base_position.pose.orientation.y,
+            feedback.base_position.pose.orientation.z,
+            feedback.base_position.pose.orientation.w)
+        (_,_,yaw) = tf.transformations.euler_from_quaternion(quaternion)
+        xyt = (feedback.base_position.pose.position.x, feedback.base_position.pose.position.y, yaw)
+        #rospy.loginfo("xy:" + str((self.goal_xyt[0] - xyt[0])**2 + (self.goal_xyt[1] - xyt[1])**2))
+        #rospy.loginfo("theta: " + str(abs(normalize_angle(self.goal_xyt[2] - xyt[2]))))
+        if (self.goal_xyt[0] - xyt[0])**2 + (self.goal_xyt[1] - xyt[1])**2 < GOAL_XY_TOLERANCE**2:
+            if abs(normalize_angle(self.goal_xyt[2] - xyt[2])) < GOAL_THETA_TOLERANCE:
+                rospy.loginfo("[fsm] Goal reached")
+                self.is_reached = True
     
     def reached_cb(self,status, result):
-        self.is_reached = True
-
+        pass
+    
 class Initial_State(smach.State):
     def __init__(self):
         super(Initial_State, self).__init__(outcomes=('Single_AMR', 'Single_Assembled', 'Double_Assembled'))
@@ -225,7 +263,7 @@ class Single_AMR(smach.State):
     Waiting State, do nothing
     '''
     def __init__(self):
-        super(Single_AMR, self).__init__(outcomes=('Find_Shelf','Single_Assembled','Double_Assembled', 'done'), output_keys=[])
+        super(Single_AMR, self).__init__(outcomes=('Find_Shelf','Single_Assembled','Double_Assembled','Go_Home', 'done'), output_keys=[])
 
     def execute(self, userdata):
         global TASK, CUR_STATE
@@ -257,9 +295,11 @@ class Find_Shelf(smach.State):
             time.sleep(2)
             return 'done'
 
-        # Send goal
-        GOAL_MANAGER.send_goal(TASK.shelf_location, ROBOT_NAME + "/map")
+        GOAL_MANAGER.is_reached = False
         while IS_RUN and TASK != None:
+            # Send goal
+            GOAL_MANAGER.send_goal(TASK.shelf_location, ROBOT_NAME + "/map")
+
             # Get apriltag shelf location
             shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
 
@@ -287,17 +327,32 @@ class Go_Dock_Standby(smach.State):
             time.sleep(2)
             return 'done'
         
-        shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
-        # 
-        if shelf_xyt != None:
-            (x1,y1) = vec_trans_coordinate((-0.5, 0), (shelf_xyt[0], shelf_xyt[1], shelf_xyt[2] + pi/2))
-            GOAL_MANAGER.send_goal((x1, y1, shelf_xyt[2] + pi/2),
-                                    ROBOT_NAME + "/map")
-        
+        GOAL_MANAGER.is_reached = False
         while IS_RUN and TASK != None:
             # Check goal reached or not
             if GOAL_MANAGER.is_reached:
                 return 'done'
+            
+            # Get shelf tag tf
+            shelf_laser_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_center")
+            if shelf_laser_xyt != None:
+                base_link_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
+                if base_link_xyt != None:
+                    min_distance = float('inf')
+                    best_xyt = None
+                    for i in range(4): # Which direction  is best
+                        (x1,y1) = vec_trans_coordinate((1.0, 0), (shelf_laser_xyt[0], shelf_laser_xyt[1], shelf_laser_xyt[2] + i*pi/2))
+                        if (base_link_xyt[0] - x1)**2 + (base_link_xyt[1] - y1)**2 < min_distance:
+                            min_distance = (base_link_xyt[0] - x1)**2 + (base_link_xyt[1] - y1)**2
+                            best_xyt = (x1,y1,shelf_laser_xyt[2] + i*pi/2 + pi)
+                shelf_xyt = best_xyt
+            else:
+                shelf_tag_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
+                if shelf_tag_xyt != None:
+                    (x1,y1) = vec_trans_coordinate((-0.5, 0), (shelf_tag_xyt[0], shelf_tag_xyt[1], shelf_tag_xyt[2] + pi/2))
+                    shelf_xyt = (x1,y1,shelf_tag_xyt[2] + pi/2)
+            # GOAL_MANAGER.send_goal((x1, y1, shelf_xyt[2] + pi/2), ROBOT_NAME + "/map")
+            GOAL_MANAGER.send_goal(shelf_xyt, ROBOT_NAME + "/map")
             
             send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_" + ROBOT_NAME, ROBOT_NAME + "/tag/shelf_center", z_offset=-0.3)
             xyt = get_tf(TFBUFFER, ROBOT_NAME +"/base_link", ROBOT_NAME +"/tag/shelf_center")
@@ -329,8 +384,7 @@ class Dock_In(smach.State):
 
         # Open gate
         PUB_GATE_CMD.publish(Bool(False))
-        # Send goal 
-        GOAL_MANAGER.send_goal((0.1, 0, 0), ROBOT_NAME + "/shelf_center")
+        GOAL_MANAGER.is_reached = False
         while IS_RUN and TASK != None:
             if GOAL_MANAGER.is_reached:
                 # Close gate
@@ -339,20 +393,13 @@ class Dock_In(smach.State):
                 next_state = TASK.task_flow[TASK.task_flow.index('Dock_In')+1]
                 transit_mode('Single_AMR', next_state)
                 return next_state
-
-                # if next_state == 'Single_Assembled':
-                #     # TODO use ros topic
-                    
-                #     transit_mode('Single_AMR', next_state)
-                #     return next_state
-                # elif next_state == 'Double_Assembled':
-                #     # switch_launch_double()
-                    
-                #     transit_mode('Single_AMR', next_state)
-                #     return next_state
-                # else:
-                #     rospy.logwarn('[fsm] Unreconginize next stage: ' + str(next_state))
-                #     return 'abort'
+            
+            # Send goal
+            shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_center")
+            if shelf_xyt != None:
+                goal_xyt = vec_trans_coordinate((0.05,0), shelf_xyt)
+                # GOAL_MANAGER.send_goal((0.05, 0, 0), ROBOT_NAME + "/shelf_center")
+                GOAL_MANAGER.send_goal((goal_xyt[0], goal_xyt[1], shelf_xyt[2]), ROBOT_NAME + "/map")
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
@@ -406,6 +453,7 @@ class Dock_Out(smach.State):
 
     def execute(self, userdata):
         global GATE_REPLY, TASK, CUR_STATE
+        
         CUR_STATE = "Dock_Out"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
         if IS_DUMMY_TEST:
@@ -417,32 +465,33 @@ class Dock_Out(smach.State):
                 TASK = None
                 rospy.loginfo("[fsm] task done")
                 return 'Single_AMR'
+        
         # Open gate
         PUB_GATE_CMD.publish(Bool(False))
         GATE_REPLY = None
         
         previous_state = TASK.task_flow[TASK.task_flow.index('Dock_Out')-1]
         transit_mode(previous_state, "Single_AMR")
-
-        # if previous_state == "Single_Assembled":
-        #     # TODO Dark Magic, Change footprint back to single AMR
-        #     transit_mode(previous_state, "Single_AMR")
-        # elif previous_state == "Double_Assembled":
-        #     # switch_launch_single()
-        #     transit_mode(previous_state, "Single_AMR")
-        #     #switch_launch(ROSLAUNCH_PATH_SINGLE_AMR)
         
-        # Split goal into 5 waypoint , in order to avoid turning
-        # TODO is there another way?
-        for i in range(5):
-            GOAL_MANAGER.send_goal((-(0.8/5.0)*i,0,0), ROBOT_NAME + "/shelf_center")
-            while IS_RUN:
-                if TASK == None:
-                    rospy.logwarn('[fsm] task abort')
-                    return 'abort'
-                if GOAL_MANAGER.is_reached:
-                    break
-                time.sleep(TIME_INTERVAL)
+        # pid cmd_vel control
+        KP = 1.0
+        t_start = rospy.get_rostime().to_sec()
+        twist = Twist()
+        twist.linear.x = -0.1
+        while rospy.get_rostime().to_sec() - t_start < 10.0: # 10 sec
+            xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
+            if xyt != None:
+                twist.angular.z = KP*xyt[2] # KP*error
+            else:
+                twist.angular.z = 0.0
+            PUB_CMD_VEL.publish(twist)
+            time.sleep(TIME_INTERVAL)
+        
+        # Send zero velocity
+        twist = Twist()
+        PUB_CMD_VEL.publish(twist)
+
+        # Go to next state
         next_state = TASK.task_flow[TASK.task_flow.index('Dock_Out')+1]
         if next_state == 'Go_Home':
             return 'done'
@@ -464,12 +513,16 @@ class Go_Home(smach.State):
             TASK = None
             return 'done'
 
-        GOAL_MANAGER.send_goal(TASK.home_location, ROBOT_NAME + "/map")
+        GOAL_MANAGER.is_reached = False
         while IS_RUN and TASK != None:
+            # Check goal reached
             if GOAL_MANAGER.is_reached:
                 TASK = None
                 rospy.loginfo("[fsm] task done")
                 return 'done'
+            
+            # Send goal 
+            GOAL_MANAGER.send_goal(TASK.home_location, ROBOT_NAME + "/map")
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
@@ -539,7 +592,7 @@ if __name__ == "__main__":
     # Publisher
     PUB_SEARCH_CENTER = rospy.Publisher("search_center", Point, queue_size = 1)
     PUB_GATE_CMD = rospy.Publisher("/gate_cmd", Bool, queue_size = 1)
-    
+    PUB_CMD_VEL = rospy.Publisher("/" + ROBOT_NAME + "/cmd_vel", Twist, queue_size = 1)
     # Global variable 
     TASK = None # store task information
     ROSLAUNCH = None
@@ -568,6 +621,7 @@ if __name__ == "__main__":
             transitions={'Find_Shelf': 'Find_Shelf',
                          'Single_Assembled': 'Single_Assembled',
                          'Double_Assembled': 'Double_Assembled',
+                         'Go_Home': 'Go_Home',
                          'done': 'completed'})
         
         smach.StateMachine.add(

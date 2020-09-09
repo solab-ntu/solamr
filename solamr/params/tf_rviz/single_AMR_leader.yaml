@@ -5,8 +5,8 @@ tf_rviz_list: [
   [car1/base_link, car1/laser_front],
   [car1/base_link, car1/laser_rear],
   # Apriltag 
-  [car1/base_link, car1/shelf_one],
-  [car1/base_link, car1/shelf_two],
+  [car1/base_link, car1/shelf_car1],
+  [car1/base_link, car1/shelf_car2],
   [car1/base_link, car1/home],
   [car1/base_link, car1/A_site],
   [car1/base_link, car1/B_site],
@@ -15,6 +15,7 @@ tf_rviz_list: [
   [car1/base_link, car1/marker3],
   # FSM goal 
   [car1/shelf_car1, car1/tag/shelf_center],
+  [car1/map, car1/goal],
   [car1/base_link, car1/shelf_center],
   [car1/shelf_center, car1/shelf_center/dock_out]
 ]

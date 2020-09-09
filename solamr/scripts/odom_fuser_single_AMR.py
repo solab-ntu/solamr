@@ -18,6 +18,7 @@ class Odom_Fuser_Single_AMR():
         self.map_xyt = (None, None, None) #(x,y,theta)
         self.map_rtabmap_last = (None, None, None) #(x,y,theta)
         self.odom_xyt = (None, None, None) #(x,y,theta)
+        self.marker1_xyt_last = (None, None, None)
         # For getting Tf
         self.tfBuffer = tf2_ros.Buffer()
         tf2_ros.TransformListener(self.tfBuffer)
@@ -70,24 +71,38 @@ class Odom_Fuser_Single_AMR():
                         update_xyt[1] - rota_odom_y,
                         normalize_angle(self.map_xyt[2] + rho))
 
+
+    
     def run_once(self):
         # Update TF
         map_rtabmap_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/raw/map", ROBOT_NAME+"/raw/odom")
         odom_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/raw/odom", ROBOT_NAME+"/raw/base_link")
         
         # Get Markers,. need to think
-        # marker1_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/base_link", ROBOT_NAME + "/marker1")
-        # if marker1_xyt != None:
-        #     base_link = get_tf(self.tfBuffer, ROBOT_NAME+"/map", ROBOT_NAME + "/base_link")
-        #     if base_link != None:
-        #         print (marker1_xyt[2])
-        #         marker1_on_map = vec_trans_coordinate(marker1_xyt[:2], (0, 0, base_link[2]))
-        #         marker1_coor = (1.75, -1.0, 3.1416926) # x- axis diff
+        marker1_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/raw/base_link", ROBOT_NAME + "/raw/marker1")
+        if marker1_xyt != None and marker1_xyt != self.marker1_xyt_last:
+            base_link = get_tf(self.tfBuffer, ROBOT_NAME+"/map", ROBOT_NAME + "/base_link")
+            if base_link != None:
+                marker1_on_map = vec_trans_coordinate(marker1_xyt[:2], (0, 0, base_link[2]))
+                marker1_coor = (1.90, -1.0, 3.1416926) # x- axis diff
+                
+                # TODO this is un correct
+                init_pose = (marker1_coor[0] - marker1_on_map[0],
+                             marker1_coor[1] - marker1_on_map[1],
+                            - marker1_xyt[2] - pi)
 
-        #         init_pose = (marker1_coor[0] - marker1_on_map[0], 
-        #                      marker1_coor[1] - marker1_on_map[1], 
-        #                      - marker1_xyt[2] - pi)
-        #         self.update_global_localization(init_pose)
+                marker1_on_map_new = vec_trans_coordinate(marker1_xyt[:2], (0, 0, init_pose[2]))
+                markers_new_xy = (marker1_on_map_new[0] + init_pose[0],
+                                  marker1_on_map_new[1] + init_pose[1])
+                
+                # Check map->base_link->tag == map->tag is at the right place
+                error = (markers_new_xy[0] - marker1_coor[0])**2 + (markers_new_xy[1] - marker1_coor[1])**2
+                #print ("error: " + str(error))
+                if error < 0.01:
+                    self.update_global_localization(init_pose)
+
+                # Flags
+                self.marker1_xyt_last = marker1_xyt
 
         if odom_xyt != None:
             self.odom_xyt = odom_xyt
