@@ -192,7 +192,10 @@ class Goal_Manager(object):
             self.yaw_goal_tolerance != tolerance[1]:
             # Need to set new tolerance
             try:
+                # TODO 
                 rospy.wait_for_service("/" + ROBOT_NAME + "/move_base/DWAPlannerROS/set_parameters", 5.0)
+                # rospy.wait_for_service("/" + ROBOT_NAME + "/move_base/TebLocalPlannerROS/set_parameters", 5.0)
+                # client = dynamic_reconfigure.client.Client("/" + ROBOT_NAME + "/move_base/TebLocalPlannerROS", timeout=30)
                 client = dynamic_reconfigure.client.Client("/" + ROBOT_NAME + "/move_base/DWAPlannerROS", timeout=30)
                 client.update_configuration({"xy_goal_tolerance": tolerance[0]})
                 client.update_configuration({"yaw_goal_tolerance": tolerance[1]})
@@ -313,7 +316,7 @@ class Find_Shelf(smach.State):
             GOAL_MANAGER.send_goal(goal, ROBOT_NAME + "/map", tolerance = (0.3, pi/6))
             
             # Get apriltag shelf location
-            shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
+            shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME, is_warn = False)
 
             if shelf_xyt != None:
                 return 'done'
@@ -381,7 +384,7 @@ class Dock_In(smach.State):
         super(Dock_In, self).__init__(outcomes=('Single_Assembled', 'Double_Assembled', 'abort'), output_keys=["target"])
 
     def execute(self, userdata):
-        global CUR_STATE
+        global CUR_STATE, GATE_REPLY
         CUR_STATE = "Dock_In"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
         if IS_DUMMY_TEST:
@@ -391,24 +394,17 @@ class Dock_In(smach.State):
 
         # Open gate
         PUB_GATE_CMD.publish(Bool(False))
+        PUB_GATE_CMD.publish(Bool(True))
+        GATE_REPLY = None
         GOAL_MANAGER.is_reached = False
         while IS_RUN and TASK != None:
-            if GOAL_MANAGER.is_reached:
-                # Close gate
-                PUB_GATE_CMD.publish(Bool(True))
+            # Send goal
+            GOAL_MANAGER.send_goal((0.05, 0, 0), ROBOT_NAME + "/shelf_center")
+            if GOAL_MANAGER.is_reached or GATE_REPLY == True:
                 # Get reply, Dockin successfully
                 next_state = TASK.task_flow[TASK.task_flow.index('Dock_In')+1]
                 transit_mode('Single_AMR', next_state)
                 return next_state
-            
-            # Send goal
-            GOAL_MANAGER.send_goal((0.05, 0, 0), ROBOT_NAME + "/shelf_center")
-
-            # shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_center")
-            # if shelf_xyt != None:
-            #     goal_xyt = vec_trans_coordinate((0.05,0), shelf_xyt)
-            #     # GOAL_MANAGER.send_goal((0.05, 0, 0), ROBOT_NAME + "/shelf_center")
-            #     GOAL_MANAGER.send_goal((goal_xyt[0], goal_xyt[1], shelf_xyt[2]), ROBOT_NAME + "/map")
             
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
@@ -425,9 +421,8 @@ class Go_Way_Point(smach.State):
         if IS_DUMMY_TEST:
             time.sleep(2)
             return 'done'
-        
-        # TODO 
-        # GOAL_MANAGER.send_goal(TASK.wait_location, ROBOT_NAME + "/map")
+
+        GOAL_MANAGER.send_goal(TASK.wait_location, ROBOT_NAME + "/map")
         while IS_RUN and TASK != None:
             if GOAL_MANAGER.is_reached:
                 # TODO Wait and evaluate possiability to get to final goal
@@ -478,6 +473,7 @@ class Dock_Out(smach.State):
         
         # Open gate
         PUB_GATE_CMD.publish(Bool(False))
+        time.sleep(2) # wait shelf become static
         GATE_REPLY = None
         
         # previous_state = TASK.task_flow[TASK.task_flow.index('Dock_Out')-1]

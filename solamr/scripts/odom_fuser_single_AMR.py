@@ -69,7 +69,7 @@ class Odom_Fuser_Single_AMR():
         odom_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/raw/odom", ROBOT_NAME+"/raw/base_link")
         
         # Get Markers,. need to think
-        marker1_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/raw/base_link", ROBOT_NAME + "/raw/marker1")
+        marker1_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/raw/base_link", ROBOT_NAME + "/raw/marker1", is_warn = False)
         if marker1_xyt != None and marker1_xyt != self.marker1_xyt_last:
             base_link = get_tf(self.tfBuffer, ROBOT_NAME+"/map", ROBOT_NAME + "/base_link")
             if base_link != None:

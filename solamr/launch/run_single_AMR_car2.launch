@@ -7,6 +7,7 @@
     
     <!-- Move Base -->
     <include file="$(find solamr)/launch/includes/move_base_dwa.xml">
+    <!-- <include file="$(find solamr)/launch/includes/move_base_teb.xml"> -->
         <arg name="robot_name" value="$(arg robot_name)"/>
         <arg name="car_length" value="$(arg car_length)"/>
         <arg name="l_half" value="$(arg l_half)"/>
