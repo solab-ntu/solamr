@@ -20,7 +20,7 @@ import smach
 import smach_ros
 # Ros message
 from tf.transformations import quaternion_from_euler
-from geometry_msgs.msg import Twist, Point, PoseStamped, Polygon
+from geometry_msgs.msg import Twist, Point, PoseStamped, Polygon, Point32
 from actionlib_msgs.msg import GoalStatusArray
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionResult
 
@@ -30,9 +30,6 @@ from solamr.srv import StringSrv
 from std_msgs.msg import String, Bool
 # Custom
 from lucky_utility.ros.rospy_utility import get_tf, vec_trans_coordinate, send_tf, normalize_angle
-
-GOAL_XY_TOLERANCE = 0.12 # m
-GOAL_THETA_TOLERANCE = 0.06 # Radian
 
 class Task(object):
     def __init__(self):
@@ -57,7 +54,6 @@ def switch_launch(file_path):
             rospy.loginfo("[fsm] Shuting down single_AMR launch file")
             ROSLAUNCH.shutdown()
             time.sleep(5) # TODO DO WE need it ?
-        # ROSLAUNCH = init_roslaunch(file_path)
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
         roslaunch.configure_logging(uuid=uuid)
         ROSLAUNCH = roslaunch.parent.ROSLaunchParent(run_id=uuid, roslaunch_files=((file_path,)))
@@ -76,18 +72,20 @@ def transit_mode(from_mode, to_mode):
         '''
         # TODO need test
         footprint = Polygon()
-        footprint.points = [[-0.65,-0.65,0.0], [-0.65,0.65,0.0], [0.65,0.65,0.0], [0.65,-0.65,0.0]]
+        L_2 = 0.65
+        footprint.points = [Point32(-L_2,-L_2,0.0), Point32(-L_2, L_2,0.0),
+                            Point32( L_2, L_2,0.0), Point32( L_2,-L_2,0.0)]
         PUB_GLOBAL_FOOTPRINT.publish(footprint)
         PUB_LOCAL_FOOTPRINT.publish(footprint)
-        # os.system("rostopic pub --once /" + ROBOT_NAME + "/move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.65,-0.65,0.0], [-0.65,0.65,0.0], [0.65,0.65,0.0], [0.65,-0.65,0.0]]'")
 
     elif from_mode == "Single_AMR" and to_mode == "Double_Assembled":
         switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
     
     elif from_mode == "Single_Assembled" and to_mode == "Single_AMR":
-        # os.system("rostopic pub --once /" + ROBOT_NAME + "/move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.22,-0.22,0.0], [-0.22,0.22,0.0], [0.22,0.22,0.0], [0.22,-0.22,0.0]]'")
         footprint = Polygon()
-        footprint.points = [[-0.22,-0.22,0.0], [-0.22,0.22,0.0], [0.22,0.22,0.0], [0.22,-0.22,0.0]]
+        L_2 = 0.22
+        footprint.points = [Point32(-L_2,-L_2,0.0), Point32(-L_2, L_2,0.0),
+                            Point32( L_2, L_2,0.0), Point32( L_2,-L_2,0.0)]
         PUB_GLOBAL_FOOTPRINT.publish(footprint)
         PUB_LOCAL_FOOTPRINT.publish(footprint)
     
@@ -100,7 +98,6 @@ def transit_mode(from_mode, to_mode):
     elif from_mode == "Double_Assembled" and to_mode == "Single_Assembled":
         switch_launch(ROSLAUNCH_PATH_SINGLE_AMR)
         # TODO change footprint?
-
     else:
         rospy.logerr("[fsm] Undefine transit mode : " + str(from_mode) + " -> " + str(to_mode))
         pass
@@ -162,18 +159,14 @@ def gate_reply_cb(data):
     GATE_REPLY = data.data
 
 class Goal_Manager(object):
-    def __init__(self, is_use_simple_goal):
-        if is_use_simple_goal:
-            self.pub_simple_goal = rospy.Publisher(ROBOT_NAME + "/move_base_simple/goal", PoseStamped, queue_size = 1)
-            rospy.Subscriber("/" + ROBOT_NAME + "/move_base/result", MoveBaseActionResult, self.simple_goal_cb)
-        else:
-            self.action = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+    def __init__(self):
+        self.pub_simple_goal = rospy.Publisher("/" + ROBOT_NAME + "/move_base_simple/goal", PoseStamped, queue_size = 1)
+        rospy.Subscriber("/" + ROBOT_NAME + "/move_base/result", MoveBaseActionResult, self.simple_goal_cb)
         self.is_reached = False
         self.goal = None
         self.goal_xyt = [None, None, None]
         self.xy_goal_tolerance = None
         self.yaw_goal_tolerance = None
-        self.is_use_simple_goal =is_use_simple_goal
 
     def send_goal(self, xyt, frame_id, tolerance=(0.12,0.06)):
         '''
@@ -198,8 +191,8 @@ class Goal_Manager(object):
             self.yaw_goal_tolerance != tolerance[1]:
             # Need to set new tolerance
             try:
-                rospy.wait_for_service(ROBOT_NAME + "/move_base/DWAPlannerROS/set_parameters", 5.0)
-                client = dynamic_reconfigure.client.Client(ROBOT_NAME + "/move_base/DWAPlannerROS", timeout=30)
+                rospy.wait_for_service("/" + ROBOT_NAME + "/move_base/DWAPlannerROS/set_parameters", 5.0)
+                client = dynamic_reconfigure.client.Client("/" + ROBOT_NAME + "/move_base/DWAPlannerROS", timeout=30)
                 client.update_configuration({"xy_goal_tolerance": tolerance[0]})
                 client.update_configuration({"yaw_goal_tolerance": tolerance[1]})
             except (rospy.ServiceException, rospy.ROSException), e:
@@ -208,70 +201,19 @@ class Goal_Manager(object):
                 self.xy_goal_tolerance = tolerance[0]
                 self.yaw_goal_tolerance = tolerance[1]
             
-        if self.is_use_simple_goal:
-            self.goal = PoseStamped()
-            self.goal.header.frame_id = frame_id
-            self.goal.header.stamp = rospy.Time.now()
-            self.goal.pose.position.x = xyt[0]
-            self.goal.pose.position.y = xyt[1]
-            self.goal.pose.position.z = 0.1
-            quaternion = quaternion_from_euler(0.0, 0.0, xyt[2])
-            (self.goal.pose.orientation.x,
-             self.goal.pose.orientation.y,
-             self.goal.pose.orientation.z,
-             self.goal.pose.orientation.w) = quaternion
-            self.pub_simple_goal.publish(self.goal)
-        else:
-            self.goal = MoveBaseGoal()
-            self.goal.target_pose.header.frame_id = frame_id
-            self.goal.target_pose.header.stamp = rospy.Time.now()
-            self.goal.target_pose.pose.position.x = xyt[0]
-            self.goal.target_pose.pose.position.y = xyt[1]
-            self.goal.target_pose.pose.position.z = 0
-            quaternion = quaternion_from_euler(0.0, 0.0, xyt[2])
-            (self.goal.target_pose.pose.orientation.x,
-            self.goal.target_pose.pose.orientation.y,
-            self.goal.target_pose.pose.orientation.z,
-            self.goal.target_pose.pose.orientation.w) = quaternion
-            self.action.send_goal(goal=self.goal, feedback_cb=self.feedback_cb, done_cb=self.reached_cb)
-
-    def feedback_cb(self, feedback):
-        '''
-        base_position: 
-            header: 
-                seq: 0
-                stamp: 
-                    secs: 1599645575
-                    nsecs: 811315059
-                frame_id: "car2/map"
-            pose: 
-                position: 
-                    x: 3.95221392238
-                    y: 1.52272473913
-                    z: 0.2
-                orientation: 
-                    x: 0.0
-                    y: 0.0
-                    z: 0.999849354686
-                    w: 0.0173570715568
-        '''
-        quaternion = (
-            feedback.base_position.pose.orientation.x,
-            feedback.base_position.pose.orientation.y,
-            feedback.base_position.pose.orientation.z,
-            feedback.base_position.pose.orientation.w)
-        (_,_,yaw) = tf.transformations.euler_from_quaternion(quaternion)
-        xyt = (feedback.base_position.pose.position.x, feedback.base_position.pose.position.y, yaw)
-        #rospy.loginfo("xy:" + str((self.goal_xyt[0] - xyt[0])**2 + (self.goal_xyt[1] - xyt[1])**2))
-        #rospy.loginfo("theta: " + str(abs(normalize_angle(self.goal_xyt[2] - xyt[2]))))
-        if (self.goal_xyt[0] - xyt[0])**2 + (self.goal_xyt[1] - xyt[1])**2 < GOAL_XY_TOLERANCE**2:
-            if abs(normalize_angle(self.goal_xyt[2] - xyt[2])) < GOAL_THETA_TOLERANCE:
-                rospy.loginfo("[fsm] Goal reached")
-                self.is_reached = True
-    
-    def reached_cb(self,status, result):
-        pass
-    
+        self.goal = PoseStamped()
+        self.goal.header.frame_id = frame_id
+        self.goal.header.stamp = rospy.Time.now()
+        self.goal.pose.position.x = xyt[0]
+        self.goal.pose.position.y = xyt[1]
+        self.goal.pose.position.z = 0.1
+        quaternion = quaternion_from_euler(0.0, 0.0, xyt[2])
+        (self.goal.pose.orientation.x,
+            self.goal.pose.orientation.y,
+            self.goal.pose.orientation.z,
+            self.goal.pose.orientation.w) = quaternion
+        self.pub_simple_goal.publish(self.goal)
+  
     def simple_goal_cb(self,data):
         '''
         std_msgs/Header header
@@ -300,7 +242,8 @@ class Goal_Manager(object):
             rospy.loginfo("[fsm] Goal Reached")
             self.is_reached = True
         elif data.status.status == 2: # PREEMPTED
-            rospy.loginfo("[fsm] Goal has been preempted by a new goal")
+            pass
+            # rospy.loginfo("[fsm] Goal has been preempted by a new goal")
 
 class Initial_State(smach.State):
     def __init__(self):
@@ -352,9 +295,9 @@ class Find_Shelf(smach.State):
 
         GOAL_MANAGER.is_reached = False
         while IS_RUN and TASK != None:
-            # Send goal
+            # TODO Send a serial of goal, yaw tolearance == 2pi
             GOAL_MANAGER.send_goal(TASK.shelf_location, ROBOT_NAME + "/map")
-
+            
             # Get apriltag shelf location
             shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
 
@@ -406,7 +349,6 @@ class Go_Dock_Standby(smach.State):
                 if shelf_tag_xyt != None:
                     (x1,y1) = vec_trans_coordinate((-0.5, 0), (shelf_tag_xyt[0], shelf_tag_xyt[1], shelf_tag_xyt[2] + pi/2))
                     shelf_xyt = (x1,y1,shelf_tag_xyt[2] + pi/2)
-            # GOAL_MANAGER.send_goal((x1, y1, shelf_xyt[2] + pi/2), ROBOT_NAME + "/map")
             GOAL_MANAGER.send_goal(shelf_xyt, ROBOT_NAME + "/map")
             
             send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_" + ROBOT_NAME, ROBOT_NAME + "/tag/shelf_center", z_offset=-0.3)
@@ -450,11 +392,14 @@ class Dock_In(smach.State):
                 return next_state
             
             # Send goal
-            shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_center")
-            if shelf_xyt != None:
-                goal_xyt = vec_trans_coordinate((0.05,0), shelf_xyt)
-                # GOAL_MANAGER.send_goal((0.05, 0, 0), ROBOT_NAME + "/shelf_center")
-                GOAL_MANAGER.send_goal((goal_xyt[0], goal_xyt[1], shelf_xyt[2]), ROBOT_NAME + "/map")
+            GOAL_MANAGER.send_goal((0.05, 0, 0), ROBOT_NAME + "/shelf_center")
+
+            # shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_center")
+            # if shelf_xyt != None:
+            #     goal_xyt = vec_trans_coordinate((0.05,0), shelf_xyt)
+            #     # GOAL_MANAGER.send_goal((0.05, 0, 0), ROBOT_NAME + "/shelf_center")
+            #     GOAL_MANAGER.send_goal((goal_xyt[0], goal_xyt[1], shelf_xyt[2]), ROBOT_NAME + "/map")
+            
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
@@ -661,7 +606,7 @@ if __name__ == "__main__":
     IS_RUN = True
     CUR_STATE = None
     # Goal manager
-    GOAL_MANAGER = Goal_Manager(is_use_simple_goal=True)
+    GOAL_MANAGER = Goal_Manager()
     
     # For getting Tf
     TFBUFFER = tf2_ros.Buffer()
