@@ -248,6 +248,7 @@ void SmartobstacleLayer::reconfigureCB(costmap_2d::SmartobstaclePluginConfig &co
   max_obstacle_height_ = config.max_obstacle_height;
   combination_method_ = config.combination_method;
   clear_map_each_update_ = config.clear_map_each_update;
+  base_radius = config.base_radius;
 }
 
 void SmartobstacleLayer::laserScanCallback(const sensor_msgs::LaserScanConstPtr& message,
@@ -256,6 +257,9 @@ void SmartobstacleLayer::laserScanCallback(const sensor_msgs::LaserScanConstPtr&
   // project the laser into a point cloud
   sensor_msgs::PointCloud2 cloud;
   cloud.header = message->header;
+
+  sensor_msgs::LaserScan laser_scan;
+
 
   // project the scan into a point cloud
   try
@@ -381,6 +385,8 @@ void SmartobstacleLayer::updateBounds(double robot_x, double robot_y, double rob
 
     double sq_obstacle_range = obs.obstacle_range_ * obs.obstacle_range_;
 
+    double sq_base_radius = base_radius*base_radius;
+
     for (unsigned int i = 0; i < cloud.points.size(); ++i)
     {
       double px = cloud.points[i].x, py = cloud.points[i].y, pz = cloud.points[i].z;
@@ -402,6 +408,11 @@ void SmartobstacleLayer::updateBounds(double robot_x, double robot_y, double rob
         ROS_DEBUG("The point is too far away");
         continue;
       }
+
+      //added by spiderkiller, remove point too close to origin
+      // TODO , need test
+      if (sq_dist < sq_base_radius) // 0.65*0.65)
+        {continue;}
 
       // now we need to compute the map coordinates for the observation
       unsigned int mx, my;

@@ -170,6 +170,7 @@ protected:
   int combination_method_;
 
   bool clear_map_each_update_;  // added by wuch (dynamic reconfigure param)
+  bool base_radius; //  added by spiderkiller (dynamic reconfigure param)
 
 private:
   void reconfigureCB(costmap_2d::SmartobstaclePluginConfig &config, uint32_t level);
