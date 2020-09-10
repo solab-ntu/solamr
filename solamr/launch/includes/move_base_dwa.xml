@@ -46,7 +46,7 @@
             <param name="controller_frequency" value="10.0" />
             <param name="controller_patience" value="15.0" />
             <param name="clearing_rotation_allowed" value="true" /> <!-- if carlike: not able to rotate in place -->
-            <remap from='odom' to='/$(arg robot_name)/zed2/zed_node/odom'/>
+            <remap from='odom' to='/$(arg robot_name)/raw/zed2/zed_node/odom'/>
             <remap from='cmd_vel' to='/$(arg robot_name)/cmd_vel'/>
         </node>
 

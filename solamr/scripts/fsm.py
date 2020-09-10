@@ -21,13 +21,13 @@ import smach_ros
 # Ros message
 from tf.transformations import quaternion_from_euler
 from geometry_msgs.msg import Twist, Point, PoseStamped, Polygon, Point32
-from actionlib_msgs.msg import GoalStatusArray
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionResult
-
-import dynamic_reconfigure.client
-
 from solamr.srv import StringSrv
 from std_msgs.msg import String, Bool
+# Move Base
+from move_base_msgs.msg import MoveBaseActionResult
+from actionlib_msgs.msg import GoalID
+import dynamic_reconfigure.client
+
 # Custom
 from lucky_utility.ros.rospy_utility import get_tf, vec_trans_coordinate, send_tf, normalize_angle
 
@@ -63,16 +63,14 @@ def switch_launch(file_path):
 
 def transit_mode(from_mode, to_mode):
     if   from_mode == "Single_AMR" and to_mode == "Single_Assembled":
-        # TODO Ros topic
         '''
         geometry_msgs/Point32[] points
             float32 x
             float32 y
             float32 z
         '''
-        # TODO need test
         footprint = Polygon()
-        L_2 = 0.65
+        L_2 = 0.45 # 0.65
         footprint.points = [Point32(-L_2,-L_2,0.0), Point32(-L_2, L_2,0.0),
                             Point32( L_2, L_2,0.0), Point32( L_2,-L_2,0.0)]
         PUB_GLOBAL_FOOTPRINT.publish(footprint)
@@ -94,6 +92,7 @@ def transit_mode(from_mode, to_mode):
 
     elif from_mode == "Double_Assembled" and to_mode == "Single_AMR":
         switch_launch(ROSLAUNCH_PATH_SINGLE_AMR)
+        # TODO change footprint?
     
     elif from_mode == "Double_Assembled" and to_mode == "Single_Assembled":
         switch_launch(ROSLAUNCH_PATH_SINGLE_AMR)
@@ -111,7 +110,8 @@ def task_cb(req):
     if req.data == "abort":
         TASK = None
         # Cacelled all goal
-        GOAL_MANAGER.action.cancel_all_goals()
+        GOAL_MANAGER.cancel_goal()
+        # GOAL_MANAGER.action.cancel_all_goals()
         return 'abort OK'
     
     elif req.data[:3] == "jp2":
@@ -161,6 +161,7 @@ def gate_reply_cb(data):
 class Goal_Manager(object):
     def __init__(self):
         self.pub_simple_goal = rospy.Publisher("/" + ROBOT_NAME + "/move_base_simple/goal", PoseStamped, queue_size = 1)
+        self.pub_goal_cancel = rospy.Publisher("/" + ROBOT_NAME + "/move_base/cancel", GoalID, queue_size = 1)
         rospy.Subscriber("/" + ROBOT_NAME + "/move_base/result", MoveBaseActionResult, self.simple_goal_cb)
         self.is_reached = False
         self.goal = None
@@ -245,6 +246,9 @@ class Goal_Manager(object):
             pass
             # rospy.loginfo("[fsm] Goal has been preempted by a new goal")
 
+    def cancel_goal(self):
+        self.pub_goal_cancel.publish()
+
 class Initial_State(smach.State):
     def __init__(self):
         super(Initial_State, self).__init__(outcomes=('Single_AMR', 'Single_Assembled', 'Double_Assembled'))
@@ -293,10 +297,20 @@ class Find_Shelf(smach.State):
             time.sleep(2)
             return 'done'
 
+        # TODO use yaml.
+        find_points = [(2.6, 0.4, -pi/2), (2, 1.2, pi), (2.6, 2.4, pi/2), (3.5, 1.2, 0.0)]
+        goal = find_points[0]
         GOAL_MANAGER.is_reached = False
         while IS_RUN and TASK != None:
-            # TODO Send a serial of goal, yaw tolearance == 2pi
-            GOAL_MANAGER.send_goal(TASK.shelf_location, ROBOT_NAME + "/map")
+            # Check goal reached or not 
+            if GOAL_MANAGER.is_reached:
+                try:
+                    goal = find_points[find_points.index(goal)+1]
+                except IndexError:
+                    goal = find_points[0]
+            
+            # Send a serial of goal
+            GOAL_MANAGER.send_goal(goal, ROBOT_NAME + "/map", tolerance = (0.3, pi/6))
             
             # Get apriltag shelf location
             shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
@@ -304,10 +318,6 @@ class Find_Shelf(smach.State):
             if shelf_xyt != None:
                 return 'done'
             
-            # Check goal reached or not 
-            if GOAL_MANAGER.is_reached:
-                rospy.logerr("[fsm] Can't find tf " + ROBOT_NAME + "/shelf_" + ROBOT_NAME)
-                return 'abort'
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
@@ -470,8 +480,11 @@ class Dock_Out(smach.State):
         PUB_GATE_CMD.publish(Bool(False))
         GATE_REPLY = None
         
-        previous_state = TASK.task_flow[TASK.task_flow.index('Dock_Out')-1]
-        transit_mode(previous_state, "Single_AMR")
+        # previous_state = TASK.task_flow[TASK.task_flow.index('Dock_Out')-1]
+        if TASK.mode == "single_AMR":
+            transit_mode("Single_Assembled", "Single_AMR")
+        elif TASK.mode == "double_AMR":
+            transit_mode("Double_Assembled", "Single_AMR")
         
         # pid cmd_vel control
         KP = 1.0

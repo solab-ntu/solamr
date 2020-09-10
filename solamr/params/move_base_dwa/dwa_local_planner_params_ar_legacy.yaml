@@ -7,12 +7,12 @@ DWAPlannerROS:
    min_vel_y: 0.0
    max_rot_vel: 1.5 # 1.0
    min_rot_vel: 0.1 # 0.02 # 0.2
-   acc_lim_x: 1.0
+   acc_lim_x: 1.0 # 2.0
    acc_lim_y: 0.0  # zero for a differential drive robot
-   acc_lim_theta: 2.0
+   acc_lim_theta: 3.14 # 6.28 # 2.0
 
    yaw_goal_tolerance: 0.1 # 0.1
-   xy_goal_tolerance: 0.05 # 0.1
+   xy_goal_tolerance: 0.1 # 0.1
    latch_xy_goal_tolerance: true
 
    oscillation_reset_dist: 0.1 # 0.05 # For DWA 
