@@ -70,9 +70,7 @@ class Odom_Fuser_Single_AMR():
         self.map_xyt = (update_xyt[0] - rota_odom_x,
                         update_xyt[1] - rota_odom_y,
                         normalize_angle(self.map_xyt[2] + rho))
-
-
-    
+   
     def run_once(self):
         # Update TF
         map_rtabmap_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/raw/map", ROBOT_NAME+"/raw/odom")
@@ -84,7 +82,7 @@ class Odom_Fuser_Single_AMR():
             base_link = get_tf(self.tfBuffer, ROBOT_NAME+"/map", ROBOT_NAME + "/base_link")
             if base_link != None:
                 marker1_on_map = vec_trans_coordinate(marker1_xyt[:2], (0, 0, base_link[2]))
-                marker1_coor = (1.90, -1.0, 3.1416926) # x- axis diff
+                marker1_coor = (1.90, -1.0, pi/2) # x- axis diff
                 
                 # TODO this is un correct
                 init_pose = (marker1_coor[0] - marker1_on_map[0],
