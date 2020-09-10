@@ -7,7 +7,7 @@ single_AMR:
   wait_location_car2: [3.0, 0.5, 0.0]
   # Final goal 
   goal_location_car1: [0.7, 1.26, 3.1415926]
-  goal_location_car2: [2.37, 1.24, 3.1415926]
+  goal_location_car2: [4.65, 1.24, 3.1415926]
   # Return home location
   home_location_car1: [3.3, 2.76, -1.57]
   home_location_car2: [2.5, 2.0, -1.57]
