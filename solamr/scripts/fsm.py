@@ -20,9 +20,12 @@ import smach
 import smach_ros
 # Ros message
 from tf.transformations import quaternion_from_euler
-from geometry_msgs.msg import Twist, Point, PoseStamped
+from geometry_msgs.msg import Twist, Point, PoseStamped, Polygon
 from actionlib_msgs.msg import GoalStatusArray
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionResult
+
+import dynamic_reconfigure.client
+
 from solamr.srv import StringSrv
 from std_msgs.msg import String, Bool
 # Custom
@@ -40,49 +43,11 @@ class Task(object):
         self.home_location = None
         self.task_flow = None
 
-#######################
-### Global Function ###
-#######################
-# def init_roslaunch(file_path):
-#     '''
-#     Let it able to switch roslaunch 
-#     Argument:
-#         file_path: string - the roslaunch file path you want to launch
-#     Return:
-#         parent of roslaunch process
-#     '''
-#     uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
-#     roslaunch.configure_logging(uuid=uuid)
-#     return roslaunch.parent.ROSLaunchParent(run_id=uuid, roslaunch_files=((file_path,)))
-
 def check_running():
     global IS_RUN
     while not rospy.is_shutdown():
         time.sleep(1)
     IS_RUN = False
-
-# def switch_launch_double():
-#     '''
-#     '''
-#     global ROSLAUNCH
-#     if not IS_DUMMY_TEST:
-#         if ROSLAUNCH != None:
-#             rospy.loginfo("[fsm] Shuting down single_AMR launch file")
-#             ROSLAUNCH.shutdown()
-#             time.sleep(5) # TODO DO WE need it ?
-#         rospy.loginfo("[fsm] Start launch file: " + ROSLAUNCH_PATH_DOUBLE_AMR)
-#         ROSLAUNCH = init_roslaunch(ROSLAUNCH_PATH_DOUBLE_AMR)
-#         ROSLAUNCH.start()
-
-# def switch_launch_single():
-#     global ROSLAUNCH
-#     if ROSLAUNCH != None:
-#         rospy.loginfo("[fsm] Shuting down double_AMR launch file")
-#         ROSLAUNCH.shutdown()
-#         time.sleep(5) # TODO DO WE need it ?
-#     rospy.loginfo("[fsm] Start launch file: " + ROSLAUNCH_PATH_SINGLE_AMR)
-#     ROSLAUNCH = init_roslaunch(ROSLAUNCH_PATH_SINGLE_AMR)
-#     ROSLAUNCH.start()
 
 def switch_launch(file_path):
     global ROSLAUNCH
@@ -102,14 +67,29 @@ def switch_launch(file_path):
 
 def transit_mode(from_mode, to_mode):
     if   from_mode == "Single_AMR" and to_mode == "Single_Assembled":
-        # TODO Ros topic 
-        os.system("rostopic pub --once /" + ROBOT_NAME + "/move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.65,-0.65,0.0], [-0.65,0.65,0.0], [0.65,0.65,0.0], [0.65,-0.65,0.0]]'")
-    
+        # TODO Ros topic
+        '''
+        geometry_msgs/Point32[] points
+            float32 x
+            float32 y
+            float32 z
+        '''
+        # TODO need test
+        footprint = Polygon()
+        footprint.points = [[-0.65,-0.65,0.0], [-0.65,0.65,0.0], [0.65,0.65,0.0], [0.65,-0.65,0.0]]
+        PUB_GLOBAL_FOOTPRINT.publish(footprint)
+        PUB_LOCAL_FOOTPRINT.publish(footprint)
+        # os.system("rostopic pub --once /" + ROBOT_NAME + "/move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.65,-0.65,0.0], [-0.65,0.65,0.0], [0.65,0.65,0.0], [0.65,-0.65,0.0]]'")
+
     elif from_mode == "Single_AMR" and to_mode == "Double_Assembled":
         switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
     
     elif from_mode == "Single_Assembled" and to_mode == "Single_AMR":
-        os.system("rostopic pub --once /" + ROBOT_NAME + "/move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.22,-0.22,0.0], [-0.22,0.22,0.0], [0.22,0.22,0.0], [0.22,-0.22,0.0]]'")
+        # os.system("rostopic pub --once /" + ROBOT_NAME + "/move_base/local_costmap/footprint geometry_msgs/Polygon -- '[[-0.22,-0.22,0.0], [-0.22,0.22,0.0], [0.22,0.22,0.0], [0.22,-0.22,0.0]]'")
+        footprint = Polygon()
+        footprint.points = [[-0.22,-0.22,0.0], [-0.22,0.22,0.0], [0.22,0.22,0.0], [0.22,-0.22,0.0]]
+        PUB_GLOBAL_FOOTPRINT.publish(footprint)
+        PUB_LOCAL_FOOTPRINT.publish(footprint)
     
     elif from_mode == "Single_Assembled" and to_mode == "Double_Assembled":
         switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
@@ -150,9 +130,7 @@ def task_cb(req):
         rospy.logerr("[fsm] Reject task, because I'm busy now.")
         return "Reject task, I'm busy now"
     
-
     # Load yaml from task_location.yaml
-    
     # Get mode
     req_list = req.data.split('_')
     mode = req_list[0] + "_" + req_list[1]
@@ -184,28 +162,78 @@ def gate_reply_cb(data):
     GATE_REPLY = data.data
 
 class Goal_Manager(object):
-    def __init__(self):
-        self.action = actionlib.SimpleActionClient('move_base', MoveBaseAction)
-        # self.action.wait_for_server()
+    def __init__(self, is_use_simple_goal):
+        if is_use_simple_goal:
+            self.pub_simple_goal = rospy.Publisher(ROBOT_NAME + "/move_base_simple/goal", PoseStamped, queue_size = 1)
+            rospy.Subscriber("/" + ROBOT_NAME + "/move_base/result", MoveBaseActionResult, self.simple_goal_cb)
+        else:
+            self.action = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         self.is_reached = False
         self.goal = None
         self.goal_xyt = [None, None, None]
+        self.xy_goal_tolerance = None
+        self.yaw_goal_tolerance = None
+        self.is_use_simple_goal =is_use_simple_goal
 
-    def send_goal(self, xyt, frame_id):
+    def send_goal(self, xyt, frame_id, tolerance=(0.12,0.06)):
+        '''
+        std_msgs/Header header
+            uint32 seq
+            time stamp
+            string frame_id
+        geometry_msgs/Pose pose
+            geometry_msgs/Point position
+                float64 x
+                float64 y
+                float64 z
+            geometry_msgs/Quaternion orientation
+                float64 x
+                float64 y
+                float64 z
+                float64 w
+        '''
         self.is_reached = False
         self.goal_xyt = xyt
-        self.goal = MoveBaseGoal()
-        self.goal.target_pose.header.frame_id = frame_id
-        self.goal.target_pose.header.stamp = rospy.Time.now()
-        self.goal.target_pose.pose.position.x = xyt[0]
-        self.goal.target_pose.pose.position.y = xyt[1]
-        self.goal.target_pose.pose.position.z = 0
-        quaternion = quaternion_from_euler(0.0, 0.0, xyt[2])
-        (self.goal.target_pose.pose.orientation.x,
-         self.goal.target_pose.pose.orientation.y,
-         self.goal.target_pose.pose.orientation.z,
-         self.goal.target_pose.pose.orientation.w) = quaternion
-        self.action.send_goal(goal=self.goal, feedback_cb=self.feedback_cb, done_cb=self.reached_cb)
+        if  self.xy_goal_tolerance != tolerance[0] or\
+            self.yaw_goal_tolerance != tolerance[1]:
+            # Need to set new tolerance
+            try:
+                rospy.wait_for_service(ROBOT_NAME + "/move_base/DWAPlannerROS/set_parameters", 5.0)
+                client = dynamic_reconfigure.client.Client(ROBOT_NAME + "/move_base/DWAPlannerROS", timeout=30)
+                client.update_configuration({"xy_goal_tolerance": tolerance[0]})
+                client.update_configuration({"yaw_goal_tolerance": tolerance[1]})
+            except (rospy.ServiceException, rospy.ROSException), e:
+                rospy.logerr("[fsm] DWAPlannerROS Service call failed: %s" % (e,))
+            else:
+                self.xy_goal_tolerance = tolerance[0]
+                self.yaw_goal_tolerance = tolerance[1]
+            
+        if self.is_use_simple_goal:
+            self.goal = PoseStamped()
+            self.goal.header.frame_id = frame_id
+            self.goal.header.stamp = rospy.Time.now()
+            self.goal.pose.position.x = xyt[0]
+            self.goal.pose.position.y = xyt[1]
+            self.goal.pose.position.z = 0.1
+            quaternion = quaternion_from_euler(0.0, 0.0, xyt[2])
+            (self.goal.pose.orientation.x,
+             self.goal.pose.orientation.y,
+             self.goal.pose.orientation.z,
+             self.goal.pose.orientation.w) = quaternion
+            self.pub_simple_goal.publish(self.goal)
+        else:
+            self.goal = MoveBaseGoal()
+            self.goal.target_pose.header.frame_id = frame_id
+            self.goal.target_pose.header.stamp = rospy.Time.now()
+            self.goal.target_pose.pose.position.x = xyt[0]
+            self.goal.target_pose.pose.position.y = xyt[1]
+            self.goal.target_pose.pose.position.z = 0
+            quaternion = quaternion_from_euler(0.0, 0.0, xyt[2])
+            (self.goal.target_pose.pose.orientation.x,
+            self.goal.target_pose.pose.orientation.y,
+            self.goal.target_pose.pose.orientation.z,
+            self.goal.target_pose.pose.orientation.w) = quaternion
+            self.action.send_goal(goal=self.goal, feedback_cb=self.feedback_cb, done_cb=self.reached_cb)
 
     def feedback_cb(self, feedback):
         '''
@@ -244,6 +272,36 @@ class Goal_Manager(object):
     def reached_cb(self,status, result):
         pass
     
+    def simple_goal_cb(self,data):
+        '''
+        std_msgs/Header header
+            uint32 seq
+            time stamp
+            string frame_id
+        actionlib_msgs/GoalStatus status
+            uint8 PENDING=0
+            uint8 ACTIVE=1
+            uint8 PREEMPTED=2
+            uint8 SUCCEEDED=3
+            uint8 ABORTED=4
+            uint8 REJECTED=5
+            uint8 PREEMPTING=6
+            uint8 RECALLING=7
+            uint8 RECALLED=8
+            uint8 LOST=9
+            actionlib_msgs/GoalID goal_id
+                time stamp
+                string id
+            uint8 status
+            string text
+        move_base_msgs/MoveBaseResult result
+        '''
+        if data.status.status == 3: # SUCCEEDED
+            rospy.loginfo("[fsm] Goal Reached")
+            self.is_reached = True
+        elif data.status.status == 2: # PREEMPTED
+            rospy.loginfo("[fsm] Goal has been preempted by a new goal")
+
 class Initial_State(smach.State):
     def __init__(self):
         super(Initial_State, self).__init__(outcomes=('Single_AMR', 'Single_Assembled', 'Double_Assembled'))
@@ -251,10 +309,7 @@ class Initial_State(smach.State):
     def execute(self, userdata):
         if INIT_STATE == 'Single_AMR' or INIT_STATE == 'Single_Assembled':
             transit_mode('Double_Assembled', 'Single_AMR')
-            # switch_launch(ROSLAUNCH_PATH_SINGLE_AMR)
         elif INIT_STATE == 'Double_Assembled':
-            # switch_launch_double()
-            # switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
             transit_mode('Single_AMR', 'Double_Assembled')
         return INIT_STATE
 
@@ -340,7 +395,7 @@ class Go_Dock_Standby(smach.State):
                 if base_link_xyt != None:
                     min_distance = float('inf')
                     best_xyt = None
-                    for i in range(4): # Which direction  is best
+                    for i in range(4): # Which direction is best
                         (x1,y1) = vec_trans_coordinate((1.0, 0), (shelf_laser_xyt[0], shelf_laser_xyt[1], shelf_laser_xyt[2] + i*pi/2))
                         if (base_link_xyt[0] - x1)**2 + (base_link_xyt[1] - y1)**2 < min_distance:
                             min_distance = (base_link_xyt[0] - x1)**2 + (base_link_xyt[1] - y1)**2
@@ -597,13 +652,16 @@ if __name__ == "__main__":
     PUB_SEARCH_CENTER = rospy.Publisher("search_center", Point, queue_size = 1)
     PUB_GATE_CMD = rospy.Publisher("/gate_cmd", Bool, queue_size = 1)
     PUB_CMD_VEL = rospy.Publisher("/" + ROBOT_NAME + "/cmd_vel", Twist, queue_size = 1)
+
+    PUB_GLOBAL_FOOTPRINT = rospy.Publisher("/" + ROBOT_NAME + "/move_base/local_costmap/footprint", Polygon, queue_size = 1)
+    PUB_LOCAL_FOOTPRINT = rospy.Publisher("/" + ROBOT_NAME + "/move_base/global_costmap/footprint", Polygon, queue_size = 1)
     # Global variable 
     TASK = None # store task information
     ROSLAUNCH = None
     IS_RUN = True
     CUR_STATE = None
     # Goal manager
-    GOAL_MANAGER = Goal_Manager()
+    GOAL_MANAGER = Goal_Manager(is_use_simple_goal=True)
     
     # For getting Tf
     TFBUFFER = tf2_ros.Buffer()
