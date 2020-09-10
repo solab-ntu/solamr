@@ -50,14 +50,6 @@ class Odom_Fuser_Single_AMR():
             data.pose.pose.orientation.w)
         (_,_,yaw) = tf.transformations.euler_from_quaternion(quaternion)
         self.update_global_localization((data.pose.pose.position.x, data.pose.pose.position.y, yaw))
-        # odom = vec_trans_coordinate((self.odom_xyt[0], self.odom_xyt[1]), (0, 0, self.map_xyt[2]))
-        # rho = yaw - (self.odom_xyt[2] + self.map_xyt[2])
-        # rota_odom_x = cos(rho)*odom[0] - sin(rho)*odom[1]
-        # rota_odom_y = sin(rho)*odom[0] + cos(rho)*odom[1]
-        
-        # self.map_xyt = (data.pose.pose.position.x - rota_odom_x,
-        #                 data.pose.pose.position.y - rota_odom_y,
-        #                 normalize_angle(self.map_xyt[2] + rho))
 
     def update_global_localization(self, update_xyt):
         '''
@@ -81,12 +73,11 @@ class Odom_Fuser_Single_AMR():
         if marker1_xyt != None and marker1_xyt != self.marker1_xyt_last:
             base_link = get_tf(self.tfBuffer, ROBOT_NAME+"/map", ROBOT_NAME + "/base_link")
             if base_link != None:
-                marker1_on_map = vec_trans_coordinate(marker1_xyt[:2], (0, 0, base_link[2]))
                 marker1_coor = (1.90, -1.0, pi/2) # x- axis diff
                 
-                # TODO this is un correct
-                init_pose = (marker1_coor[0] - marker1_on_map[0],
-                             marker1_coor[1] - marker1_on_map[1],
+                marker1_to_baselink__on_map = vec_trans_coordinate(marker1_xyt[:2], (0, 0, marker1_coor[2]))
+                init_pose = (marker1_coor[0] + marker1_to_baselink__on_map[0],
+                             marker1_coor[1] + marker1_to_baselink__on_map[1],
                             - marker1_xyt[2] - pi)
 
                 marker1_on_map_new = vec_trans_coordinate(marker1_xyt[:2], (0, 0, init_pose[2]))
@@ -95,8 +86,9 @@ class Odom_Fuser_Single_AMR():
                 
                 # Check map->base_link->tag == map->tag is at the right place
                 error = (markers_new_xy[0] - marker1_coor[0])**2 + (markers_new_xy[1] - marker1_coor[1])**2
-                #print ("error: " + str(error))
+                # print ("error: " + str(error))
                 if error < 0.01:
+                    rospy.loginfo("[odom_fuser] Accepted marker1 initialpose update.")
                     self.update_global_localization(init_pose)
 
                 # Flags
@@ -141,11 +133,9 @@ def send_tf_z_offset(xyt, frame_id, child_frame_id):
 
 if __name__ == '__main__':
     rospy.init_node('odom_fuser_single_AMR',anonymous=False)
-    
     ROBOT_NAME = rospy.get_param(param_name="~robot_name")
     odom_fuser_single_AMR = Odom_Fuser_Single_AMR()
     rospy.Subscriber("/" + ROBOT_NAME + "/initialpose", PoseWithCovarianceStamped, odom_fuser_single_AMR.init_cb)
-    # Init naive controller
     
     rate = rospy.Rate(10.0)
     while not rospy.is_shutdown():
