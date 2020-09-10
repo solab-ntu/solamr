@@ -70,7 +70,7 @@ def transit_mode(from_mode, to_mode):
             float32 z
         '''
         footprint = Polygon()
-        L_2 = 0.45 # 0.65
+        L_2 = 0.65 # 0.45 # 0.65
         footprint.points = [Point32(-L_2,-L_2,0.0), Point32(-L_2, L_2,0.0),
                             Point32( L_2, L_2,0.0), Point32( L_2,-L_2,0.0)]
         PUB_GLOBAL_FOOTPRINT.publish(footprint)
