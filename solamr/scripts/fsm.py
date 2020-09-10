@@ -6,7 +6,7 @@ from __future__ import division
 import yaml
 import os
 import time
-from math import pi
+from math import pi,sqrt
 import threading
 # ROS
 import rospy
@@ -75,17 +75,28 @@ def transit_mode(from_mode, to_mode):
                             Point32( L_2, L_2,0.0), Point32( L_2,-L_2,0.0)]
         PUB_GLOBAL_FOOTPRINT.publish(footprint)
         PUB_LOCAL_FOOTPRINT.publish(footprint)
+        # TODO need to reconfig smartobstcle layer
+
 
     elif from_mode == "Single_AMR" and to_mode == "Double_Assembled":
         switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
     
     elif from_mode == "Single_Assembled" and to_mode == "Single_AMR":
+        # Change footprint
         footprint = Polygon()
         L_2 = 0.22
         footprint.points = [Point32(-L_2,-L_2,0.0), Point32(-L_2, L_2,0.0),
                             Point32( L_2, L_2,0.0), Point32( L_2,-L_2,0.0)]
         PUB_GLOBAL_FOOTPRINT.publish(footprint)
         PUB_LOCAL_FOOTPRINT.publish(footprint)
+
+        # Smart obstacle layer, reconfig
+        # TODO need to do 
+        # rosrun dynamic_reconfigure dynparam list
+        # rospy.wait_for_service("/" + ROBOT_NAME + "/move_base/DWAPlannerROS/set_parameters", 5.0)
+        # client = dynamic_reconfigure.client.Client("/" + ROBOT_NAME + "/move_base/DWAPlannerROS", timeout=30)
+        # client.update_configuration({"base_radius": L_2*sqrt(2)})
+
     
     elif from_mode == "Single_Assembled" and to_mode == "Double_Assembled":
         switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
@@ -111,7 +122,6 @@ def task_cb(req):
         TASK = None
         # Cacelled all goal
         GOAL_MANAGER.cancel_goal()
-        # GOAL_MANAGER.action.cancel_all_goals()
         return 'abort OK'
     
     elif req.data[:3] == "jp2":
@@ -194,9 +204,9 @@ class Goal_Manager(object):
             try:
                 # TODO 
                 rospy.wait_for_service("/" + ROBOT_NAME + "/move_base/DWAPlannerROS/set_parameters", 5.0)
+                client = dynamic_reconfigure.client.Client("/" + ROBOT_NAME + "/move_base/DWAPlannerROS", timeout=30)
                 # rospy.wait_for_service("/" + ROBOT_NAME + "/move_base/TebLocalPlannerROS/set_parameters", 5.0)
                 # client = dynamic_reconfigure.client.Client("/" + ROBOT_NAME + "/move_base/TebLocalPlannerROS", timeout=30)
-                client = dynamic_reconfigure.client.Client("/" + ROBOT_NAME + "/move_base/DWAPlannerROS", timeout=30)
                 client.update_configuration({"xy_goal_tolerance": tolerance[0]})
                 client.update_configuration({"yaw_goal_tolerance": tolerance[1]})
             except (rospy.ServiceException, rospy.ROSException), e:
@@ -340,11 +350,18 @@ class Go_Dock_Standby(smach.State):
         
         GOAL_MANAGER.is_reached = False
         while IS_RUN and TASK != None:
+            # Choose a nearest direction to dockin
+            
+
+
+
+
             # Check goal reached or not
             if GOAL_MANAGER.is_reached:
                 return 'done'
             
             # Get shelf tag tf
+            # TODO use another while loop to deal with this shit
             shelf_laser_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_center")
             if shelf_laser_xyt != None:
                 base_link_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
@@ -393,15 +410,35 @@ class Dock_In(smach.State):
             return next_state
 
         # Open gate
+        GATE_REPLY = None
         PUB_GATE_CMD.publish(Bool(False))
         PUB_GATE_CMD.publish(Bool(True))
-        GATE_REPLY = None
-        GOAL_MANAGER.is_reached = False
+        # GOAL_MANAGER.is_reached = False
+        # P controller
+        KP_X = 0.1
+        KP_T = 1.0
+        XY_TOLERANCE = 0.05 # m
+        twist = Twist()
+        distance = float('inf')
         while IS_RUN and TASK != None:
             # Send goal
-            GOAL_MANAGER.send_goal((0.05, 0, 0), ROBOT_NAME + "/shelf_center")
-            if GOAL_MANAGER.is_reached or GATE_REPLY == True:
+            # TODO Dont use move_base, use cmd_vel
+            # GOAL_MANAGER.send_goal((0.05, 0, 0), ROBOT_NAME + "/shelf_center")
+            shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
+            if shelf_xyt != None:
+                distance = sqrt(shelf_xyt[0]**2 + shelf_xyt[1]**2)
+                twist.linear.x = KP_X*distance
+                twist.angular.z = KP_T*shelf_xyt[2]
+            
+            PUB_CMD_VEL.publish(twist)
+            
+            # if GOAL_MANAGER.is_reached or GATE_REPLY == True:
+            if distance < XY_TOLERANCE or GATE_REPLY == True:
                 # Get reply, Dockin successfully
+                # Send zero velocity
+                twist = Twist()
+                PUB_CMD_VEL.publish(twist)
+                
                 next_state = TASK.task_flow[TASK.task_flow.index('Dock_In')+1]
                 transit_mode('Single_AMR', next_state)
                 return next_state
