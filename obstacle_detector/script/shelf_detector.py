@@ -46,10 +46,6 @@ class Shelf_finder():
         # self.search_center = None# (x,y)
         self.corner_dict = {}
         #------ Parameters --------#
-        # self.sheft_length_tolerance = sheft_length_tolerance # Meter, Tolerance of detecing shelf's length
-        # self.angle_tolerance = angle_tolerance # Radian, Tolerance of detecing right angle
-        # self.max_circle_radius = max_circle_radius # Meter, Ignore clusters's radius bigger than MAX_CIRCLE_RADIUS
-        # self.search_radius = search_radius
         self.name = name # "base" or "peer"
         self.viz_marker = Marker_Manager("obstacle_detector/markers/" + name)
         self.viz_marker.register_marker("corners_"+name, 7, BASE_LINK_FRAME, (0,0,255) , 0.1)
@@ -341,7 +337,6 @@ def mode_switch_cb(req):
             SHEFT_LENGTH_TOLERANCE = params['SHEFT_LENGTH_TOLERANCE']
             ANGLE_TOLERANCE = params['ANGLE_TOLERANCE']  *pi/180
             # Frame
-            # BASE_LINK_FRAME = params['BASE_LINK_FRAME']
             # 
             SHELF_LEN_DIAGONAL = SHELF_LEN * sqrt(2)
             SEARCH_CENTER_SINGLE_AMR = None
