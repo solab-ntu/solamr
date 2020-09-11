@@ -61,42 +61,50 @@ def switch_launch(file_path):
     else:
         pass
 
-def transit_mode(from_mode, to_mode):
-    if   from_mode == "Single_AMR" and to_mode == "Single_Assembled":
-        '''
+def change_footprint(L_2):
+    '''
+    L_2: half the footprint 
+    std_msgs/Header header
+        uint32 seq
+        time stamp
+        string frame_id
+    geometry_msgs/Polygon polygon
         geometry_msgs/Point32[] points
             float32 x
             float32 y
             float32 z
-        '''
-        footprint = Polygon()
-        L_2 = 0.65 # 0.45 # 0.65
-        footprint.points = [Point32(-L_2,-L_2,0.0), Point32(-L_2, L_2,0.0),
-                            Point32( L_2, L_2,0.0), Point32( L_2,-L_2,0.0)]
-        PUB_GLOBAL_FOOTPRINT.publish(footprint)
-        PUB_LOCAL_FOOTPRINT.publish(footprint)
-        # TODO need to reconfig smartobstcle layer
+    '''
+    footprint = Polygon()
+    footprint.points = [Point32(-L_2,-L_2,0.0), Point32(-L_2, L_2,0.0),
+                        Point32( L_2, L_2,0.0), Point32( L_2,-L_2,0.0)]
+    PUB_GLOBAL_FOOTPRINT.publish(footprint)
+    PUB_LOCAL_FOOTPRINT.publish(footprint)
+    rospy.loginfo("[fsm] change footprint to " + str(L_2*2))
+
+def change_smart_layer_base_radius(r):
+    '''
+    r = base_raduis
+    '''
+    rospy.wait_for_service("/" + ROBOT_NAME + "/move_base/global_costmap/smartobstacle_layer/set_parameters", 5.0)
+    rospy.wait_for_service("/" + ROBOT_NAME + "/move_base/local_costmap/smartobstacle_layer/set_parameters", 5.0)
+    client = dynamic_reconfigure.client.Client("/" + ROBOT_NAME + "/move_base/global_costmap/smartobstacle_layer", timeout=30)
+    client.update_configuration({"base_radius": r})
+    client = dynamic_reconfigure.client.Client("/" + ROBOT_NAME + "/move_base/local_costmap/smartobstacle_layer", timeout=30)
+    client.update_configuration({"base_radius": r})
+    rospy.loginfo("[fsm] change base_radius to " + str(r))
+
+def transit_mode(from_mode, to_mode):
+    if   from_mode == "Single_AMR" and to_mode == "Single_Assembled":
+        change_footprint(0.45)
+        change_smart_layer_base_radius(0.45*sqrt(2))
 
 
     elif from_mode == "Single_AMR" and to_mode == "Double_Assembled":
         switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
     
     elif from_mode == "Single_Assembled" and to_mode == "Single_AMR":
-        # Change footprint
-        footprint = Polygon()
-        L_2 = 0.22
-        footprint.points = [Point32(-L_2,-L_2,0.0), Point32(-L_2, L_2,0.0),
-                            Point32( L_2, L_2,0.0), Point32( L_2,-L_2,0.0)]
-        PUB_GLOBAL_FOOTPRINT.publish(footprint)
-        PUB_LOCAL_FOOTPRINT.publish(footprint)
-
-        # Smart obstacle layer, reconfig
-        # TODO need to do 
-        # rosrun dynamic_reconfigure dynparam list
-        # rospy.wait_for_service("/" + ROBOT_NAME + "/move_base/DWAPlannerROS/set_parameters", 5.0)
-        # client = dynamic_reconfigure.client.Client("/" + ROBOT_NAME + "/move_base/DWAPlannerROS", timeout=30)
-        # client.update_configuration({"base_radius": L_2*sqrt(2)})
-
+        change_footprint(0.22)
+        change_smart_layer_base_radius(0.22*sqrt(2))
     
     elif from_mode == "Single_Assembled" and to_mode == "Double_Assembled":
         switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
@@ -258,6 +266,9 @@ class Goal_Manager(object):
         elif data.status.status == 2: # PREEMPTED
             pass
             # rospy.loginfo("[fsm] Goal has been preempted by a new goal")
+        elif data.status.status == 4: # ABORTED
+            # TODO do something
+            rospy.logerr("[fsm] Goal has been aborted !!!")
 
     def cancel_goal(self):
         self.pub_goal_cancel.publish()

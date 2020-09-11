@@ -248,7 +248,7 @@ void SmartobstacleLayer::reconfigureCB(costmap_2d::SmartobstaclePluginConfig &co
   max_obstacle_height_ = config.max_obstacle_height;
   combination_method_ = config.combination_method;
   clear_map_each_update_ = config.clear_map_each_update;
-  base_radius = config.base_radius;
+  base_radius_ = config.base_radius;
 }
 
 void SmartobstacleLayer::laserScanCallback(const sensor_msgs::LaserScanConstPtr& message,
@@ -384,9 +384,8 @@ void SmartobstacleLayer::updateBounds(double robot_x, double robot_y, double rob
     const pcl::PointCloud<pcl::PointXYZ>& cloud = *(obs.cloud_);
 
     double sq_obstacle_range = obs.obstacle_range_ * obs.obstacle_range_;
-
-    double sq_base_radius = base_radius*base_radius;
-
+    //added by spiderkiller
+    double sq_base_radius = base_radius_*base_radius_;
     for (unsigned int i = 0; i < cloud.points.size(); ++i)
     {
       double px = cloud.points[i].x, py = cloud.points[i].y, pz = cloud.points[i].z;
@@ -410,9 +409,10 @@ void SmartobstacleLayer::updateBounds(double robot_x, double robot_y, double rob
       }
 
       //added by spiderkiller, remove point too close to origin
-      // TODO , need test
-      if (sq_dist < sq_base_radius) // 0.65*0.65)
-        {continue;}
+      if (sq_dist < sq_base_radius)
+      {
+        continue;
+      }
 
       // now we need to compute the map coordinates for the observation
       unsigned int mx, my;
