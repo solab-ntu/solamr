@@ -7,9 +7,7 @@ Panels:
         - /Global Options1
         - /TF1
         - /TF1/Tree1
-        - /car1/AMR1/Status1
         - /car2/AMR1
-        - /car2/AMR1/Status1
       Splitter Ratio: 0.552777767
     Tree Height: 718
   - Class: rviz/Selection
@@ -59,35 +57,9 @@ Visualization Manager:
       Frame Timeout: 999
       Frames:
         All Enabled: false
-        car1/B_site:
-          Value: true
-        car1/base_link:
-          Value: true
-        car1/home:
-          Value: true
-        car1/laser_front:
-          Value: true
-        car1/laser_rear:
-          Value: true
         car1/map:
           Value: true
-        car1/marker1:
-          Value: true
-        car1/odom:
-          Value: true
-        car1/shelf_car1:
-          Value: true
-        car1/shelf_car2:
-          Value: true
-        car1/shelf_center:
-          Value: true
-        car1/tag/shelf_center:
-          Value: true
-        car2/B_site:
-          Value: true
         car2/base_link:
-          Value: true
-        car2/home:
           Value: true
         car2/laser_front:
           Value: true
@@ -98,14 +70,6 @@ Visualization Manager:
         car2/marker1:
           Value: true
         car2/odom:
-          Value: true
-        car2/shelf_car1:
-          Value: true
-        car2/shelf_car2:
-          Value: true
-        car2/shelf_center:
-          Value: true
-        car2/tag/shelf_center:
           Value: true
         carB/map:
           Value: true
@@ -119,44 +83,15 @@ Visualization Manager:
       Tree:
         world:
           car1/map:
-            car1/odom:
-              car1/base_link:
-                car1/B_site:
-                  {}
-                car1/home:
-                  {}
-                car1/laser_front:
-                  {}
-                car1/laser_rear:
-                  {}
-                car1/marker1:
-                  {}
-                car1/shelf_car1:
-                  car1/tag/shelf_center:
-                    {}
-                car1/shelf_car2:
-                  {}
-                car1/shelf_center:
-                  {}
+            {}
           car2/map:
             car2/odom:
               car2/base_link:
-                car2/B_site:
-                  {}
-                car2/home:
-                  {}
                 car2/laser_front:
                   {}
                 car2/laser_rear:
                   {}
                 car2/marker1:
-                  {}
-                car2/shelf_car1:
-                  {}
-                car2/shelf_car2:
-                  car2/tag/shelf_center:
-                    {}
-                car2/shelf_center:
                   {}
           carB/map:
             {}
@@ -296,7 +231,7 @@ Visualization Manager:
       Marker Topic: /car1/obstacle_detector/markers/base
       Name: car1/sheft_finder/base
       Namespaces:
-        tiles: true
+        {}
       Queue Size: 9
       Value: true
     - Class: rviz/MarkerArray
@@ -395,7 +330,7 @@ Visualization Manager:
       Marker Topic: /car2/obstacle_detector/markers/base
       Name: car2/shelf_finder/base
       Namespaces:
-        tiles: true
+        {}
       Queue Size: 10
       Value: true
     - Class: rviz/MarkerArray
@@ -499,7 +434,7 @@ Visualization Manager:
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: world
+    Fixed Frame: car2/base_link
     Frame Rate: 30
   Name: root
   Tools:
@@ -524,16 +459,16 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 6.10250282
+      Distance: 9.03662872
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 2.71022511
-        Y: 1.39224327
-        Z: 0.164196789
+        X: 1.47174203
+        Y: 0.70693934
+        Z: 0.162966326
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
