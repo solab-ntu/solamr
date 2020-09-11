@@ -385,7 +385,7 @@ class Go_Dock_Standby(smach.State):
             
             shelf_laser_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
             if shelf_laser_xyt != None and tag_xyt != None:
-                # base_link_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
+                base_link_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
                 min_distance = float('inf')
                 best_xyt = None
                 for i in range(4): # Which direction is best
@@ -393,8 +393,14 @@ class Go_Dock_Standby(smach.State):
                     dis_sq = (tag_xyt[0] - x1)**2 + (tag_xyt[1] - y1)**2 
                     if dis_sq < min_distance:
                         min_distance = dis_sq
-                        best_xyt = (x1, y1, shelf_laser_xyt[2] + i*pi/2 + pi)
-                GOAL_MANAGER.send_goal(best_xyt, ROBOT_NAME + "/base_link")
+                        (x2,y2) = vec_trans_coordinate((x1, y1), base_link_xyt)
+                        best_xyt = (x2, y2, base_link_xyt[2] + shelf_laser_xyt[2] + i*pi/2 + pi)
+                        # best_xyt = (x1, y1, shelf_laser_xyt[2] + i*pi/2 + pi)
+
+                
+                
+                GOAL_MANAGER.send_goal(best_xyt, ROBOT_NAME + "/map")
+                # GOAL_MANAGER.send_goal(best_xyt, ROBOT_NAME + "/base_link")
             else: # if shelf_laser_xyt == None and shelf_tag_xyt != None:
                 # PUblish goal by tag tf
                 shelf_tag_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
@@ -460,6 +466,7 @@ class Dock_In(smach.State):
             PUB_CMD_VEL.publish(twist)
             
             if GATE_REPLY == True:
+            # if rho < 0.03:
                 # Get reply, Dockin successfully
                 # Send zero velocity
                 twist = Twist()
