@@ -773,7 +773,7 @@ if __name__ == "__main__":
     t_check_running.start()
 
     # FSM VIEWER
-    sis = smach_ros.IntrospectionServer('smach_server', SM, '/ROOT')
+    sis = smach_ros.IntrospectionServer("/" + ROBOT_NAME + '/smach_server', SM, '/ROOT')
     sis.start()
     SM.execute() # start FSM
     
