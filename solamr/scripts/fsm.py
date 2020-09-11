@@ -392,7 +392,7 @@ class Go_Dock_Standby(smach.State):
                         min_distance = dis_sq
                         best_xyt = (x1, y1, shelf_laser_xyt[2] + i*pi/2 + pi)
                 GOAL_MANAGER.send_goal(best_xyt, ROBOT_NAME + "/base_link")
-            elif shelf_laser_xyt == None and tag_xyt != None:
+            elif shelf_laser_xyt == None and shelf_tag_xyt != None:
                 # PUblish goal by tag tf
                 #shelf_tag_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
                 #if shelf_tag_xyt != None:
