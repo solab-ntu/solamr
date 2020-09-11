@@ -130,6 +130,9 @@ def task_cb(req):
         TASK = None
         # Cacelled all goal
         GOAL_MANAGER.cancel_goal()
+        # Zero velocity # TODO 
+        twist = Twist()
+        PUB_CMD_VEL.publish(twist)
         return 'abort OK'
     
     elif req.data[:3] == "jp2":
@@ -380,25 +383,23 @@ class Go_Dock_Standby(smach.State):
             shelf_laser_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
             if shelf_laser_xyt != None and tag_xyt != None:
                 # base_link_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
-                # if base_link_xyt != None:
                 min_distance = float('inf')
                 best_xyt = None
                 for i in range(4): # Which direction is best
                     (x1,y1) = vec_trans_coordinate((1.0, 0), (shelf_laser_xyt[0], shelf_laser_xyt[1], shelf_laser_xyt[2] + i*pi/2))
-                    
-                    if (tag_xyt[0] - x1)**2 + (tag_xyt[1] - y1)**2 < min_distance:
-                        min_distance = (tag_xyt[0] - x1)**2 + (tag_xyt[1] - y1)**2
+                    dis_sq = (tag_xyt[0] - x1)**2 + (tag_xyt[1] - y1)**2 
+                    if dis_sq < min_distance:
+                        min_distance = dis_sq
                         best_xyt = (x1, y1, shelf_laser_xyt[2] + i*pi/2 + pi)
-                # shelf_xyt = best_xyt
                 GOAL_MANAGER.send_goal(best_xyt, ROBOT_NAME + "/base_link")
-            else:
+            elif shelf_laser_xyt == None and tag_xyt != None:
                 # PUblish goal by tag tf
                 #shelf_tag_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
                 #if shelf_tag_xyt != None:
                 #    (x1,y1) = vec_trans_coordinate((-0.5, 0), (shelf_tag_xyt[0], shelf_tag_xyt[1], shelf_tag_xyt[2] + pi/2))
                 #    shelf_xyt = (x1,y1,shelf_tag_xyt[2] + pi/2)
                 # 
-                GOAL_MANAGER.send_goal((0,0,pi/2), ROBOT_NAME + "/shelf_" + ROBOT_NAME, z_offset=0.5)
+                GOAL_MANAGER.send_goal((0,0,pi), ROBOT_NAME + "/shelf_" + ROBOT_NAME, z_offset=0.5)
             # GOAL_MANAGER.send_goal(shelf_xyt, ROBOT_NAME + "/map")
             
             # Send search center to shelf detector
