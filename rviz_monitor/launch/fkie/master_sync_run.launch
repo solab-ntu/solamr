@@ -41,7 +41,7 @@
     -->
 
     <!-- The list of topics to synchronize. The ~ignore_nodes and ~ignore_topics lists are processed first. -->
-    <rosparam param="sync_topics">[/tf_rviz,
+    <rosparam param="sync_topics">[/car1/tf_rviz,
 
                                    /car1/scan_merged/filtered,
                                    /car1/zed2/map_rviz,
@@ -60,6 +60,7 @@
                                    /car1/smach_server/smach/container_structure,
                                    /car1/move_base/TebLocalPlannerROS/local_plan,
                                    
+                                   /car2/tf_rviz,
                                    /car2/scan_merged/filtered,
                                    /car2/zed2/map_rviz,
                                    /car2/map_rviz,
