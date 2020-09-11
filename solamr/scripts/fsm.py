@@ -6,7 +6,7 @@ from __future__ import division
 import yaml
 import os
 import time
-from math import pi,sqrt
+from math import pi,sqrt, atan2
 import threading
 # ROS
 import rospy
@@ -29,7 +29,7 @@ from actionlib_msgs.msg import GoalID
 import dynamic_reconfigure.client
 
 # Custom
-from lucky_utility.ros.rospy_utility import get_tf, vec_trans_coordinate, send_tf, normalize_angle
+from lucky_utility.ros.rospy_utility import get_tf, vec_trans_coordinate, send_tf, normalize_angle, sign
 
 class Task(object):
     def __init__(self):
@@ -187,7 +187,7 @@ class Goal_Manager(object):
         self.xy_goal_tolerance = None
         self.yaw_goal_tolerance = None
 
-    def send_goal(self, xyt, frame_id, tolerance=(0.12,0.06)):
+    def send_goal(self, xyt, frame_id, tolerance=(0.12,0.06), z_offset = 0.1):
         '''
         std_msgs/Header header
             uint32 seq
@@ -228,7 +228,7 @@ class Goal_Manager(object):
         self.goal.header.stamp = rospy.Time.now()
         self.goal.pose.position.x = xyt[0]
         self.goal.pose.position.y = xyt[1]
-        self.goal.pose.position.z = 0.1
+        self.goal.pose.position.z = z_offset
         quaternion = quaternion_from_euler(0.0, 0.0, xyt[2])
         (self.goal.pose.orientation.x,
             self.goal.pose.orientation.y,
@@ -332,6 +332,8 @@ class Find_Shelf(smach.State):
                     goal = find_points[find_points.index(goal)+1]
                 except IndexError:
                     goal = find_points[0]
+                # Wait goal to calm down
+                time.sleep(1)
             
             # Send a serial of goal
             GOAL_MANAGER.send_goal(goal, ROBOT_NAME + "/map", tolerance = (0.3, pi/6))
@@ -362,6 +364,10 @@ class Go_Dock_Standby(smach.State):
         GOAL_MANAGER.is_reached = False
         tag_xyt = None 
         while IS_RUN and TASK != None:
+            # Check goal reached or not
+            if GOAL_MANAGER.is_reached:
+                return 'done'
+
             # Choose a nearest direction to dockin
             # Get shelf tag tf
             # TODO use another while loop to deal with this shit NEED test
@@ -391,22 +397,15 @@ class Go_Dock_Standby(smach.State):
                 #if shelf_tag_xyt != None:
                 #    (x1,y1) = vec_trans_coordinate((-0.5, 0), (shelf_tag_xyt[0], shelf_tag_xyt[1], shelf_tag_xyt[2] + pi/2))
                 #    shelf_xyt = (x1,y1,shelf_tag_xyt[2] + pi/2)
-                GOAL_MANAGER.send_goal((0,0,-0.5), ROBOT_NAME + "/shelf_" + ROBOT_NAME)
+                # 
+                GOAL_MANAGER.send_goal((0,0,pi/2), ROBOT_NAME + "/shelf_" + ROBOT_NAME, z_offset=0.5)
             # GOAL_MANAGER.send_goal(shelf_xyt, ROBOT_NAME + "/map")
             
             # Send search center to shelf detector
             send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_" + ROBOT_NAME, ROBOT_NAME + "/tag/shelf_center", z_offset=-0.3)
             xyt = get_tf(TFBUFFER, ROBOT_NAME +"/base_link", ROBOT_NAME +"/tag/shelf_center")
             if xyt != None:
-                #point = Point()
-                #point.x = xyt[0]
-                #point.y = xyt[1]
-                #PUB_SEARCH_CENTER.publish(point)
                 PUB_SEARCH_CENTER.publish(Point(xyt[0], xyt[1], 0))
-            
-            # Check goal reached or not
-            if GOAL_MANAGER.is_reached:
-                return 'done'
             
             time.sleep(TIME_INTERVAL)
 
@@ -430,27 +429,34 @@ class Dock_In(smach.State):
         GATE_REPLY = None
         PUB_GATE_CMD.publish(Bool(False))
         PUB_GATE_CMD.publish(Bool(True))
-        # GOAL_MANAGER.is_reached = False
         # P controller
-        KP_X = 0.1
+        KP_X = 0.3
         KP_T = 1.0
-        XY_TOLERANCE = 0.05 # m
+        VX_MAX = 0.1 # Max dockin velocity
+        VX_MIN = 0.01 # Min dockin velocity
+        XY_TOLERANCE = 0.01 # m
         twist = Twist()
-        distance = float('inf')
+        rho = float('inf')
         while IS_RUN and TASK != None:
             # Send goal
-            # TODO Dont use move_base, use cmd_vel
-            # GOAL_MANAGER.send_goal((0.05, 0, 0), ROBOT_NAME + "/shelf_center")
             shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
             if shelf_xyt != None:
-                distance = sqrt(shelf_xyt[0]**2 + shelf_xyt[1]**2)
-                twist.linear.x = KP_X*distance
-                twist.angular.z = KP_T*shelf_xyt[2]
+                rho = sqrt(shelf_xyt[0]**2 + shelf_xyt[1]**2)
+                twist.linear.x = KP_X*rho
+                # Saturation velocity
+                if abs(twist.linear.x) > VX_MAX:
+                    twist.linear.x = VX_MAX * sign(twist.linear.x)
+                elif abs(twist.linear.x) < VX_MIN:
+                    twist.linear.x = VX_MIN * sign(twist.linear.x)
+                
+                if rho > 0.05: # To avoid strang things
+                    twist.angular.z = KP_T*atan2(shelf_xyt[1], shelf_xyt[0])
+                else:
+                    twist.angular.z = 0.0
             
             PUB_CMD_VEL.publish(twist)
             
-            # if GOAL_MANAGER.is_reached or GATE_REPLY == True:
-            if distance < XY_TOLERANCE or GATE_REPLY == True:
+            if GATE_REPLY == True:
                 # Get reply, Dockin successfully
                 # Send zero velocity
                 twist = Twist()
@@ -585,11 +591,13 @@ class Go_Home(smach.State):
                 rospy.loginfo("[fsm] task done")
                 return 'done'
             
+            # TODO using tag??????
+            GOAL_MANAGER.send_goal(TASK.home_location, ROBOT_NAME + "/map")
             # Send goal
-            home_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/home")
-            if home_xyt != None:
-                goal_xy = vec_trans_coordinate((0.5,0), (home_xyt[0], home_xyt[1], home_xyt[2]-pi/2))
-                GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], home_xyt[2]+pi/2), ROBOT_NAME + "/map")
+            # home_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/home")
+            # if home_xyt != None:
+            #     goal_xy = vec_trans_coordinate((0.5,0), (home_xyt[0], home_xyt[1], home_xyt[2]-pi/2))
+            #     GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], home_xyt[2]+pi/2), ROBOT_NAME + "/map")
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
