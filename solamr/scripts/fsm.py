@@ -399,8 +399,8 @@ class Go_Dock_Standby(smach.State):
                 # PUblish goal by tag tf
                 shelf_tag_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
                 if shelf_tag_xyt != None:
-                   (x1,y1) = vec_trans_coordinate((-0.5, 0), (shelf_tag_xyt[0], shelf_tag_xyt[1], shelf_tag_xyt[2] + pi/2))
-                   shelf_xyt = (x1,y1,shelf_tag_xyt[2] + pi/2)
+                    (x1,y1) = vec_trans_coordinate((-0.5, 0), (shelf_tag_xyt[0], shelf_tag_xyt[1], shelf_tag_xyt[2] + pi/2))
+                    shelf_xyt = (x1,y1,shelf_tag_xyt[2] + pi/2)
                     GOAL_MANAGER.send_goal(shelf_xyt, ROBOT_NAME + "/map")
                 # GOAL_MANAGER.send_goal((0,0,pi), ROBOT_NAME + "/shelf_" + ROBOT_NAME, z_offset=0.5)
             
