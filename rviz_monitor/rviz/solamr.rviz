@@ -7,7 +7,7 @@ Panels:
         - /Global Options1
         - /TF1/Frames1
         - /TF1/Tree1
-        - /car2/shelf_finder/base1
+        - /car1/AMR1
       Splitter Ratio: 0.552777767
     Tree Height: 718
   - Class: rviz/Selection
@@ -28,7 +28,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: car2/scan
+    SyncSource: ""
 Toolbars:
   toolButtonStyle: 2
 Visualization Manager:
@@ -57,31 +57,31 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
+        car1/A_site:
+          Value: true
+        car1/B_site:
+          Value: true
+        car1/base_link:
+          Value: true
+        car1/home:
+          Value: true
+        car1/laser_front:
+          Value: true
+        car1/laser_rear:
+          Value: true
         car1/map:
           Value: true
-        car2/A_site:
+        car1/marker1:
           Value: true
-        car2/B_site:
+        car1/odom:
           Value: true
-        car2/base_link:
+        car1/shelf_car1:
           Value: true
-        car2/home:
+        car1/shelf_center:
           Value: true
-        car2/laser_front:
-          Value: true
-        car2/laser_rear:
+        car1/tag/shelf_center:
           Value: true
         car2/map:
-          Value: true
-        car2/marker1:
-          Value: true
-        car2/odom:
-          Value: true
-        car2/shelf_car2:
-          Value: true
-        car2/shelf_center:
-          Value: true
-        car2/tag/shelf_center:
           Value: true
         carB/map:
           Value: true
@@ -95,22 +95,27 @@ Visualization Manager:
       Tree:
         world:
           car1/map:
-            {}
+            car1/odom:
+              car1/base_link:
+                car1/A_site:
+                  {}
+                car1/B_site:
+                  {}
+                car1/home:
+                  {}
+                car1/laser_front:
+                  {}
+                car1/laser_rear:
+                  {}
+                car1/marker1:
+                  {}
+                car1/shelf_car1:
+                  car1/tag/shelf_center:
+                    {}
+                car1/shelf_center:
+                  {}
           car2/map:
-            car2/odom:
-              car2/base_link:
-                car2/A_site:
-                  {}
-                car2/B_site:
-                  {}
-                car2/home:
-                  {}
-                car2/laser_front:
-                  {}
-                car2/laser_rear:
-                  {}
-                car2/shelf_center:
-                  {}
+            {}
           carB/map:
             {}
       Update Interval: 0
@@ -245,31 +250,31 @@ Visualization Manager:
       Unreliable: false
       Value: true
     - Class: rviz/MarkerArray
-      Enabled: true
+      Enabled: false
       Marker Topic: /car1/obstacle_detector/markers/base
       Name: car1/sheft_finder/base
       Namespaces:
         {}
       Queue Size: 1
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
-      Enabled: true
+      Enabled: false
       Marker Topic: /car2/obstacle_detector/markers/base
       Name: car1/shelf_finder/peer
       Namespaces:
-        tiles: true
+        {}
       Queue Size: 1
-      Value: true
+      Value: false
     - Alpha: 0.699999988
       Class: rviz/Map
       Color Scheme: map
       Draw Behind: false
-      Enabled: true
+      Enabled: false
       Name: "car2/Static map "
       Topic: /car2/map
       Unreliable: false
       Use Timestamp: false
-      Value: true
+      Value: false
     - Alpha: 0.699999988
       Class: rviz/Map
       Color Scheme: costmap
@@ -302,7 +307,7 @@ Visualization Manager:
       Color: 0; 255; 0
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 0
@@ -315,11 +320,11 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.0299999993
       Style: Flat Squares
-      Topic: /car2/scan_merged
+      Topic: /car2/scan_merged/filtered
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: false
-      Value: true
+      Value: false
     - Alpha: 1
       Class: rviz/Polygon
       Color: 85; 255; 0
@@ -328,16 +333,16 @@ Visualization Manager:
       Topic: /car2/move_base/local_costmap/footprint
       Unreliable: false
       Value: true
-    - Alpha: 1
+    - Alpha: 0.5
       Axes Length: 1
       Axes Radius: 0.100000001
       Class: rviz/Pose
       Color: 255; 25; 0
       Enabled: true
-      Head Length: 0.300000012
+      Head Length: 0.100000001
       Head Radius: 0.100000001
       Name: car2/goal
-      Shaft Length: 1
+      Shaft Length: 0.200000003
       Shaft Radius: 0.0500000007
       Shape: Arrow
       Topic: /car2/move_base/current_goal
@@ -348,17 +353,17 @@ Visualization Manager:
       Marker Topic: /car2/obstacle_detector/markers/base
       Name: car2/shelf_finder/base
       Namespaces:
-        tiles: true
-      Queue Size: 100
+        {}
+      Queue Size: 10
       Value: true
     - Class: rviz/MarkerArray
-      Enabled: false
+      Enabled: true
       Marker Topic: /car2/obstacle_detector/markers/peer
       Name: car2/shelf_finder/peer
       Namespaces:
         {}
       Queue Size: 100
-      Value: false
+      Value: true
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /car1/rap_angle_marker_line
@@ -425,6 +430,29 @@ Visualization Manager:
       Topic: /car2/move_base/GlobalPlanner/plan
       Unreliable: false
       Value: true
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz/Path
+      Color: 255; 0; 0
+      Enabled: false
+      Head Diameter: 0.300000012
+      Head Length: 0.200000003
+      Length: 0.300000012
+      Line Style: Lines
+      Line Width: 0.0299999993
+      Name: Path
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Radius: 0.0299999993
+      Shaft Diameter: 0.100000001
+      Shaft Length: 0.100000001
+      Topic: /car1/move_base/TebLocalPlannerROS/local_plan
+      Unreliable: false
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -453,7 +481,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: -14.1549931
+      Angle: -20.4249935
       Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
@@ -463,11 +491,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Scale: 150.020996
+      Scale: 138.49263
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz)
-      X: 2.48089576
-      Y: -0.0142691992
+      X: 2.5436902
+      Y: 0.000817611755
     Saved: ~
 Window Geometry:
   Displays:
@@ -485,5 +513,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1855
-  X: 1986
+  X: 1985
   Y: 24

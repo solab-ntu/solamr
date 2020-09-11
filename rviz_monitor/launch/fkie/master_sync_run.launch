@@ -58,6 +58,7 @@
                                    /car1/smach_server/smach/container_init,
                                    /car1/smach_server/smach/container_status,
                                    /car1/smach_server/smach/container_structure,
+                                   /car1/move_base/TebLocalPlannerROS/local_plan,
                                    
                                    /car2/scan_merged/filtered,
                                    /car2/zed2/map_rviz,
