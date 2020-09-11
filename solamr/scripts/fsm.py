@@ -326,7 +326,10 @@ class Find_Shelf(smach.State):
 
         # TODO use yaml.
         find_points = [(2.6, 0.4, -pi/2), (2, 1.2, pi), (2.6, 2.4, pi/2), (3.5, 1.2, 0.0)]
-        goal = find_points[0]
+        if ROBOT_NAME == "car1":
+            goal = find_points[0]
+        elif ROBOT_NAME == "car2":
+            goal = find_points[2]
         GOAL_MANAGER.is_reached = False
         while IS_RUN and TASK != None:
             # Check goal reached or not 
@@ -392,15 +395,14 @@ class Go_Dock_Standby(smach.State):
                         min_distance = dis_sq
                         best_xyt = (x1, y1, shelf_laser_xyt[2] + i*pi/2 + pi)
                 GOAL_MANAGER.send_goal(best_xyt, ROBOT_NAME + "/base_link")
-            elif shelf_laser_xyt == None and shelf_tag_xyt != None:
+            else: # if shelf_laser_xyt == None and shelf_tag_xyt != None:
                 # PUblish goal by tag tf
-                #shelf_tag_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
-                #if shelf_tag_xyt != None:
-                #    (x1,y1) = vec_trans_coordinate((-0.5, 0), (shelf_tag_xyt[0], shelf_tag_xyt[1], shelf_tag_xyt[2] + pi/2))
-                #    shelf_xyt = (x1,y1,shelf_tag_xyt[2] + pi/2)
-                # 
-                GOAL_MANAGER.send_goal((0,0,pi), ROBOT_NAME + "/shelf_" + ROBOT_NAME, z_offset=0.5)
-            # GOAL_MANAGER.send_goal(shelf_xyt, ROBOT_NAME + "/map")
+                shelf_tag_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
+                if shelf_tag_xyt != None:
+                   (x1,y1) = vec_trans_coordinate((-0.5, 0), (shelf_tag_xyt[0], shelf_tag_xyt[1], shelf_tag_xyt[2] + pi/2))
+                   shelf_xyt = (x1,y1,shelf_tag_xyt[2] + pi/2)
+                    GOAL_MANAGER.send_goal(shelf_xyt, ROBOT_NAME + "/map")
+                # GOAL_MANAGER.send_goal((0,0,pi), ROBOT_NAME + "/shelf_" + ROBOT_NAME, z_offset=0.5)
             
             # Send search center to shelf detector
             send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_" + ROBOT_NAME, ROBOT_NAME + "/tag/shelf_center", z_offset=-0.3)
