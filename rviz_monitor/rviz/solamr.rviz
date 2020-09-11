@@ -57,6 +57,12 @@ Visualization Manager:
       Frame Timeout: 999
       Frames:
         All Enabled: false
+        car1/base_link:
+          Value: true
+        car1/laser_front:
+          Value: true
+        car1/laser_rear:
+          Value: true
         car1/map:
           Value: true
         car2/base_link:
@@ -77,7 +83,7 @@ Visualization Manager:
           Value: true
       Marker Scale: 1
       Name: TF
-      Show Arrows: true
+      Show Arrows: false
       Show Axes: true
       Show Names: true
       Tree:
@@ -434,7 +440,7 @@ Visualization Manager:
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: car2/base_link
+    Fixed Frame: world
     Frame Rate: 30
   Name: root
   Tools:
@@ -459,16 +465,16 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 9.03662872
+      Distance: 11.1119499
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 1.47174203
-        Y: 0.70693934
-        Z: 0.162966326
+        X: 2.0788393
+        Y: 1.15704072
+        Z: 0.165622398
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
@@ -477,7 +483,7 @@ Visualization Manager:
       Pitch: 1.56979632
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.13000846
+      Yaw: 3.13500834
     Saved: ~
 Window Geometry:
   Displays:
