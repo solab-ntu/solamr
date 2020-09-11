@@ -9,8 +9,8 @@ single_AMR:
   goal_location_car1: [0.7, 1.26, 3.1415926]
   goal_location_car2: [4.65, 1.24, 0.0]
   # Return home location
-  home_location_car1: [3.3, 2.78, -1.57]
-  home_location_car2: [2.5, 2.78, -1.57]
+  home_location_car1: [3.5, 2.78, -1.57]
+  home_location_car2: [2.2, 2.78, -1.57]
 
 double_AMR:
   shelf_location_car1: [1.23, 1.33, 3.1415926]
