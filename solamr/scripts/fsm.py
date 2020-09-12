@@ -378,7 +378,6 @@ def get_chosest_goal(laser_center,ref_point):
             output_xyt = (x_laser, y_laser, laser_center[2] + i*pi/2 + pi)
     return output_xyt
 
-
 class Go_Dock_Standby(smach.State):
 
     def __init__(self):
@@ -519,7 +518,7 @@ class Go_Way_Point(smach.State):
             time.sleep(2)
             return 'done'
 
-        GOAL_MANAGER.send_goal(TASK.wait_location, ROBOT_NAME + "/map")
+        GOAL_MANAGER.send_goal(TASK.wait_location, ROBOT_NAME + "/map", tolerance = (0.3,  pi/6))
         while IS_RUN and TASK != None:
             if GOAL_MANAGER.is_reached:
                 # TODO Wait and evaluate possiability to get to final goal
@@ -629,12 +628,15 @@ class Go_Home(smach.State):
                 return 'done'
             
             # TODO using tag??????
-            GOAL_MANAGER.send_goal(TASK.home_location, ROBOT_NAME + "/map")
+            # GOAL_MANAGER.send_goal(TASK.home_location, ROBOT_NAME + "/map")
             # Send goal
             # home_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/home")
-            # if home_xyt != None:
-            #     goal_xy = vec_trans_coordinate((0.5,0), (home_xyt[0], home_xyt[1], home_xyt[2]-pi/2))
-            #     GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], home_xyt[2]+pi/2), ROBOT_NAME + "/map")
+            if home_xyt != None:
+                if ROBOT_NAME == "car1":
+                    goal_xy = vec_trans_coordinate((0.5,-0.5), (home_xyt[0], home_xyt[1], home_xyt[2]-pi/2))
+                elif ROBOT_NAME == "car2":
+                    goal_xy = vec_trans_coordinate((0.5, 0.5), (home_xyt[0], home_xyt[1], home_xyt[2]-pi/2))
+                GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], home_xyt[2]+pi/2), ROBOT_NAME + "/map")
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
