@@ -548,8 +548,8 @@ class Go_Goal(smach.State):
                 goal_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/A_site")
 
             if goal_xyt != None:
-                goal_xy = vec_trans_coordinate((1,0), (home_xyt[0], home_xyt[1], home_xyt[2]-pi/2))
-                GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], home_xyt[2]+pi/2), ROBOT_NAME + "/map")
+                goal_xy = vec_trans_coordinate((1,0), (goal_xyt[0], goal_xyt[1], goal_xyt[2]-pi/2))
+                GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], goal_xyt[2]+pi/2), ROBOT_NAME + "/map")
 
             if GOAL_MANAGER.is_reached:
                 return 'done'
