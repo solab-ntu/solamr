@@ -325,7 +325,7 @@ class Find_Shelf(smach.State):
             return 'done'
 
         # TODO use yaml.
-        find_points = [(2.6, 0.4, -pi/2), (2, 1.2, pi), (2.6, 2.4, pi/2), (3.5, 1.2, 0.0)]
+        find_points = [(2.6, 0.4, -pi/2), (2, 1.2, pi), (2.6, 2.1, pi/2), (3.5, 1.2, 0.0)]
         if ROBOT_NAME == "car1":
             goal = find_points[0]
         elif ROBOT_NAME == "car2":
@@ -371,14 +371,6 @@ def get_chosest_goal(laser_center,ref_point):
         if dis_sq < min_distance:
             min_distance = dis_sq
             output_xyt = (x_laser, y_laser, laser_center[2] + i*pi/2 + pi)
-        if i == 0:
-            send_tf((x_laser,y_laser,0), ROBOT_NAME + "/map", ROBOT_NAME + "/A_site")
-        elif i == 1:
-            send_tf((x_laser,y_laser,0), ROBOT_NAME + "/map", ROBOT_NAME + "/B_site")
-        elif i == 2:
-            send_tf((x_laser,y_laser,0), ROBOT_NAME + "/map", ROBOT_NAME + "/home")
-        elif i == 3:
-            send_tf((x_laser,y_laser,0), ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_car2")
     return output_xyt
 
 
