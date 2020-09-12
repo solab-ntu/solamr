@@ -186,7 +186,7 @@ class Goal_Manager(object):
         rospy.Subscriber("/" + ROBOT_NAME + "/move_base/result", MoveBaseActionResult, self.simple_goal_cb)
         self.is_reached = False
         self.goal = None
-        self.goal_xyt = [None, None, None]
+        # self.goal_xyt = [None, None, None]
         self.xy_goal_tolerance = None
         self.yaw_goal_tolerance = None
         self.time_last_goal = time.time()
@@ -213,7 +213,6 @@ class Goal_Manager(object):
             return
 
         self.is_reached = False
-        self.goal_xyt = xyt
         if  self.xy_goal_tolerance != tolerance[0] or\
             self.yaw_goal_tolerance != tolerance[1]:
             # Need to set new tolerance
@@ -333,9 +332,9 @@ class Find_Shelf(smach.State):
         # TODO use yaml.
         find_points = [(2.6, 0.4, -pi/2), (2, 1.2, pi), (2.6, 2.1, pi/2), (3.5, 1.2, 0.0)]
         if ROBOT_NAME == "car1":
-            goal = find_points[0]
+            goal = find_points[3]
         elif ROBOT_NAME == "car2":
-            goal = find_points[2]
+            goal = find_points[1]
         GOAL_MANAGER.is_reached = False
         while IS_RUN and TASK != None:
             # Check goal reached or not 
@@ -488,7 +487,9 @@ class Dock_In(smach.State):
                     twist.angular.z = KP_T*atan2(shelf_xyt[1], shelf_xyt[0])
                 else:
                     twist.angular.z = 0.0
-            
+            else:
+                rospy.logerr("[fsm] Docking fail")
+                return 'abort'
             PUB_CMD_VEL.publish(twist)
             
             if GATE_REPLY == True:
