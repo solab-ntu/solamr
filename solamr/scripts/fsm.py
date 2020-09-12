@@ -238,6 +238,7 @@ class Goal_Manager(object):
             self.goal.pose.orientation.z,
             self.goal.pose.orientation.w) = quaternion
         self.pub_simple_goal.publish(self.goal)
+        time.sleep(SEND_GOAL_INTERVAL)
   
     def simple_goal_cb(self,data):
         '''
@@ -686,6 +687,7 @@ if __name__ == "__main__":
     ROLE = rospy.get_param(param_name="~role")
     INIT_STATE = rospy.get_param(param_name="~init_state")
     TIME_INTERVAL = 1.0/rospy.get_param(param_name="~frequency")
+    SEND_GOAL_INTERVAL = 1
     IS_DUMMY_TEST = rospy.get_param(param_name="~dummy_test")
     # Service
     rospy.Service(name="~task", service_class=StringSrv, handler=task_cb)
