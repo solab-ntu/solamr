@@ -104,27 +104,29 @@ class Odom_Fuser_Single_AMR():
         #print ("valid_num = " + str(valid_num))
         if sum_error != None and sum_error < 0.02:
             if marker1_xyt != None and marker1_xyt != self.marker1_xyt_last:
-                marker1_coor = (1.90, -0.93, pi/2) # x- axis diff
-                
-                # Step 1
-                theta = marker1_xyt[2] - pi/2
-                # print ("theta: " + str(theta))
-                # Step 2
-                (tag_2_base_x, tag_2_base_y) = vec_trans_coordinate((-marker1_xyt[0], -marker1_xyt[1]) ,
-                                                                    (0, 0, -theta))
-                tag_2_base_t = -theta
-                # Step 3
-                (tag_2_base_x__map, tag_2_base_y__map) = vec_trans_coordinate((tag_2_base_x, tag_2_base_y),
-                                                                                (0, 0, marker1_coor[2]))
-                init_pose = (marker1_coor[0] + tag_2_base_x__map,
-                             marker1_coor[1] + tag_2_base_y__map,
-                             marker1_coor[2] + tag_2_base_t)
-                
-                # Send initpose
-                self.update_global_localization(init_pose)
+                if sqrt(marker1_xyt[0]**2 + marker1_xyt[1]**2) < 2.0:
+                    marker1_coor = (1.90, -0.93, pi/2) # x- axis diff
+                    
+                    # Step 1
+                    theta = marker1_xyt[2] - pi/2
+                    # print ("theta: " + str(theta))
+                    # Step 2
+                    (tag_2_base_x, tag_2_base_y) = vec_trans_coordinate((-marker1_xyt[0], -marker1_xyt[1]) ,
+                                                                        (0, 0, -theta))
+                    tag_2_base_t = -theta
+                    # Step 3
+                    (tag_2_base_x__map, tag_2_base_y__map) = vec_trans_coordinate((tag_2_base_x, tag_2_base_y),
+                                                                                    (0, 0, marker1_coor[2]))
+                    init_pose = (marker1_coor[0] + tag_2_base_x__map,
+                                marker1_coor[1] + tag_2_base_y__map,
+                                marker1_coor[2] + tag_2_base_t)
+                    
+                    # Send initpose
+                    rospy.loginfo("[odom fuser] Accepted apriltag initialpose")
+                    self.update_global_localization(init_pose)
 
-                # Flags
-                self.marker1_xyt_last = marker1_xyt
+                    # Flags
+                    self.marker1_xyt_last = marker1_xyt
 
         if odom_xyt != None:
             self.odom_xyt = odom_xyt
