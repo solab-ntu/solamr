@@ -189,6 +189,7 @@ class Goal_Manager(object):
         self.goal_xyt = [None, None, None]
         self.xy_goal_tolerance = None
         self.yaw_goal_tolerance = None
+        self.time_last_goal = time.time()
 
     def send_goal(self, xyt, frame_id, tolerance=(0.12,0.06), z_offset = 0.1):
         '''
@@ -207,6 +208,10 @@ class Goal_Manager(object):
                 float64 z
                 float64 w
         '''
+        # Check goal latch time
+        if time.time() - self.time_last_goal < SEND_GOAL_INTERVAL: # sec
+            return
+
         self.is_reached = False
         self.goal_xyt = xyt
         if  self.xy_goal_tolerance != tolerance[0] or\
@@ -238,7 +243,7 @@ class Goal_Manager(object):
             self.goal.pose.orientation.z,
             self.goal.pose.orientation.w) = quaternion
         self.pub_simple_goal.publish(self.goal)
-        time.sleep(SEND_GOAL_INTERVAL)
+        self.time_last_goal = time.time()
   
     def simple_goal_cb(self,data):
         '''
@@ -687,7 +692,7 @@ if __name__ == "__main__":
     ROLE = rospy.get_param(param_name="~role")
     INIT_STATE = rospy.get_param(param_name="~init_state")
     TIME_INTERVAL = 1.0/rospy.get_param(param_name="~frequency")
-    SEND_GOAL_INTERVAL = 1
+    SEND_GOAL_INTERVAL = 2
     IS_DUMMY_TEST = rospy.get_param(param_name="~dummy_test")
     # Service
     rospy.Service(name="~task", service_class=StringSrv, handler=task_cb)
