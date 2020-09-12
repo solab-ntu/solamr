@@ -11,7 +11,7 @@ from geometry_msgs.msg import PoseWithCovarianceStamped, TransformStamped
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Float64
 # Custom import
-from lucky_utility.ros.rospy_utility import get_tf, send_tf, vec_trans_coordinate, normalize_angle
+from lucky_utility.ros.rospy_utility import get_tf, send_tf, vec_trans_coordinate, normalize_angle, cal_ang_distance
 
 class Odom_Fuser_Single_AMR():
     def __init__(self):
@@ -19,6 +19,7 @@ class Odom_Fuser_Single_AMR():
         self.map_rtabmap_last = (None, None, None) #(x,y,theta)
         self.odom_xyt = (None, None, None) #(x,y,theta)
         self.marker1_xyt_last = (None, None, None)
+        self.tag_list = []
         # For getting Tf
         self.tfBuffer = tf2_ros.Buffer()
         tf2_ros.TransformListener(self.tfBuffer)
@@ -68,48 +69,54 @@ class Odom_Fuser_Single_AMR():
         map_rtabmap_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/raw/map", ROBOT_NAME+"/raw/odom")
         odom_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/raw/odom", ROBOT_NAME+"/raw/base_link")
         
-        # Get Markers,. need to think
+        # Get Markers
         marker1_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/raw/base_link", ROBOT_NAME + "/raw/marker1", is_warn = False)
-        # marker1_xyt = get_tf(self.tfBuffer, "car2/raw/zed2_left_camera_optical_frame","car2/raw/marker1", is_warn = False)
-        if marker1_xyt != None and marker1_xyt != self.marker1_xyt_last:
-            # base_link = get_tf(self.tfBuffer, ROBOT_NAME+"/map", ROBOT_NAME + "/base_link") # TODO TODO problem
-            if base_link != None:
+        
+        # insert new data
+        self.tag_list.append(marker1_xyt)
+        if len(self.tag_list) > 10:
+            del self.tag_list[0]
+        
+        # Get avgerage ang
+        valid_num = 0
+        sum_ang = 0
+        sum_error = None
+        for i in self.tag_list:
+            if i != None:
+                valid_num += 1
+                sum_ang += i[2]
+        try:
+            avg = sum_ang / valid_num
+        except ZeroDivisionError:
+            pass
+        else:
+            # Get resident_sqare
+            sum_error = 0
+            for i in self.tag_list:
+                if i != None:
+                    sum_error += abs(avg - i[2])
+            
+            #print ("sum_error = " + str(sum_error))
+        #print ("valid_num = " + str(valid_num))
+        if sum_error != None and sum_error < 0.05:
+            if marker1_xyt != None and marker1_xyt != self.marker1_xyt_last:
                 marker1_coor = (1.90, -0.93, pi/2) # x- axis diff
                 
                 # Step 1
                 theta = marker1_xyt[2] - pi/2
-                print ("theta = " + str(theta))
+                # print ("theta: " + str(theta))
                 # Step 2
                 (tag_2_base_x, tag_2_base_y) = vec_trans_coordinate((-marker1_xyt[0], -marker1_xyt[1]) ,
-                                                                    (0, 0, theta))
+                                                                    (0, 0, -theta))
                 tag_2_base_t = -theta
                 # Step 3
                 (tag_2_base_x__map, tag_2_base_y__map) = vec_trans_coordinate((tag_2_base_x, tag_2_base_y),
-                                                                              (0, 0, marker1_coor[2]))
-                init_pose = (marker1_coor[0] + robot_see_tag__on_map[0],
-                             marker1_coor[1] + robot_see_tag__on_map[1],
-                             marker1_coor[2] + tag_2_base_t)
-
-
-                # robot_see_tag__on_map = vec_trans_coordinate(marker1_xyt[:2], (0, 0, base_link[2]))
-                # init_pose = (marker1_coor[0] - robot_see_tag__on_map[0],
-                #              marker1_coor[1] - robot_see_tag__on_map[1],
-                #              -(marker1_xyt[2] + pi))
+                                                                                (0, 0, marker1_coor[2]))
+                init_pose = (marker1_coor[0] + tag_2_base_x__map,
+                            marker1_coor[1] + tag_2_base_y__map,
+                            marker1_coor[2] + tag_2_base_t)
                 
-                # init_pose = (marker1_coor[0] + marker1_to_baselink__on_map[0],
-                #              marker1_coor[1] + marker1_to_baselink__on_map[1],
-                #              - marker1_xyt[2] - pi) # Orignian 
-                            # marker1_coor[2] + pi + marker1_xyt[2] + pi/2) # good thinking
-                
-                
-                # Check map->base_link->tag == map->tag is at the right place
-                marker1_on_map_new = vec_trans_coordinate(marker1_xyt[:2], init_pose)
-                error = (marker1_on_map_new[0] - marker1_coor[0])**2 +\
-                        (marker1_on_map_new[1] - marker1_coor[1])**2
-                ##print ("error: " + str(error))
-                # TODO 
-                # if error < 0.01: # 3.0: # 0.01:
-                rospy.loginfo("[odom_fuser] Accepted marker1 initialpose update.")
+                # Send initpose
                 self.update_global_localization(init_pose)
 
                 # Flags

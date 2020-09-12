@@ -354,6 +354,26 @@ class Find_Shelf(smach.State):
         rospy.logwarn('[fsm] task abort')
         return 'abort'
 
+def get_chosest_goal(laser_center,ref_point):
+    '''
+    laser_center - (x,y,t)
+    ref_point -(x,y)
+    '''
+    # Set choose point !!
+    min_distance = float('inf')
+    output_xyt = None
+    for i in range(4): # Which direction is best
+        (x_laser, y_laser) = vec_trans_coordinate((1.0, 0), 
+                                        (laser_center[0], 
+                                         laser_center[1], 
+                                         laser_center[2] + i*pi/2))
+        dis_sq = (ref_point[0] - x_laser)**2 + (ref_point[1] - y_laser)**2 
+        if dis_sq < min_distance:
+            min_distance = dis_sq
+            output_xyt = (x_laser, y_laser, laser_center[2] + i*pi/2 + pi)
+    return output_xyt
+
+
 class Go_Dock_Standby(smach.State):
 
     def __init__(self):
@@ -368,7 +388,6 @@ class Go_Dock_Standby(smach.State):
             return 'done'
         
         GOAL_MANAGER.is_reached = False
-        # tag_xyt = None 
         choose_point = None
         while IS_RUN and TASK != None:
             # Check goal reached or not
@@ -382,45 +401,30 @@ class Go_Dock_Standby(smach.State):
             # Choose point only set, when tag and laser are both avaliable
             shelf_tag_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
             shelf_laser_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_center")
-
             
-
-            if shelf_tag_xyt != None and shelf_laser_xyt != None:
-                # Choose a direction to do this
-                (x_tag,y_tag) = vec_trans_coordinate((-0.5, 0),
-                                                        (shelf_tag_xyt[0], shelf_tag_xyt[1], shelf_tag_xyt[2] + pi/2))
-                min_distance = float('inf')
-                tmp_point = None
-                for i in range(4): # Which direction is best
-                    (x_laser, y_laser) = vec_trans_coordinate((1.0, 0), 
-                                                    (shelf_laser_xyt[0], shelf_laser_xyt[1], shelf_laser_xyt[2] + i*pi/2))
-                    dis_sq = (x_tag - x_laser)**2 + (y_tag - y_laser)**2 
-                    if dis_sq < min_distance:
-                        min_distance = dis_sq
-                        tmp_point = (x_laser, y_laser, shelf_laser_xyt[2] + i*pi/2 + pi)
-                
-                # Assign point to choose point
-                if choose_point == None:
-                    choose_point = tmp_point
-                else:
+            if choose_point == None:
+                if shelf_tag_xyt != None and shelf_laser_xyt != None:
+                    tag_goal_xy = vec_trans_coordinate((-0.5, 0),
+                                        (shelf_tag_xyt[0], shelf_tag_xyt[1], shelf_tag_xyt[2] + pi/2))
+                    # Assign point to choose point
+                    choose_point = get_chosest_goal(shelf_laser_xyt, tag_goal_xy)
+                    GOAL_MANAGER.send_goal(choose_point, ROBOT_NAME + "/map")
+                elif  shelf_tag_xyt != None:
+                    # If chose point is not set, we won't consider laser center
+                    # Send tag goal, 
+                    (x1,y1) = vec_trans_coordinate((-0.5, 0),
+                                                    (shelf_tag_xyt[0], 
+                                                    shelf_tag_xyt[1], 
+                                                    shelf_tag_xyt[2] + pi/2))
+                    GOAL_MANAGER.send_goal((x1,y1,shelf_tag_xyt[2] + pi/2), ROBOT_NAME + "/map")
+            else:
+                # Care only laser
+                if shelf_laser_xyt != None:
+                    tmp_point = get_chosest_goal(shelf_laser_xyt, choose_point[:2])
                     err = sqrt((choose_point[0] - tmp_point[0])**2 + (choose_point[1] - tmp_point[1])**2)
                     rospy.loginfo("err = " + str(err))
                     choose_point = tmp_point
-
-                    
-                elif shelf_tag_xyt != None and shelf_laser_xyt == None:
-                    (x1,y1) = vec_trans_coordinate((-0.5, 0),
-                                                   (shelf_tag_xyt[0], shelf_tag_xyt[1], shelf_tag_xyt[2] + pi/2))
-                    shelf_xyt = (x1,y1,shelf_tag_xyt[2] + pi/2)
-                    GOAL_MANAGER.send_goal(shelf_xyt, ROBOT_NAME + "/map")
-            
-            else:
-                # Go to set goal
-
-                    GOAL_MANAGER.send_goal(best_xyt, ROBOT_NAME + "/map")
-                    # GOAL_MANAGER.send_goal(best_xyt, ROBOT_NAME + "/base_link")
-           
-           
+                    GOAL_MANAGER.send_goal(choose_point, ROBOT_NAME + "/map")
             
             # Send search center to shelf detector
             send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_" + ROBOT_NAME, ROBOT_NAME + "/tag/shelf_center", z_offset=-0.3)
