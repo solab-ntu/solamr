@@ -98,7 +98,7 @@ class Odom_Fuser_Single_AMR():
             
             #print ("sum_error = " + str(sum_error))
         #print ("valid_num = " + str(valid_num))
-        if sum_error != None and sum_error < 0.05:
+        if sum_error != None and sum_error < 0.02:
             if marker1_xyt != None and marker1_xyt != self.marker1_xyt_last:
                 marker1_coor = (1.90, -0.93, pi/2) # x- axis diff
                 

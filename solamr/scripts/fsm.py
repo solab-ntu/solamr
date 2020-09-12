@@ -137,11 +137,11 @@ def task_cb(req):
     
     elif req.data[:3] == "jp2":
         # Jump to assign state
-        req_list = req.data.split(' ')
+        #  = req.data.split(' ')
         task_tmp = Task()
-        task_tmp.task_flow = [CUR_STATE, req_list[1]]
+        task_tmp.task_flow = [CUR_STATE, req.data[3:]]
         TASK = task_tmp
-        return "jump to " + req_list[1] + " OK"
+        return "jump to " + req.data[3:] + " OK"
 
     # Check Task is busy
     if TASK != None:
