@@ -23,6 +23,9 @@
     <node pkg="tf" type="static_transform_publisher" name="world2car3" args="0 0 0 0 0 0 1 world carB/map 100">
         <remap from="tf" to="/server/tf_rviz"/>
     </node>
+    <node pkg="tf" type="static_transform_publisher" name="world2carTEST" args="1 0 0 -0.5 0.5 -0.5 0.5 world TEST 100">
+        <remap from="tf" to="/server/tf_rviz"/>
+    </node>
     
     <!-- TODO what if double AMR? -->
     <node pkg='rviz_monitor' type='rviz_monitor_forwarder.py' name='car1_rviz_monitor_forwarder' output="screen">

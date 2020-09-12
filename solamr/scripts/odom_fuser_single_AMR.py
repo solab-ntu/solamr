@@ -72,36 +72,45 @@ class Odom_Fuser_Single_AMR():
         marker1_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/raw/base_link", ROBOT_NAME + "/raw/marker1", is_warn = False)
         # marker1_xyt = get_tf(self.tfBuffer, "car2/raw/zed2_left_camera_optical_frame","car2/raw/marker1", is_warn = False)
         if marker1_xyt != None and marker1_xyt != self.marker1_xyt_last:
-            base_link = get_tf(self.tfBuffer, ROBOT_NAME+"/map", ROBOT_NAME + "/base_link") # TODO TODO problem
+            # base_link = get_tf(self.tfBuffer, ROBOT_NAME+"/map", ROBOT_NAME + "/base_link") # TODO TODO problem
             if base_link != None:
                 marker1_coor = (1.90, -0.93, pi/2) # x- axis diff
-                # marker1_to_baselink__on_map = vec_trans_coordinate(marker1_xyt[:2], (0, 0, marker1_coor[2]))
-                # marker1_to_baselink__on_map = vec_trans_coordinate((marker1_xyt[0], -marker1_xyt[1]), (0, 0, marker1_coor[2]))
-                robot_see_tag__on_map = vec_trans_coordinate(marker1_xyt[:2], (0, 0, base_link[2]))
-                init_pose = (marker1_coor[0] - robot_see_tag__on_map[0],
-                             marker1_coor[1] - robot_see_tag__on_map[1],
-                             -(marker1_xyt[2] + pi))
+                
+                # Step 1
+                theta = marker1_xyt[2] - pi/2
+                print ("theta = " + str(theta))
+                # Step 2
+                (tag_2_base_x, tag_2_base_y) = vec_trans_coordinate((-marker1_xyt[0], -marker1_xyt[1]) ,
+                                                                    (0, 0, theta))
+                tag_2_base_t = -theta
+                # Step 3
+                (tag_2_base_x__map, tag_2_base_y__map) = vec_trans_coordinate((tag_2_base_x, tag_2_base_y),
+                                                                              (0, 0, marker1_coor[2]))
+                init_pose = (marker1_coor[0] + robot_see_tag__on_map[0],
+                             marker1_coor[1] + robot_see_tag__on_map[1],
+                             marker1_coor[2] + tag_2_base_t)
+
+
+                # robot_see_tag__on_map = vec_trans_coordinate(marker1_xyt[:2], (0, 0, base_link[2]))
+                # init_pose = (marker1_coor[0] - robot_see_tag__on_map[0],
+                #              marker1_coor[1] - robot_see_tag__on_map[1],
+                #              -(marker1_xyt[2] + pi))
                 
                 # init_pose = (marker1_coor[0] + marker1_to_baselink__on_map[0],
                 #              marker1_coor[1] + marker1_to_baselink__on_map[1],
                 #              - marker1_xyt[2] - pi) # Orignian 
                             # marker1_coor[2] + pi + marker1_xyt[2] + pi/2) # good thinking
-                #print ("marker1_xyt = " + str(marker1_xyt))
-                #print ("marker1_to_baselink__on_map = " + str(marker1_to_baselink__on_map))
                 
-                marker1_on_map_new = vec_trans_coordinate(marker1_xyt[:2], init_pose)
-                # marker1_on_map_new = vec_trans_coordinate(marker1_xyt[:2], (0, 0, init_pose[2]))
-                #markers_new_xy = (marker1_on_map_new[0] + init_pose[0],
-                ##                  marker1_on_map_new[1] + init_pose[1])
-
+                
                 # Check map->base_link->tag == map->tag is at the right place
+                marker1_on_map_new = vec_trans_coordinate(marker1_xyt[:2], init_pose)
                 error = (marker1_on_map_new[0] - marker1_coor[0])**2 +\
                         (marker1_on_map_new[1] - marker1_coor[1])**2
-                print ("error: " + str(error))
+                ##print ("error: " + str(error))
                 # TODO 
-                if error < 0.01: # 3.0: # 0.01:
-                    rospy.loginfo("[odom_fuser] Accepted marker1 initialpose update.")
-                    self.update_global_localization(init_pose)
+                # if error < 0.01: # 3.0: # 0.01:
+                rospy.loginfo("[odom_fuser] Accepted marker1 initialpose update.")
+                self.update_global_localization(init_pose)
 
                 # Flags
                 self.marker1_xyt_last = marker1_xyt
