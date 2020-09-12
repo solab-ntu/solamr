@@ -55,6 +55,10 @@ class Odom_Fuser_Single_AMR():
     def update_global_localization(self, update_xyt):
         '''
         '''
+        if self.odom_xyt[0] == None or self.map_xyt[0] == None:
+            # if map it's not valid yet, ignore
+            return 
+
         odom = vec_trans_coordinate((self.odom_xyt[0], self.odom_xyt[1]), (0, 0, self.map_xyt[2]))
         rho = update_xyt[2] - (self.odom_xyt[2] + self.map_xyt[2])
         rota_odom_x = cos(rho)*odom[0] - sin(rho)*odom[1]
@@ -113,8 +117,8 @@ class Odom_Fuser_Single_AMR():
                 (tag_2_base_x__map, tag_2_base_y__map) = vec_trans_coordinate((tag_2_base_x, tag_2_base_y),
                                                                                 (0, 0, marker1_coor[2]))
                 init_pose = (marker1_coor[0] + tag_2_base_x__map,
-                            marker1_coor[1] + tag_2_base_y__map,
-                            marker1_coor[2] + tag_2_base_t)
+                             marker1_coor[1] + tag_2_base_y__map,
+                             marker1_coor[2] + tag_2_base_t)
                 
                 # Send initpose
                 self.update_global_localization(init_pose)
