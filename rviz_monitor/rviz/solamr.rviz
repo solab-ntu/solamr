@@ -5,9 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /TF1
-        - /TF1/Tree1
-        - /car2/AMR1
+        - /TF1/Frames1
       Splitter Ratio: 0.552777767
     Tree Height: 718
   - Class: rviz/Selection
@@ -57,26 +55,44 @@ Visualization Manager:
       Frame Timeout: 999
       Frames:
         All Enabled: false
-        TEST:
+        car1/A_site:
           Value: true
+        car1/base_link:
+          Value: true
+        car1/home:
+          Value: true
+        car1/laser_front:
+          Value: false
+        car1/laser_rear:
+          Value: false
         car1/map:
+          Value: false
+        car1/marker1:
           Value: true
-        car2/B_site:
+        car1/odom:
+          Value: false
+        car1/shelf_car1:
+          Value: true
+        car1/shelf_car2:
+          Value: true
+        car1/shelf_center:
+          Value: true
+        car1/tag/shelf_center:
+          Value: true
+        car2/A_site:
           Value: true
         car2/base_link:
           Value: true
         car2/home:
           Value: true
         car2/laser_front:
-          Value: true
+          Value: false
         car2/laser_rear:
-          Value: true
+          Value: false
         car2/map:
-          Value: true
-        car2/marker1:
-          Value: true
+          Value: false
         car2/odom:
-          Value: true
+          Value: false
         car2/shelf_car1:
           Value: true
         car2/shelf_car2:
@@ -86,7 +102,7 @@ Visualization Manager:
         car2/tag/shelf_center:
           Value: true
         carB/map:
-          Value: true
+          Value: false
         world:
           Value: true
       Marker Scale: 1
@@ -96,22 +112,36 @@ Visualization Manager:
       Show Names: true
       Tree:
         world:
-          TEST:
-            {}
           car1/map:
-            {}
+            car1/odom:
+              car1/base_link:
+                car1/A_site:
+                  {}
+                car1/home:
+                  {}
+                car1/laser_front:
+                  {}
+                car1/laser_rear:
+                  {}
+                car1/marker1:
+                  {}
+                car1/shelf_car1:
+                  car1/tag/shelf_center:
+                    {}
+                car1/shelf_car2:
+                  {}
+                car1/shelf_center:
+                  {}
           car2/map:
             car2/odom:
               car2/base_link:
-                car2/B_site:
+                car2/A_site:
                   {}
                 car2/home:
                   {}
                 car2/laser_front:
                   {}
                 car2/laser_rear:
-                  {}
-                car2/marker1:
                   {}
                 car2/shelf_car1:
                   {}
@@ -258,7 +288,7 @@ Visualization Manager:
       Marker Topic: /car1/obstacle_detector/markers/base
       Name: car1/sheft_finder/base
       Namespaces:
-        {}
+        tiles: true
       Queue Size: 9
       Value: true
     - Class: rviz/MarkerArray
@@ -273,12 +303,12 @@ Visualization Manager:
       Class: rviz/Map
       Color Scheme: map
       Draw Behind: false
-      Enabled: true
+      Enabled: false
       Name: "car2/Static map "
       Topic: /car2/map
       Unreliable: false
       Use Timestamp: false
-      Value: true
+      Value: false
     - Alpha: 0.699999988
       Class: rviz/Map
       Color Scheme: costmap
@@ -359,14 +389,6 @@ Visualization Manager:
       Namespaces:
         tiles: true
       Queue Size: 10
-      Value: true
-    - Class: rviz/MarkerArray
-      Enabled: true
-      Marker Topic: /car2/obstacle_detector/markers/peer
-      Name: car2/shelf_finder/peer
-      Namespaces:
-        {}
-      Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
@@ -486,25 +508,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 7.26398134
+      Distance: 9.90578079
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 2.08181071
-        Y: 0.900439143
-        Z: 0.943980217
+        X: 3.4206512
+        Y: 0.787282526
+        Z: 1.00763345
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 1.54979634
+      Pitch: 1.56979632
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.13500643
+      Yaw: 3.1450057
     Saved: ~
 Window Geometry:
   Displays:
@@ -522,5 +544,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1855
-  X: 2327
-  Y: 221
+  X: 1985
+  Y: 24
