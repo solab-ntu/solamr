@@ -705,9 +705,7 @@ class Double_Assembled(smach.State):
                     
                     if TASK.mode == "double_AMR":
                         # TODO Wait for peer robot finish dock_in
-                        if PEER_ROBOT_STATE != "Double_Assembled":
-                            pass
-                        else:
+                        if PEER_ROBOT_STATE == "Double_Assembled" or PEER_ROBOT_STATE == "Go_Goal":
                             return next_state
                     else:
                         return next_state

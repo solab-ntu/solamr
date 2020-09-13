@@ -325,7 +325,6 @@ def mode_switch_cb(req):
         with open(req.data) as file:
             rospy.loginfo("[shelf_detector] Load yaml file from " + req.data)
             params = yaml.safe_load(file)
-            # params = yaml.load(file, Loader=yaml.FullLoader)
             # Mode 
             MODE = params['MODE']
             # Kinematics
@@ -433,9 +432,8 @@ if __name__ == '__main__':
     SEARCH_CENTER_SINGLE_AMR = None
 
     # Wait Changable parameters loading...
-    
     while not rospy.is_shutdown():
-        if MODE == None: 
+        if SHELF_MAIN_FINDER == None: 
             rospy.loginfo("[shelf_detector] Waiting for parameters...")
         elif OBSTACLE_DATA == None:
             rospy.loginfo("[shelf_detector] Waiting for obstacle data...")
