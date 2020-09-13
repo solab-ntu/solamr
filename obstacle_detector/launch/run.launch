@@ -3,7 +3,6 @@
 <launch>
   <arg name="robot_name" default="car1"/>
   <arg name="role" default="leader"/>
-  <node pkg="rosservice" type="rosservice" name="Shelf_Detector_Param_set" args="call --wait StringSrv '$(find obstacle_detector)/param/single_AMR.yaml'" />
   <node name="shelf_detector" pkg="obstacle_detector" type="shelf_detector.py" output="screen">
     <!-- System -->
     <param name="robot_name" value="$(arg robot_name)"/>

@@ -400,7 +400,7 @@ def search_center_cb(data):
 if __name__ == '__main__':
     rospy.init_node('shelf_detector',anonymous=False)
     # Service
-    service = rospy.Service('StringSrv', StringSrv, mode_switch_cb)
+    service = rospy.Service('~set_mode', StringSrv, mode_switch_cb)
     # Subscirber
     rospy.Subscriber("raw_obstacles", Obstacles, obstacle_cb)
     OBSTACLE_DATA = None

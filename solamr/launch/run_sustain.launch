@@ -44,7 +44,7 @@
         </node>
 
         <!-- Forwarding topics for PC rviz -->
-        <node pkg="solamr" type="tf_rviz_forwarder.py"  name="tf_rviz_forwarder">
+        <node pkg="solamr" type="tf_rviz_forwarder.py"  name="tf_rviz_forwarder" output='screen'>
             <param name="robot_name" value="$(arg robot_name)"/>
             <rosparam command="load" file="$(find solamr)/params/tf_rviz/single_AMR_$(arg role).yaml"/>
         </node>

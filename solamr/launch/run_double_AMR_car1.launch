@@ -16,7 +16,10 @@
     <!-- Move Base -->
     <include file="$(find solamr)/launch/includes/move_base_rap_planner.xml"/>
 
-    <!-- Shelf Detector change paran -->
-    <node pkg="rosservice" type="rosservice" name="Shelf_Detector_Param_set" args="call --wait StringSrv '$(find obstacle_detector)/param/double_AMR.yaml'" />
-    
+    <!-- Shelf Detector change param -->
+    <node pkg="rosservice" type="rosservice" name="Shelf_Detector_Param_set" args="call --wait /$(arg robot_name)/shelf_detector/set_mode '$(find obstacle_detector)/param/double_AMR.yaml'" />
+
+    <!-- tf_rviz_forwarder change param -->
+    <node pkg="rosservice" type="rosservice" name="tf_rviz_forwarder_Param_set" args="call --wait /$(arg robot_name)/tf_rviz_forwarder/set_param 'double_AMR_$(arg role)'" />
+
 </launch>

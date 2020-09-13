@@ -18,4 +18,8 @@
     <node pkg="solamr" type="odom_fuser_single_AMR.py"  name="odom_fuser_single_AMR" output="screen">
         <param name="robot_name" value="$(arg robot_name)"/>
     </node>
+
+    <!-- Shelf_Detector_Param -->
+    <node pkg="rosservice" type="rosservice" name="Shelf_Detector_Param_set" args="call --wait /$(arg robot_name)/shelf_detector/set_mode '$(find obstacle_detector)/param/single_AMR.yaml'" />
+
 </launch>

@@ -1,13 +1,15 @@
 tf_rviz_list: [
+  # Big car TF
   [carB/map, carB/odom],
   [carB/odom, carB/base_link],
   [carB/base_link, car1/base_link],
   [carB/base_link, car2/base_link],
+  # car1 TF
   [car1/base_link, car1/laser_front],
   [car1/base_link, car1/laser_rear],
   # Apriltag 
-  [car1/base_link, car1/shelf_one],
-  [car1/base_link, car1/shelf_two],
+  [car1/base_link, car1/shelf_car1],
+  [car1/base_link, car1/shelf_car2],
   [car1/base_link, car1/home],
   [car1/base_link, car1/A_site],
   [car1/base_link, car1/B_site]
