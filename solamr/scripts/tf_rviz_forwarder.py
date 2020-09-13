@@ -18,7 +18,7 @@ def set_param_cb(req):
         with open(path) as file:
             rospy.loginfo("[tf_rviz_forwarder] Load yaml file from " + path)
             params = yaml.safe_load(file)
-            TF_RVIZ_LIST = params
+            TF_RVIZ_LIST = params['tf_rviz_list']
             return "OK"
     except OSError:
         rospy.logerr("[tf_rviz_forwarder] Yaml file not found at " + req.data)
@@ -46,6 +46,7 @@ if __name__ == '__main__':
     rate = rospy.Rate(10.0)
     while not rospy.is_shutdown():
         tf_list = []
+        rospy.loginfo(str(TF_RVIZ_LIST))
         for i in TF_RVIZ_LIST:
             try:
                 t = tfBuffer.lookup_transform(i[0], i[1], rospy.Time())
