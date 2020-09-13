@@ -35,7 +35,7 @@
     <rosparam param="sync_nodes">[]</rosparam>
     <!-- The list of topics, which are to be ignored while a synchroniation. The ~ignore_nodes list is processed first.
     These are defaults and cannot be removed: ['/rosout', '/rosout_agg'] -->
-    <rosparam param="ignore_topics">['tf','tf_rviz', 'gate_cmd', 'gate_reply']</rosparam>
+    <rosparam param="ignore_topics">['/tf','/tf_rviz', '/gate_cmd', '/gate_reply']</rosparam>
     <!--
     <rosparam param="ignore_publishers">[]</rosparam>
     <rosparam param="ignore_subscribers">[]</rosparam>
