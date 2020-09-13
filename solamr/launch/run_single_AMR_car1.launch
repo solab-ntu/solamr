@@ -15,7 +15,7 @@
     </include>
 
     <!-- Odom Fuser Single AMR -->
-    <node pkg="solamr" type="odom_fuser_single_AMR.py"  name="odom_fuser_single_AMR"  output="screen">
+    <node pkg="solamr" type="odom_fuser_single_AMR.py"  name="odom_fuser_single_AMR" output="screen">
         <param name="robot_name" value="$(arg robot_name)"/>
     </node>
 </launch>
