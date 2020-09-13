@@ -286,9 +286,13 @@ class Initial_State(smach.State):
         super(Initial_State, self).__init__(outcomes=('Single_AMR', 'Single_Assembled', 'Double_Assembled'))
 
     def execute(self, userdata):
-        if INIT_STATE == 'Single_AMR' or INIT_STATE == 'Single_Assembled':
+        if INIT_STATE == 'Single_AMR':
+            transit_mode('Double_Assembled', 'Single_AMR')
+        elif INIT_STATE == 'Single_Assembled':
+            PUB_GATE_CMD.publish(Bool(True))
             transit_mode('Double_Assembled', 'Single_AMR')
         elif INIT_STATE == 'Double_Assembled':
+            PUB_GATE_CMD.publish(Bool(True))
             transit_mode('Single_AMR', 'Double_Assembled')
         return INIT_STATE
 
