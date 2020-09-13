@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <launch>
    <arg name="robot_name" default="car1"/>
+   <arg name="robot_peer_name" default="car2"/>
    <node name="$(anon master_sync)" pkg="master_sync_fkie" type="master_sync">
     <!-- Performs resync after the host was offline: unregister and register again to avoid connection losses to python topic. These does not suppot reconnection! -->
     <param name="resync_on_reconnect" value="True" />
@@ -41,7 +42,12 @@
     -->
 
     <!-- The list of topics to synchronize. The ~ignore_nodes and ~ignore_topics lists are processed first. -->
-    <rosparam param="sync_topics" subst_value="True">[/$(arg robot_name)/raw/initialpose, /$(arg robot_name)/move_base_simple/goal, /$(arg robot_name)/rap_cmd, /$(arg robot_name)/cmd_vel]</rosparam>
+    <rosparam param="sync_topics" subst_value="True">[/$(arg robot_name)/raw/initialpose,
+                                                      /$(arg robot_name)/move_base_simple/goal,
+                                                      /$(arg robot_name)/rap_cmd,
+                                                      /$(arg robot_peer_name)/current_state,
+                                                      /$(arg robot_name)/cmd_vel]
+                                                      </rosparam>
 
     <!-- The list of services, which are to be ignored while a synchroniation. The ~ignore_nodes list is processed first.
     These are defaults and cannot be removed: ['/*get_loggers', '/*set_logger_level'] -->

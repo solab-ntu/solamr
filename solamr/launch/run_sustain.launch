@@ -2,6 +2,7 @@
 
 <launch>
     <arg name="robot_name" default="car1" />
+    <arg name="robot_peer_name" default="car2"/>
     <arg name="role" default="leader" />
     <!--Double_Assembled-->
     <!--Single_Assembled-->
@@ -12,6 +13,7 @@
         <!-- SMACH -->
         <include file="$(find solamr)/launch/fsm.launch">
             <arg name="robot_name" value="$(arg robot_name)"/>
+            <arg name="robot_peer_name" value="$(arg robot_peer_name)"/>
             <arg name="role" value="$(arg role)" />
             <arg name="init_state" value="$(arg init_state)"/>
         </include>
@@ -53,6 +55,7 @@
         <include file="$(find solamr)/launch/fkie/master_discovery.launch"/>
         <include file="$(find solamr)/launch/fkie/master_sync.launch">
             <arg name="robot_name" value="$(arg robot_name)"/>
+            <arg name="robot_peer_name" value="$(arg robot_peer_name)"/>
         </include>
     </group>
 </launch>

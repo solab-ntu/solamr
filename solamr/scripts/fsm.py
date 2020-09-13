@@ -43,6 +43,7 @@ class Task(object):
 def check_running():
     global IS_RUN
     while not rospy.is_shutdown():
+        PUB_CUR_STATE.publish(str(CUR_STATE))
         time.sleep(1)
     IS_RUN = False
 
@@ -545,12 +546,15 @@ class Go_Goal(smach.State):
         
         GOAL_MANAGER.send_goal(TASK.goal_location, ROBOT_NAME + "/map")
         while IS_RUN and TASK != None:
-            # Tag navigation
-            if  ROBOT_NAME == "car1":
+            # Tag navigation, TODO need to exchange shelf
+            if TASK.mode == "single_AMR":
+                if  ROBOT_NAME == "car1":
+                    goal_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/B_site")
+                elif ROBOT_NAME == "car2":
+                    goal_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/A_site")
+            elif TASK.mode == "double_AMR":
                 goal_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/B_site")
-            elif ROBOT_NAME == "car2":
-                goal_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/A_site")
-
+            
             if goal_xyt != None:
                 goal_xy = vec_trans_coordinate((1,0), (goal_xyt[0], goal_xyt[1], goal_xyt[2]-pi/2))
                 GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], goal_xyt[2]+pi/2), ROBOT_NAME + "/map")
@@ -592,12 +596,12 @@ class Dock_Out(smach.State):
         elif TASK.mode == "double_AMR":
             transit_mode("Double_Assembled", "Single_AMR")
         
-        # pid cmd_vel control
+        # pid cmd_vel control, TODO choose a direction to dockout
         KP = 1.0
         t_start = rospy.get_rostime().to_sec()
         twist = Twist()
         twist.linear.x = -0.1
-        while rospy.get_rostime().to_sec() - t_start < 10.0: # 10 sec
+        while rospy.get_rostime().to_sec() - t_start < 8.0: # sec
             xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
             if xyt != None:
                 twist.angular.z = KP*xyt[2] # KP*error
@@ -695,10 +699,24 @@ class Double_Assembled(smach.State):
                     rospy.loginfo("[fsm] task done")
                     TASK = None
                 else:
+                    # TODO Wait robot peer ready
                     if next_state == 'Single_AMR' or next_state == 'Single_Assembled':
                         transit_mode("Double_Assembled", next_state)
-                    return next_state
+                    
+                    if TASK.mode == "double_AMR":
+                        # TODO Wait for peer robot finish dock_in
+                        if PEER_ROBOT_STATE != "Double_Assembled":
+                            pass
+                        else:
+                            return next_state
+                    else:
+                        return next_state
             time.sleep(TIME_INTERVAL)
+
+def peer_robot_state_cb(data):
+    global PEER_ROBOT_STATE
+    PEER_ROBOT_STATE = data.data
+
 
 if __name__ == "__main__":
     rospy.init_node(name='fsm', anonymous=False)
@@ -707,6 +725,7 @@ if __name__ == "__main__":
     ROSLAUNCH_PATH_SINGLE_AMR = rospy.get_param(param_name="~roslaunch_path_single_amr")
     ROSLAUNCH_PATH_DOUBLE_AMR = rospy.get_param(param_name="~roslaunch_path_double_amr")
     ROBOT_NAME = rospy.get_param(param_name="~robot_name")
+    ROBOT_PEER_NAME = rospy.get_param(param_name="~robot_peer_name")
     ROLE = rospy.get_param(param_name="~role")
     INIT_STATE = rospy.get_param(param_name="~init_state")
     TIME_INTERVAL = 1.0/rospy.get_param(param_name="~frequency")
@@ -718,11 +737,14 @@ if __name__ == "__main__":
     # Subscriber
     rospy.Subscriber("/gate_reply", Bool, gate_reply_cb)
     GATE_REPLY = None
+    rospy.Subscriber( "/" + ROBOT_PEER_NAME + "/current_state", String, peer_robot_state_cb)
+    PEER_ROBOT_STATE = None
     
     # Publisher
     PUB_SEARCH_CENTER = rospy.Publisher("search_center", Point, queue_size = 1)
     PUB_GATE_CMD = rospy.Publisher("/gate_cmd", Bool, queue_size = 1)
     PUB_CMD_VEL = rospy.Publisher("/" + ROBOT_NAME + "/cmd_vel", Twist, queue_size = 1)
+    PUB_CUR_STATE = rospy.Publisher("/" + ROBOT_NAME + "/current_state", String, queue_size = 1)
 
     PUB_GLOBAL_FOOTPRINT = rospy.Publisher("/" + ROBOT_NAME + "/move_base/local_costmap/footprint", Polygon, queue_size = 1)
     PUB_LOCAL_FOOTPRINT = rospy.Publisher("/" + ROBOT_NAME + "/move_base/global_costmap/footprint", Polygon, queue_size = 1)
