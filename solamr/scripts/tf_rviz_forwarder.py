@@ -46,7 +46,6 @@ if __name__ == '__main__':
     rate = rospy.Rate(10.0)
     while not rospy.is_shutdown():
         tf_list = []
-        rospy.loginfo(str(TF_RVIZ_LIST))
         for i in TF_RVIZ_LIST:
             try:
                 t = tfBuffer.lookup_transform(i[0], i[1], rospy.Time())
