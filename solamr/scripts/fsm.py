@@ -20,7 +20,7 @@ import smach
 import smach_ros
 # Ros message
 from tf.transformations import quaternion_from_euler
-from geometry_msgs.msg import Twist, Point, PoseStamped, Polygon, Point32
+from geometry_msgs.msg import Twist, Point, PoseStamped, Polygon, Point32, PoseWithCovarianceStamped
 from solamr.srv import StringSrv
 from std_msgs.msg import String, Bool
 # Move Base
@@ -94,17 +94,61 @@ def change_smart_layer_base_radius(r):
     client.update_configuration({"base_radius": r})
     rospy.loginfo("[fsm] change base_radius to " + str(r))
 
+def send_initpose(xyt):
+    '''
+    '''
+    # big_car_init_xyt
+    initpose = PoseWithCovarianceStamped()
+    initpose.header.stamp = rospy.Time.now()
+    initpose.header.frame_id = ROBOT_NAME + "/map"
+    initpose.pose.pose.position.x = xyt[0]
+    initpose.pose.pose.position.y = xyt[1]
+    quaternion = quaternion_from_euler(0.0, 0.0, xyt[2])
+    (initpose.pose.pose.orientation.x,
+     initpose.pose.pose.orientation.y,
+     initpose.pose.pose.orientation.z,
+     initpose.pose.pose.orientation.w) = quaternion
+    PUB_INIT_POSE.publish(initpose)
+
 def transit_mode(from_mode, to_mode):
+    global LAST_PEER_BASE
     if   from_mode == "Single_AMR" and to_mode == "Single_Assembled":
         change_footprint(0.45)
         change_smart_layer_base_radius(0.45*sqrt(2))
 
     elif from_mode == "Single_AMR" and to_mode == "Double_Assembled":
-
+        # Record the last base_link localization
+        last_base = None
+        while last_base == None:
+            last_base = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
+            time.sleep(1)
         
+        if ROLE == "follower":
+            # Send last_base to peer robot
+            PUB_CUR_STATE.publish("peer_last_base:" +
+                                   str(last_base[0]) + ":" +
+                                   str(last_base[1]) + ":" + 
+                                   str(last_base[2]))
+            rospy.loginfo("[fsm] Send to leader my last localization : " + str(last_base))
+
         switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
         time.sleep(5)
-        # INIT pose at carB/map TODO
+        # Use last_base and LAST_PEER_BASE to calculate , TODO need test
+        if ROLE == "leader":
+            while:
+                if LAST_PEER_BASE != None:
+                    big_car_init_xyt =\
+                    ((last_base[0] + LAST_PEER_BASE[0]) / 2.0,
+                     (last_base[1] + LAST_PEER_BASE[1]) / 2.0,
+                      atan2(last_base[1] - LAST_PEER_BASE[1], last_base[0] - LAST_PEER_BASE[0]))
+                    LAST_PEER_BASE = None
+                    
+                    # big_car_init_xyt
+                    send_initpose(big_car_init_xyt)
+                    break
+                time.sleep(1)
+                rospy.loginfo("[fsm] Waiting for peer robot to send last localization infomation")
+        
     
     elif from_mode == "Single_Assembled" and to_mode == "Single_AMR":
         change_footprint(0.22)
@@ -114,9 +158,37 @@ def transit_mode(from_mode, to_mode):
         switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
 
     elif from_mode == "Double_Assembled" and to_mode == "Single_AMR":
+        
+        # Record last localization result of big car
+        last_base_leader = None
+        last_base_follower = None
+        if ROLE == "leader":
+            while:
+                if last_base_leader == None or last_base_follower == None:
+                    last_base_leader   = get_tf(TFBUFFER, "carB/map", "car1/base_link")
+                    last_base_follower = get_tf(TFBUFFER, "carB/map", "car2/base_link")
+                    break
+                else:
+                    time.sleep(1)
+            
+        # Switch launch file 
         switch_launch(ROSLAUNCH_PATH_SINGLE_AMR)
-        time.sleep(5)
-        # INIT pose at car1/map and car2/map TODO 
+        time.sleep(5) # Wait
+
+        if ROLE == "leader":
+            PUB_CUR_STATE.publish("peer_last_base:" +
+                                   str(last_base_follower[0]) + ":" +
+                                   str(last_base_follower[1]) + ":" + 
+                                   str(last_base_follower[2]))
+            rospy.loginfo("[fsm] Send to follower its last localization : " + str(last_base_follower))
+            send_initpose(last_base_leader)
+        elif ROLE == "follower":
+            while:
+                if LAST_PEER_BASE != None:
+                    send_initpose(LAST_PEER_BASE)
+                    break
+                else:
+                    time.sleep(1)
     
     elif from_mode == "Double_Assembled" and to_mode == "Single_Assembled":
         switch_launch(ROSLAUNCH_PATH_SINGLE_AMR)
@@ -202,6 +274,14 @@ def gate_reply_cb(data):
     global GATE_REPLY
     GATE_REPLY = data.data
 
+def peer_robot_state_cb(data):
+    global PEER_ROBOT_STATE, LAST_PEER_BASE
+    if data.data[:14] == "peer_last_base":
+        LAST_PEER_BASE = data.data.split(':')[1:]
+        rospy.loginfo("[fsm] Received peer robot localization info. : " + str(LAST_PEER_BASE))
+    else:
+        PEER_ROBOT_STATE = data.data
+
 class Goal_Manager(object):
     def __init__(self):
         self.pub_simple_goal = rospy.Publisher("/" + ROBOT_NAME + "/move_base_simple/goal", PoseStamped, queue_size = 1)
@@ -261,9 +341,9 @@ class Goal_Manager(object):
         self.goal.pose.position.z = z_offset
         quaternion = quaternion_from_euler(0.0, 0.0, xyt[2])
         (self.goal.pose.orientation.x,
-            self.goal.pose.orientation.y,
-            self.goal.pose.orientation.z,
-            self.goal.pose.orientation.w) = quaternion
+         self.goal.pose.orientation.y,
+         self.goal.pose.orientation.z,
+         self.goal.pose.orientation.w) = quaternion
         self.pub_simple_goal.publish(self.goal)
         self.time_last_goal = time.time()
   
@@ -385,7 +465,6 @@ class Find_Shelf(smach.State):
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
-
 
 class Go_Dock_Standby(smach.State):
 
@@ -768,11 +847,6 @@ class Double_Assembled(smach.State):
                         return next_state
             time.sleep(TIME_INTERVAL)
 
-def peer_robot_state_cb(data):
-    global PEER_ROBOT_STATE
-    PEER_ROBOT_STATE = data.data
-
-
 if __name__ == "__main__":
     rospy.init_node(name='fsm', anonymous=False)
     
@@ -800,14 +874,16 @@ if __name__ == "__main__":
     PUB_GATE_CMD = rospy.Publisher("/gate_cmd", Bool, queue_size = 1)
     PUB_CMD_VEL = rospy.Publisher("/" + ROBOT_NAME + "/cmd_vel", Twist, queue_size = 1)
     PUB_CUR_STATE = rospy.Publisher("/" + ROBOT_NAME + "/current_state", String, queue_size = 1)
-
+    PUB_INIT_POSE = rospy.Publisher("/" + ROBOT_NAME + "/initialpose", PoseWithCovarianceStamped, queue_size = 1)\
     PUB_GLOBAL_FOOTPRINT = rospy.Publisher("/" + ROBOT_NAME + "/move_base/local_costmap/footprint", Polygon, queue_size = 1)
     PUB_LOCAL_FOOTPRINT = rospy.Publisher("/" + ROBOT_NAME + "/move_base/global_costmap/footprint", Polygon, queue_size = 1)
+    
     # Global variable 
     TASK = None # store task information
     ROSLAUNCH = None
     IS_RUN = True
     CUR_STATE = None
+    LAST_PEER_BASE = None 
     # Goal manager
     GOAL_MANAGER = Goal_Manager()
     

@@ -57,9 +57,9 @@ Visualization Manager:
         All Enabled: false
         car1/A_site:
           Value: true
-        car1/base_link:
+        car1/B_site:
           Value: true
-        car1/home:
+        car1/base_link:
           Value: true
         car1/laser_front:
           Value: false
@@ -67,19 +67,15 @@ Visualization Manager:
           Value: false
         car1/map:
           Value: false
-        car1/marker1:
-          Value: true
         car1/odom:
           Value: false
         car1/shelf_car1:
           Value: true
         car1/shelf_car2:
           Value: true
-        car1/shelf_center:
-          Value: true
-        car1/tag/shelf_center:
-          Value: true
         car2/A_site:
+          Value: true
+        car2/B_site:
           Value: true
         car2/base_link:
           Value: true
@@ -97,12 +93,12 @@ Visualization Manager:
           Value: true
         car2/shelf_car2:
           Value: true
-        car2/shelf_center:
-          Value: true
-        car2/tag/shelf_center:
+        carB/base_link:
           Value: true
         carB/map:
           Value: false
+        carB/odom:
+          Value: true
         world:
           Value: true
       Marker Scale: 1
@@ -114,44 +110,41 @@ Visualization Manager:
         world:
           car1/map:
             car1/odom:
-              car1/base_link:
-                car1/A_site:
-                  {}
-                car1/home:
-                  {}
-                car1/laser_front:
-                  {}
-                car1/laser_rear:
-                  {}
-                car1/marker1:
-                  {}
-                car1/shelf_car1:
-                  car1/tag/shelf_center:
-                    {}
-                car1/shelf_car2:
-                  {}
-                car1/shelf_center:
-                  {}
+              {}
           car2/map:
             car2/odom:
-              car2/base_link:
-                car2/A_site:
-                  {}
-                car2/home:
-                  {}
-                car2/laser_front:
-                  {}
-                car2/laser_rear:
-                  {}
-                car2/shelf_car1:
-                  {}
-                car2/shelf_car2:
-                  car2/tag/shelf_center:
-                    {}
-                car2/shelf_center:
-                  {}
+              {}
           carB/map:
-            {}
+            carB/odom:
+              carB/base_link:
+                car1/base_link:
+                  car1/A_site:
+                    {}
+                  car1/B_site:
+                    {}
+                  car1/laser_front:
+                    {}
+                  car1/laser_rear:
+                    {}
+                  car1/shelf_car1:
+                    {}
+                  car1/shelf_car2:
+                    {}
+                car2/base_link:
+                  car2/A_site:
+                    {}
+                  car2/B_site:
+                    {}
+                  car2/home:
+                    {}
+                  car2/laser_front:
+                    {}
+                  car2/laser_rear:
+                    {}
+                  car2/shelf_car1:
+                    {}
+                  car2/shelf_car2:
+                    {}
       Update Interval: 0
       Value: true
     - Alpha: 0.699999988
@@ -403,7 +396,7 @@ Visualization Manager:
       Marker Topic: /rap_controller/markers
       Name: rap_mode
       Namespaces:
-        {}
+        tiles: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -483,7 +476,7 @@ Visualization Manager:
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: world
+    Fixed Frame: carB/map
     Frame Rate: 30
   Name: root
   Tools:
@@ -508,16 +501,16 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 9.90578079
+      Distance: 7.39139032
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 3.4206512
-        Y: 0.787282526
-        Z: 1.00763345
+        X: 2.86723351
+        Y: 0.128418967
+        Z: 1.00707769
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
