@@ -131,7 +131,7 @@ def task_cb(req):
         TASK = None
         # Cacelled all goal
         GOAL_MANAGER.cancel_goal()
-        # Zero velocity # TODO 
+        # Zero velocity
         twist = Twist()
         PUB_CMD_VEL.publish(twist)
         return 'abort OK'
@@ -142,7 +142,7 @@ def task_cb(req):
         task_tmp = Task()
         task_tmp.task_flow = [CUR_STATE, req.data[3:]]
         TASK = task_tmp
-        return "jump to " + req.data[3:] + " OK"
+        return "jump to " + req.data[3:]
 
     # Check Task is busy
     if TASK != None:

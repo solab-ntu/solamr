@@ -3,6 +3,7 @@
 import rospy
 import sys
 from math import atan2,acos,sqrt,pi,sin,cos,tan
+import time
 # ROS import 
 import tf2_ros
 import tf # conversion euler
@@ -130,6 +131,7 @@ class Odom_fuser():
         # Check TF and thetas are valid
         if car1_xyt == None or car2_xyt == None or\
            self.theta1 == None or self.theta2 == None: # or car1_map == None or car2_map == None:
+            time.sleep(1)
             return False
         else:
             self.car1_xyt = car1_xyt

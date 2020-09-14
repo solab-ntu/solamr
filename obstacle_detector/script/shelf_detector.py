@@ -320,7 +320,9 @@ def mode_switch_cb(req):
     '''
     global MODE, TOW_CAR_LENGTH, SHELF_LEN, MAX_CIRCLE_RADIUS, SEARCH_RADIUS,\
            SHEFT_LENGTH_TOLERANCE, ANGLE_TOLERANCE, SHELF_LEN_DIAGONAL, SHELF_MAIN_FINDER,\
-           SEARCH_CENTER_SINGLE_AMR
+           SEARCH_CENTER_SINGLE_AMR, LOCK_SWITCH
+    
+    LOCK_SWITCH = True # Critical section start
     try:
         with open(req.data) as file:
             rospy.loginfo("[shelf_detector] Load yaml file from " + req.data)
@@ -345,9 +347,11 @@ def mode_switch_cb(req):
             elif MODE == "double_AMR":
                 SHELF_MAIN_FINDER = Two_shelf_finder()
             rospy.loginfo("[shelf_detector] Switch mode to " + MODE )
+            LOCK_SWITCH = False # Critical section end
             return "OK"
     except OSError:
         rospy.logerr("[shelf_detector] Yaml file not found at " + req.data)
+        LOCK_SWITCH = False # Critical section end
         return "Yaml file not found"
 
 def obstacle_cb(data):
@@ -430,6 +434,8 @@ if __name__ == '__main__':
     # 
     SHELF_MAIN_FINDER = None
     SEARCH_CENTER_SINGLE_AMR = None
+    # Lock 
+    LOCK_SWITCH = False
 
     # Wait Changable parameters loading...
     while not rospy.is_shutdown():
@@ -443,6 +449,9 @@ if __name__ == '__main__':
 
     RATE = rospy.Rate(FREQUENCY)
     while not rospy.is_shutdown():
+        if LOCK_SWITCH: # While mode_switch callback executing, main loop can't do anything  
+            RATE.sleep()
+            continue
         SHELF_MAIN_FINDER.obstacle = OBSTACLE_DATA
         if MODE == "single_AMR":
             if SEARCH_CENTER_SINGLE_AMR != None:
