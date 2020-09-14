@@ -33,6 +33,9 @@ from geometry_msgs.msg import Twist
 
 import sys, select, termios, tty
 
+import os # for os.environ
+
+
 msg = """
 Control Your Turtlebot!
 ---------------------------
@@ -92,8 +95,10 @@ if __name__=="__main__":
 
     rospy.init_node('teleop_key')
     
-    pub_car1 = rospy.Publisher("car1/cmd_vel", Twist, queue_size=5)
-    pub_car2 = rospy.Publisher("car2/cmd_vel", Twist, queue_size=5)
+    ROBOT_NAME = os.environ['ROBOT_NAME']
+    rospy.loginfo("This is " + str(ROBOT_NAME))
+    pub = rospy.Publisher(ROBOT_NAME + "/cmd_vel", Twist, queue_size=5)
+    # pub_car2 = rospy.Publisher("car2/cmd_vel", Twist, queue_size=5)
     
     x = 0
     th = 0
@@ -156,8 +161,8 @@ if __name__=="__main__":
             twist.linear.x = control_speed; twist.linear.y = 0; twist.linear.z = 0
             twist.angular.x = 0; twist.angular.y = 0; twist.angular.z = control_turn
             # Lucky added, let cmd_vel don't publish while no keyboard input
-            pub_car1.publish(twist)
-            pub_car2.publish(twist)
+            pub.publish(twist)
+            # pub_car2.publish(twist)
 
             #print("loop: {0}".format(count))
             #print("target: vx: {0}, wz: {1}".format(target_speed, target_turn))
@@ -170,7 +175,7 @@ if __name__=="__main__":
         twist = Twist()
         twist.linear.x = 0; twist.linear.y = 0; twist.linear.z = 0
         twist.angular.x = 0; twist.angular.y = 0; twist.angular.z = 0
-        pub_car1.publish(twist)
-        pub_car2.publish(twist)
+        pub.publish(twist)
+        # pub_car2.publish(twist)
 
     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)

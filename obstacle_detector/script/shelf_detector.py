@@ -298,7 +298,7 @@ class Two_shelf_finder():
                                     atan2(vec_big_car[1], vec_big_car[0]))
             return True #We need base.center only, big_car_xyt is for ref_ang
         else:
-            rospy.logerr("[Shelf Detector] Can't find base shelft cneter.")
+            rospy.loginfo("[Shelf Detector] Can't find base shelft center.")
             return False
     
     def publish(self):
