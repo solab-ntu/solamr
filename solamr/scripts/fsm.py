@@ -631,6 +631,7 @@ class Dock_Out(smach.State):
         elif TASK.mode == "double_AMR":
             transit_mode("Double_Assembled", "Single_AMR")
         
+        PUB_SEARCH_CENTER.publish(Point(0, 0, 0))
         twist = Twist()
         KP = 1.0
         #------------  in-place rotation -------------# 
