@@ -54,7 +54,7 @@ def switch_launch(file_path):
         if ROSLAUNCH != None:
             rospy.loginfo("[fsm] Shuting down single_AMR launch file")
             ROSLAUNCH.shutdown()
-            time.sleep(5) # TODO DO WE need it ?
+            # time.sleep(5) # TODO DO WE need it ?
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
         roslaunch.configure_logging(uuid=uuid)
         ROSLAUNCH = roslaunch.parent.ROSLaunchParent(run_id=uuid, roslaunch_files=((file_path,)))
@@ -99,9 +99,10 @@ def transit_mode(from_mode, to_mode):
         change_footprint(0.45)
         change_smart_layer_base_radius(0.45*sqrt(2))
 
-
     elif from_mode == "Single_AMR" and to_mode == "Double_Assembled":
         switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
+        time.sleep(5)
+        # INIT pose at carB/map TODO
     
     elif from_mode == "Single_Assembled" and to_mode == "Single_AMR":
         change_footprint(0.22)
@@ -112,14 +113,33 @@ def transit_mode(from_mode, to_mode):
 
     elif from_mode == "Double_Assembled" and to_mode == "Single_AMR":
         switch_launch(ROSLAUNCH_PATH_SINGLE_AMR)
-        # TODO change footprint?
+        time.sleep(5)
+        # INIT pose at car1/map and car2/map TODO 
     
     elif from_mode == "Double_Assembled" and to_mode == "Single_Assembled":
         switch_launch(ROSLAUNCH_PATH_SINGLE_AMR)
-        # TODO change footprint?
     else:
         rospy.logerr("[fsm] Undefine transit mode : " + str(from_mode) + " -> " + str(to_mode))
         pass
+
+def get_chosest_goal(laser_center,ref_point):
+    '''
+    laser_center - (x,y,t) by map->shelf_center
+    ref_point -(x,y)
+    '''
+    # Set choose point !!
+    min_distance = float('inf')
+    output_xyt = None
+    for i in range(4): # Which direction is best
+        (x_laser, y_laser) = vec_trans_coordinate((1.0, 0), 
+                                        (laser_center[0], 
+                                         laser_center[1], 
+                                         laser_center[2] + i*pi/2))
+        dis_sq = (ref_point[0] - x_laser)**2 + (ref_point[1] - y_laser)**2 
+        if dis_sq < min_distance:
+            min_distance = dis_sq
+            output_xyt = (x_laser, y_laser, laser_center[2] + i*pi/2 + pi)
+    return output_xyt
 
 def task_cb(req):
     '''
@@ -364,24 +384,6 @@ class Find_Shelf(smach.State):
         rospy.logwarn('[fsm] task abort')
         return 'abort'
 
-def get_chosest_goal(laser_center,ref_point):
-    '''
-    laser_center - (x,y,t)
-    ref_point -(x,y)
-    '''
-    # Set choose point !!
-    min_distance = float('inf')
-    output_xyt = None
-    for i in range(4): # Which direction is best
-        (x_laser, y_laser) = vec_trans_coordinate((1.0, 0), 
-                                        (laser_center[0], 
-                                         laser_center[1], 
-                                         laser_center[2] + i*pi/2))
-        dis_sq = (ref_point[0] - x_laser)**2 + (ref_point[1] - y_laser)**2 
-        if dis_sq < min_distance:
-            min_distance = dis_sq
-            output_xyt = (x_laser, y_laser, laser_center[2] + i*pi/2 + pi)
-    return output_xyt
 
 class Go_Dock_Standby(smach.State):
 
@@ -410,7 +412,6 @@ class Go_Dock_Standby(smach.State):
             shelf_tag_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
             shelf_laser_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_center")
             
-            # if choose_point == None:
             if shelf_tag_xyt != None and shelf_laser_xyt != None:
                 tag_goal_xy = vec_trans_coordinate((-0.5, 0),
                                     (shelf_tag_xyt[0], shelf_tag_xyt[1], shelf_tag_xyt[2] + pi/2))
@@ -568,6 +569,38 @@ class Go_Goal(smach.State):
         rospy.logwarn('[fsm] task abort')
         return 'abort'
 
+class Go_Double_Goal(smach.State):
+    def __init__(self):
+        super(Go_Double_Goal, self).__init__(outcomes=['done', 'abort'], input_keys=["target"], output_keys=["behavior"])
+
+    def execute(self, userdata):
+        global CUR_STATE
+        CUR_STATE = "Go_Double_Goal"
+        rospy.loginfo('[fsm] Execute ' + CUR_STATE)
+        
+        # Send goal 
+        if ROLE == "leader":
+            GOAL_MANAGER.send_goal(TASK.goal_location, "carB/map")
+        
+        while IS_RUN and TASK != None:
+            if ROLE == "leader":
+                # Tag navigation
+                goal_xyt = get_tf(TFBUFFER, "carB/map", ROBOT_NAME + "/B_site")
+                if goal_xyt != None:
+                    goal_xy = vec_trans_coordinate((1,0), (goal_xyt[0], goal_xyt[1], goal_xyt[2]-pi/2))
+                    GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], goal_xyt[2]+pi/2), "carB/map")
+
+                # Wait goal reached
+                if GOAL_MANAGER.is_reached:
+                    return 'done'
+            elif ROLE == "follower":
+                # Listen to car1 state
+                if PEER_ROBOT_STATE == "Dock_Out": # If peer dockout, you dockout too
+                    return 'done'
+            time.sleep(TIME_INTERVAL)
+        rospy.logwarn('[fsm] task abort')
+        return 'abort'
+
 class Dock_Out(smach.State):
 
     def __init__(self):
@@ -593,18 +626,32 @@ class Dock_Out(smach.State):
         time.sleep(2) # wait shelf become static
         GATE_REPLY = None
         
-        # previous_state = TASK.task_flow[TASK.task_flow.index('Dock_Out')-1]
         if TASK.mode == "single_AMR":
             transit_mode("Single_Assembled", "Single_AMR")
         elif TASK.mode == "double_AMR":
             transit_mode("Double_Assembled", "Single_AMR")
         
-        # pid cmd_vel control, TODO choose a direction to dockout
-        KP = 1.0
-        t_start = rospy.get_rostime().to_sec()
         twist = Twist()
+        KP = 1.0
+        #------------  in-place rotation -------------# 
+        while IS_RUN and TASK != None:
+            # pid cmd_vel control, TODO choose a direction to dockout
+            shelf_laser_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_center")
+            base_link_xyt   = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
+            if shelf_laser_xyt != None and base_link_xyt != None:
+                # Chooose the point near the map center
+                choose_point = get_chosest_goal(shelf_laser_xyt, (2.83, 1.15))
+                error_theta = normalize_angle( normalize_angle(choose_point[2] + pi) - base_link_xyt[2])
+                rospy.loginfo("ERROR theta: " + str(error_theta))
+                twist.angular.z = KP*error_theta
+            PUB_CMD_VEL.publish(twist)
+            time.sleep(TIME_INTERVAL)
+        
+        #------------  dock out -------------# 
+        t_start = rospy.get_rostime().to_sec()
         twist.linear.x = -0.1
-        while rospy.get_rostime().to_sec() - t_start < 8.0: # sec
+        while IS_RUN and TASK != None and\
+            rospy.get_rostime().to_sec() - t_start < 8.0: # sec
             xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
             if xyt != None:
                 twist.angular.z = KP*xyt[2] # KP*error
@@ -613,6 +660,10 @@ class Dock_Out(smach.State):
             PUB_CMD_VEL.publish(twist)
             time.sleep(TIME_INTERVAL)
         
+        #------------  in-place rotation -------------# 
+        # TODO 
+
+
         # Send zero velocity
         twist = Twist()
         PUB_CMD_VEL.publish(twist)
@@ -688,7 +739,7 @@ class Single_Assembled(smach.State):
 class Double_Assembled(smach.State):
 
     def __init__(self):
-        super(Double_Assembled, self).__init__(outcomes=['Dock_Out', 'Go_Way_Point','Single_AMR', 'Single_Assembled', 'Go_Goal'], output_keys=["target"])
+        super(Double_Assembled, self).__init__(outcomes=['Dock_Out', 'Go_Way_Point','Single_AMR', 'Single_Assembled', 'Go_Double_Goal'], output_keys=["target"])
 
     def execute(self, userdata):
         global TASK, CUR_STATE
@@ -702,13 +753,12 @@ class Double_Assembled(smach.State):
                     rospy.loginfo("[fsm] task done")
                     TASK = None
                 else:
-                    # TODO Wait robot peer ready
                     if next_state == 'Single_AMR' or next_state == 'Single_Assembled':
                         transit_mode("Double_Assembled", next_state)
                     
                     if TASK.mode == "double_AMR":
-                        # TODO Wait for peer robot finish dock_in
-                        if PEER_ROBOT_STATE == "Double_Assembled" or PEER_ROBOT_STATE == "Go_Goal":
+                        # Wait for peer robot finish dock_in
+                        if PEER_ROBOT_STATE == "Double_Assembled" or PEER_ROBOT_STATE == "Go_Double_Goal":
                             return next_state
                     else:
                         return next_state
@@ -829,6 +879,12 @@ if __name__ == "__main__":
                          'done': 'Dock_Out'}) # Successfully reached goal
 
         smach.StateMachine.add(
+            label='Go_Double_Goal',
+            state=Go_Double_Goal(),
+            transitions={'abort': 'Double_Assembled',
+                         'done': 'Dock_Out'}) # Successfully reached goal
+
+        smach.StateMachine.add(
             label='Go_Home',
             state=Go_Home(),
             transitions={'abort': 'Single_AMR',
@@ -838,7 +894,7 @@ if __name__ == "__main__":
             label='Double_Assembled',
             state=Double_Assembled(),
             transitions={'Dock_Out': 'Dock_Out',
-                         'Go_Goal': 'Go_Goal',
+                         'Go_Double_Goal': 'Go_Double_Goal',
                          'Single_AMR': 'Single_AMR',
                          'Single_Assembled': 'Single_Assembled',
                          'Go_Way_Point': 'Go_Way_Point'})
