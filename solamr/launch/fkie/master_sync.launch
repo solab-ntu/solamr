@@ -23,7 +23,7 @@
     <rosparam param="ignore_hosts">[]</rosparam>
 
     <!-- This list with names of ROS master to synchronize. Only this ROS master in this list will be synchronized. The ~ignore_hosts list is processed first. -->
-    <rosparam param="sync_hosts">['192.168.50.10', '192.168.50.11', '192.168.50.12']</rosparam>
+    <rosparam param="sync_hosts">['192.168.50.10', '10.0.0.1', '10.0.0.2']</rosparam>
 
     <!-- The list of nodes, which are to be ignored while a synchroniation. All their topics and services are ignored!
     These are defaults and cannot be removed: [/rosout, "/*master_sync* node", "remote /*master_discovery* node", "/*node_manager", /*zeroconf] -->
