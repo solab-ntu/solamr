@@ -100,6 +100,8 @@ def transit_mode(from_mode, to_mode):
         change_smart_layer_base_radius(0.45*sqrt(2))
 
     elif from_mode == "Single_AMR" and to_mode == "Double_Assembled":
+
+        
         switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
         time.sleep(5)
         # INIT pose at carB/map TODO
@@ -498,7 +500,6 @@ class Dock_In(smach.State):
             PUB_CMD_VEL.publish(twist)
             
             if GATE_REPLY == True:
-            # if rho < 0.03:
                 # Get reply, Dockin successfully
                 # Send zero velocity
                 twist = Twist()
@@ -635,14 +636,16 @@ class Dock_Out(smach.State):
         twist = Twist()
         KP = 1.0
         #------------  in-place rotation -------------# 
+        error_theta = float('inf')
         while IS_RUN and TASK != None:
             # pid cmd_vel control, TODO choose a direction to dockout
             shelf_laser_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_center")
             base_link_xyt   = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
-            if shelf_laser_xyt != None and base_link_xyt != None:
+            if shelf_laser_xyt != None and base_link_xyt != None and\
+                error_theta > 0.01:
                 # Chooose the point near the map center
                 choose_point = get_chosest_goal(shelf_laser_xyt, (2.83, 1.15))
-                error_theta = normalize_angle( normalize_angle(choose_point[2] + pi) - base_link_xyt[2])
+                error_theta = normalize_angle( normalize_angle(choose_point[2]) - base_link_xyt[2])
                 rospy.loginfo("ERROR theta: " + str(error_theta))
                 twist.angular.z = KP*error_theta
             PUB_CMD_VEL.publish(twist)

@@ -41,36 +41,6 @@ class Odom_fuser():
         self.tfBuffer = tf2_ros.Buffer()
         tf2_ros.TransformListener(self.tfBuffer)
 
-    # def init_cb(self, data):
-    #     '''
-    #     std_msgs/Header header
-    #         uint32 seq
-    #         time stamp
-    #         string frame_id
-    #     geometry_msgs/PoseWithCovariance pose
-    #         geometry_msgs/Pose pose
-    #             geometry_msgs/Point position
-    #                 float64 x
-    #                 float64 y
-    #                 float64 z
-    #             geometry_msgs/Quaternion orientation
-    #                 float64 x
-    #                 float64 y
-    #                 float64 z
-    #                 float64 w
-    #     float64[36] covariance
-    #     '''
-    #     self.carB_map[0] = data.pose.pose.position.x - self.carB_odom[0]
-    #     self.carB_map[1] = data.pose.pose.position.y - self.carB_odom[1]
-    #     quaternion = (
-    #         data.pose.pose.orientation.x,
-    #         data.pose.pose.orientation.y,
-    #         data.pose.pose.orientation.z,
-    #         data.pose.pose.orientation.w)
-    #     (_,_,yaw) = tf.transformations.euler_from_quaternion(quaternion)
-    #     self.carB_map[2] = normalize_angle(yaw - self.carB_odom[2])
-    
-
     def init_cb(self, data):
         '''
         std_msgs/Header header
@@ -114,8 +84,6 @@ class Odom_fuser():
         self.carB_map = (update_xyt[0] - rota_odom_x,
                         update_xyt[1] - rota_odom_y,
                         normalize_angle(self.carB_map[2] + rho))
-
-
 
     def car1_theta_cb(self, data):
         self.theta1 = data.data
