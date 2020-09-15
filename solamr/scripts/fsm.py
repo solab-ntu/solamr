@@ -45,8 +45,9 @@ def check_running():
     while not rospy.is_shutdown():
         # Package formet string = "<CUR_STATE>|<x,y,t>"
         send_str = str(CUR_STATE)
-        BASE_XYT = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
-        if BASE_XYT != None:
+        base_xyt_tmp = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
+        if base_xyt_tmp != None:
+            BASE_XYT = base_xyt_tmp
             send_str += "|"\
                      + str(BASE_XYT[0]) + ","\
                      + str(BASE_XYT[1]) + ","\
