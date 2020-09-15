@@ -730,7 +730,8 @@ class Dock_Out(smach.State):
                 time.sleep(TIME_INTERVAL)
         '''
         elif TASK.mode == "double_AMR" and ROLE == "leader":
-            # NEED TODO test
+            # NEED TODO test, give up this one, because rap planner will also publish cmd_vel 
+            # at thsi point, tow cmd will collide
             
             twist_1 = Twist()
             twist_2 = Twist()
@@ -763,12 +764,13 @@ class Dock_Out(smach.State):
             twist.linear.x = 0.0
             if ROLE == "leader":
                 twist.angular.z = 0.6
-            elif ROLE == "follwer":
+            elif ROLE == "follower":
                 twist.angular.z = -0.6
             t_start = rospy.get_rostime().to_sec()
             while IS_RUN and TASK != None and\
                 rospy.get_rostime().to_sec() - t_start < (pi/2)/abs(twist.angular.z): # sec
                 PUB_CMD_VEL.publish(twist)
+                PUB_SEARCH_CENTER.publish(Point(0, 0, 0)) # TODO is this need?
                 time.sleep(TIME_INTERVAL)
         
         # Open gate
