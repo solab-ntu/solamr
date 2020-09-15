@@ -27,7 +27,8 @@ Must have interface
 */
 {
   //ROS_DEBUG("[Fake local planner] isGoalReached, do nothing");
-  return true;
+  //return true;
+  return false;
 }
 
 bool FakeLocalPlannerROS::setPlan(const std::vector<geometry_msgs::PoseStamped>& orig_global_plan)

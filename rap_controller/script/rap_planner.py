@@ -11,7 +11,7 @@ from nav_msgs.msg import Path, OccupancyGrid
 import time # for testing 
 from rap_controller import Rap_controller
 from lucky_utility.ros.rospy_utility import get_tf, Marker_Manager,normalize_angle,sign
-                                            
+from move_base_msgs.msg import MoveBaseActionResult # For publish goal result
 NUM_CIRCLE_POINT = 100
 USE_CRAB_FOR_HEADING = True
 USE_COSTMAP = False # TODO Giving up 
@@ -29,6 +29,7 @@ class Rap_planner():
         # Publisher
         self.viz_marker = Marker_Manager("/rap_planner/markers")
         self.pub_global_path = rospy.Publisher("/rap_planner/global_path", Path,queue_size = 1,latch=False)
+        self.pub_goal_result = rospy.Publisher("/" + ROBOT_NAME + "/move_base/result", MoveBaseActionResult, queue_size = 1, latch=False)
         # Debug publisher
         self.pub_alpha = rospy.Publisher("/alpha", Float64,queue_size = 1,latch=False)
         self.alpha = 0.0
@@ -304,12 +305,43 @@ class Rap_planner():
         self.simple_goal = None
         self.latch_xy = False
 
+    def publish_reached(self):
+        '''
+        std_msgs/Header header
+            uint32 seq
+            time stamp
+            string frame_id
+        actionlib_msgs/GoalStatus status
+            uint8 PENDING=0
+            uint8 ACTIVE=1
+            uint8 PREEMPTED=2
+            uint8 SUCCEEDED=3
+            uint8 ABORTED=4
+            uint8 REJECTED=5
+            uint8 PREEMPTING=6
+            uint8 RECALLING=7
+            uint8 RECALLED=8
+            uint8 LOST=9
+            actionlib_msgs/GoalID goal_id
+                time stamp
+                string id
+            uint8 status
+            string text
+        move_base_msgs/MoveBaseResult result
+        '''
+        result = MoveBaseActionResult()
+        result.header.stamp = rospy.Time.now()
+        result.status.status = 3 # SUCCEEDED
+        result.status.text = "This msg is pub by rap_planner"
+        self.pub_goal_result.publish(result)
+
+
     def run_once(self):
         # Check simple goal is already reached
         if self.simple_goal == None:
             return False
         
-        # Update tf # TODO use odom_fuse result
+        # Update tf
         t_big_car   = get_tf(self.tfBuffer, MAP_FRAME, BIG_CAR_FRAME)
         if t_big_car != None:
             self.big_car_xyt = t_big_car
@@ -339,6 +371,7 @@ class Rap_planner():
             rospy.loginfo("[rap_planner] Goal xy Reached")
             if IGNORE_HEADING:
                 self.reset_plan()
+                self.publish_reached()
                 return True
             else:
                 self.latch_xy = True
@@ -348,6 +381,7 @@ class Rap_planner():
             if abs(normalize_angle(self.simple_goal[2] - self.big_car_xyt[2])) <\
                 (GOAL_TOLERANCE_T/2.0):
                 self.reset_plan()
+                self.publish_reached()
                 rospy.loginfo("[rap_planner] Goal Heading Reached")
                 return True
         
