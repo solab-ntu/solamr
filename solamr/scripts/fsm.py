@@ -740,8 +740,8 @@ class Dock_Out(smach.State):
                 theta_1 = get_tf(TFBUFFER, "carB/map", "car1/base_link")
                 theta_2 = get_tf(TFBUFFER, "carB/map", "car2/base_link")
                 if theta_1 != None and theta_2 != None and carB_xyt != None:
-                    error_1 = normalize_angle(carB_xyt[2] + pi) - theta_1[2]
-                    error_2 = normalize_angle(carB_xyt[2] + pi) - theta_2[2]
+                    error_1 = normalize_angle(carB_xyt[2] + pi/2) - theta_1[2]
+                    error_2 = normalize_angle(carB_xyt[2] + pi/2) - theta_2[2]
                     rospy.loginfo("ERROR error_1: " + str(error_1))
                     rospy.loginfo("ERROR error_2: " + str(error_2))
                     twist_1.angular.z = KP*error_1
