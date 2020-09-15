@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<launch>
+<arg name="robot_name" default="car1" />
+<arg name="robot_peer_name" default="car2"/>
+<arg name="role" default="leader" />
+    <!-- STM32 -->
+    <node pkg="rosserial_python" type="serial_node.py" args="/dev/stm32" name="serial_node">
+        <remap from="/cmd_vel" to="/$(arg robot_name)/cmd_vel"/>
+        <remap from="/STM32_twist" to="/$(arg robot_name)/STM32_twist"/>
+    </node>
+
+    <node pkg="solamr" type="teleop_key.py" name="teleop"/>
+
+</launch>
