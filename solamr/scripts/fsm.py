@@ -707,38 +707,59 @@ class Dock_Out(smach.State):
                 rospy.loginfo("[fsm] task done")
                 return 'Single_AMR'
         
+
+        twist = Twist()
+        KP = 1.0
+        #------------  in-place rotation -------------# 
+        if TASK.mode == "single_AMR":
+            error_theta = float('inf')
+            while IS_RUN and TASK != None and abs(error_theta) > 0.01:
+                # pid cmd_vel control, TODO choose a direction to dockout
+                shelf_laser_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_center")
+                base_link_xyt   = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
+                if shelf_laser_xyt != None and base_link_xyt != None:
+                    # Chooose the point near the map center TODO don't pick inner direction
+                    choose_point = get_chosest_goal(shelf_laser_xyt, (2.83, 1.15))
+                    error_theta = normalize_angle( normalize_angle(choose_point[2]) - base_link_xyt[2])
+                    rospy.loginfo("ERROR theta: " + str(error_theta))
+                    twist.angular.z = KP*error_theta
+                else:
+                    # init search center
+                    PUB_SEARCH_CENTER.publish(Point(0, 0, 0))
+                PUB_CMD_VEL.publish(twist)
+                time.sleep(TIME_INTERVAL)
+        
+        elif TASK.mode == "double_AMR" and ROLE == "leader":
+            # NEED TODO test
+            twist_1 = Twist()
+            twist_2 = Twist()
+            error_1 = float('inf')
+            error_2 = float('inf')
+            while (abs(error_1) > 0.01 and abs(error_2) > 0.01):
+                carB_xyt = get_tf(TFBUFFER, "carB/map", "carB/base_link")
+                theta_1 = get_tf(TFBUFFER, "carB/map", "car1/base_link")
+                theta_2 = get_tf(TFBUFFER, "carB/map", "car2/base_link")
+                if theta_1 != None and theta_2 != None and carB_xyt != None:
+                    error_1 = normalize_angle(carB_xyt[2] + pi) - theta_1[2]
+                    error_2 = normalize_angle(carB_xyt[2] + pi) - theta_2[2]
+                    rospy.loginfo("ERROR error_1: " + str(error_1))
+                    rospy.loginfo("ERROR error_2: " + str(error_2))
+                    twist_1.angular.z = KP*error_1
+                    twist_2.angular.z = KP*error_2
+                    PUB_CMD_VEL.publish(twist_1)
+                    PUB_CMD_VEL_PEER.publish(twist_2)
+        
         # Open gate
         PUB_GATE_CMD.publish(Bool(False))
-        
         GATE_REPLY = None
-        
+
+        # Switch launch file
         if TASK.mode == "single_AMR":
             transit_mode("Single_Assembled", "Single_AMR")
         elif TASK.mode == "double_AMR":
             transit_mode("Double_Assembled", "Single_AMR")
-        
         time.sleep(2) # wait shelf become static
-        twist = Twist()
-        KP = 1.0
-        #------------  in-place rotation -------------# 
-        error_theta = float('inf')
-        while IS_RUN and TASK != None:
-            # pid cmd_vel control, TODO choose a direction to dockout
-            shelf_laser_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_center")
-            base_link_xyt   = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
-            if shelf_laser_xyt != None and base_link_xyt != None and\
-                error_theta > 0.01:
-                # Chooose the point near the map center
-                choose_point = get_chosest_goal(shelf_laser_xyt, (2.83, 1.15))
-                error_theta = normalize_angle( normalize_angle(choose_point[2]) - base_link_xyt[2])
-                rospy.loginfo("ERROR theta: " + str(error_theta))
-                twist.angular.z = KP*error_theta
-            else:
-                # init search center
-                PUB_SEARCH_CENTER.publish(Point(0, 0, 0))
-            PUB_CMD_VEL.publish(twist)
-            time.sleep(TIME_INTERVAL)
-        
+
         #------------  dock out -------------# 
         t_start = rospy.get_rostime().to_sec()
         twist.linear.x = -0.1
@@ -753,7 +774,13 @@ class Dock_Out(smach.State):
             time.sleep(TIME_INTERVAL)
         
         #------------  in-place rotation -------------# 
-        # TODO, not figure it out yet
+        twist.linear.x = 0.0
+        twist.angular.z = 0.6
+        t_start = rospy.get_rostime().to_sec()
+        while IS_RUN and TASK != None and\
+            rospy.get_rostime().to_sec() - t_start < pi/twist.angular.z: # sec
+            PUB_CMD_VEL.publish(twist)
+            time.sleep(TIME_INTERVAL)
 
         # Send zero velocity
         twist = Twist()
@@ -885,7 +912,8 @@ if __name__ == "__main__":
     PUB_INIT_POSE = rospy.Publisher("/" + ROBOT_NAME + "/initialpose", PoseWithCovarianceStamped, queue_size = 1)
     PUB_GLOBAL_FOOTPRINT = rospy.Publisher("/" + ROBOT_NAME + "/move_base/local_costmap/footprint", Polygon, queue_size = 1)
     PUB_LOCAL_FOOTPRINT = rospy.Publisher("/" + ROBOT_NAME + "/move_base/global_costmap/footprint", Polygon, queue_size = 1)
-    
+    if ROLE == "leader":
+        PUB_CMD_VEL_PEER = rospy.Publisher("/" + ROBOT_PEER_NAME + "/cmd_vel", Twist, queue_size = 1)
     # Global variable 
     TASK = None # store task information
     ROSLAUNCH = None

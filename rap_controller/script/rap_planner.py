@@ -335,7 +335,6 @@ class Rap_planner():
         result.status.text = "This msg is pub by rap_planner"
         self.pub_goal_result.publish(result)
 
-
     def run_once(self):
         # Check simple goal is already reached
         if self.simple_goal == None:
