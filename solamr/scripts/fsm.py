@@ -668,17 +668,12 @@ class Go_Double_Goal(smach.State):
                 goal_xyt = get_tf(TFBUFFER, "carB/map", ROBOT_NAME + "/B_site")
                 if goal_xyt != None:
                     goal_xy = vec_trans_coordinate((1,0), (goal_xyt[0], goal_xyt[1], goal_xyt[2]-pi/2))
-                    GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], goal_xyt[2]+pi/2), "carB/map")
-
-                # TODO test 
-                time.sleep(5)
-                return 'done'
+                    GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], goal_xyt[2]), "carB/map")
+                
                 # Wait goal reached
                 if GOAL_MANAGER.is_reached:
-                    # rospy.logerr("[FSM] GGGGGGGGGGGGGGGGGGGGGgggg GOAL reached")
-                    # TODO test stuck here forever
-                    # return 'done'
-                    pass
+                    return 'done'
+                
             elif ROLE == "follower":
                 # Listen to car1 state
                 if PEER_ROBOT_STATE == "Dock_Out": # If peer dockout, you dockout too
@@ -828,7 +823,6 @@ class Go_Home(smach.State):
         GOAL_MANAGER.is_reached = False
         GOAL_MANAGER.send_goal(TASK.home_location, ROBOT_NAME + "/map")
         while IS_RUN and TASK != None:
-            print ("go home")
             # Check goal reached
             if GOAL_MANAGER.is_reached:
                 TASK = None

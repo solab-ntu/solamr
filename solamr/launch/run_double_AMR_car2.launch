@@ -11,4 +11,7 @@
     <!-- tf_rviz_forwarder change param -->
     <node pkg="rosservice" type="rosservice" name="tf_rviz_forwarder_Param_set" args="call --wait /$(arg robot_name)/tf_rviz_forwarder/set_param 'double_AMR_$(arg role)'" />
     
+    <!-- tf_rviz_forwarder change param -->
+    <node pkg="rosservice" type="rosservice" name="tf_rviz_forwarder_Param_set" args="call --wait /$(arg robot_name)/tf_rviz_forwarder/set_param 'single_AMR_$(arg role)'" />
+
 </launch>

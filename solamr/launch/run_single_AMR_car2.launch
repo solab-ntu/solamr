@@ -23,6 +23,9 @@
     <!-- Shelf_Detector_Param -->
     <node pkg="rosservice" type="rosservice" name="Shelf_Detector_Param_set" args="call --wait /$(arg robot_name)/shelf_detector/set_mode '$(find obstacle_detector)/param/single_AMR.yaml'" />
 
+    <!-- tf_rviz_forwarder change param -->
+    <node pkg="rosservice" type="rosservice" name="tf_rviz_forwarder_Param_set" args="call --wait /$(arg robot_name)/tf_rviz_forwarder/set_param 'single_AMR_$(arg role)'" />
+
     <!-- MQTT Bridge -->
     <node pkg="ros_mqtt_bridge" type="single_AMR_$(arg role).py"  name="ros_mqtt_bridge" output='screen'/>
 </launch>

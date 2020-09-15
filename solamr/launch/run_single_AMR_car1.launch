@@ -25,4 +25,7 @@
 
     <!-- MQTT Bridge -->
     <node pkg="ros_mqtt_bridge" type="single_AMR_$(arg role).py"  name="ros_mqtt_bridge" output='screen'/>
+
+    <!-- tf_rviz_forwarder change param -->
+    <node pkg="rosservice" type="rosservice" name="tf_rviz_forwarder_Param_set" args="call --wait /$(arg robot_name)/tf_rviz_forwarder/set_param 'single_AMR_$(arg role)'" />\
 </launch>
