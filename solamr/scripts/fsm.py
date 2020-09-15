@@ -728,9 +728,10 @@ class Dock_Out(smach.State):
                     PUB_SEARCH_CENTER.publish(Point(0, 0, 0))
                 PUB_CMD_VEL.publish(twist)
                 time.sleep(TIME_INTERVAL)
-        
+        '''
         elif TASK.mode == "double_AMR" and ROLE == "leader":
             # NEED TODO test
+            
             twist_1 = Twist()
             twist_2 = Twist()
             error_1 = float('inf')
@@ -748,17 +749,31 @@ class Dock_Out(smach.State):
                     twist_2.angular.z = KP*error_2
                     PUB_CMD_VEL.publish(twist_1)
                     PUB_CMD_VEL_PEER.publish(twist_2)
+        '''
         
-        # Open gate
-        PUB_GATE_CMD.publish(Bool(False))
-        GATE_REPLY = None
-
         # Switch launch file
         if TASK.mode == "single_AMR":
             transit_mode("Single_Assembled", "Single_AMR")
         elif TASK.mode == "double_AMR":
             transit_mode("Double_Assembled", "Single_AMR")
         time.sleep(2) # wait shelf become static
+
+        # Double AMR in-place rotation 
+        if TASK.mode == "double_AMR":
+            twist.linear.x = 0.0
+            if ROLE == "leader":
+                twist.angular.z = 0.6
+            elif ROLE == "follwer":
+                twist.angular.z = -0.6
+            t_start = rospy.get_rostime().to_sec()
+            while IS_RUN and TASK != None and\
+                rospy.get_rostime().to_sec() - t_start < (pi/2)/abs(twist.angular.z): # sec
+                PUB_CMD_VEL.publish(twist)
+                time.sleep(TIME_INTERVAL)
+        
+        # Open gate
+        PUB_GATE_CMD.publish(Bool(False))
+        GATE_REPLY = None
 
         #------------  dock out -------------# 
         t_start = rospy.get_rostime().to_sec()
