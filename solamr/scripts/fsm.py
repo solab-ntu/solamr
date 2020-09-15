@@ -41,23 +41,22 @@ class Task(object):
         self.task_flow = None
 
 def check_running():
-    global IS_RUN
+    global IS_RUN, BASE_XYT
     while not rospy.is_shutdown():
         # Package formet string = "<CUR_STATE>|<x,y,t>"
         send_str = str(CUR_STATE)
-        last_base = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
-        if last_base != None:
+        BASE_XYT = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
+        if BASE_XYT != None:
             send_str += "|"\
-                     + str(last_base[0]) + ","\
-                     + str(last_base[1]) + ","\
-                     + str(last_base[2])
+                     + str(BASE_XYT[0]) + ","\
+                     + str(BASE_XYT[1]) + ","\
+                     + str(BASE_XYT[2])
         if MEASURE_PEER_XYT != None:
             send_str += "|"\
                      + str(MEASURE_PEER_XYT[0]) + ","\
                      + str(MEASURE_PEER_XYT[1]) + ","\
                      + str(MEASURE_PEER_XYT[2])
         PUB_CUR_STATE.publish(send_str)
-        # rospy.loginfo("[fsm] Send to leader my last localization : " + str(last_base))
         time.sleep(1)
     IS_RUN = False
 
@@ -144,7 +143,6 @@ def transit_mode(from_mode, to_mode):
         #                            str(last_base[1]) + ":" + 
         #                            str(last_base[2]))
         #     rospy.loginfo("[fsm] Send to leader my last localization : " + str(last_base))
-
         switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
         time.sleep(5)
         # Use last_base and PEER_BASE_XYT to calculate , TODO need test
@@ -154,15 +152,14 @@ def transit_mode(from_mode, to_mode):
                 rospy.loginfo("[fsm] Waiting for peer robot to send last localization infomation")
 
             big_car_init_xyt =\
-            ((last_base[0] + PEER_BASE_XYT[0]) / 2.0,
-             (last_base[1] + PEER_BASE_XYT[1]) / 2.0,
-             atan2(last_base[1] - PEER_BASE_XYT[1], last_base[0] - PEER_BASE_XYT[0]))
+            ((BASE_XYT[0] + PEER_BASE_XYT[0]) / 2.0,
+             (BASE_XYT[1] + PEER_BASE_XYT[1]) / 2.0,
+             atan2(BASE_XYT[1] - PEER_BASE_XYT[1], BASE_XYT[0] - PEER_BASE_XYT[0]))
             PEER_BASE_XYT = None
             
             # big_car_init_xyt
             send_initpose(big_car_init_xyt)
-            
-    
+   
     elif from_mode == "Single_Assembled" and to_mode == "Single_AMR":
         change_footprint(0.22)
         change_smart_layer_base_radius(0.22*sqrt(2))
@@ -300,7 +297,6 @@ def peer_robot_state_cb(data):
     except IndexError:
         pass
 
-    
 class Goal_Manager(object):
     def __init__(self):
         self.pub_simple_goal = rospy.Publisher("/" + ROBOT_NAME + "/move_base_simple/goal", PoseStamped, queue_size = 1)
@@ -902,6 +898,7 @@ if __name__ == "__main__":
     ROSLAUNCH = None
     IS_RUN = True
     CUR_STATE = None
+    BASE_XYT = None
     PEER_BASE_XYT = None 
     MEASURE_PEER_XYT = None
     # Goal manager
