@@ -135,20 +135,19 @@ def transit_mode(from_mode, to_mode):
         time.sleep(5)
         # Use last_base and LAST_PEER_BASE to calculate , TODO need test
         if ROLE == "leader":
-            while:
-                if LAST_PEER_BASE != None:
-                    big_car_init_xyt =\
-                    ((last_base[0] + LAST_PEER_BASE[0]) / 2.0,
-                     (last_base[1] + LAST_PEER_BASE[1]) / 2.0,
-                      atan2(last_base[1] - LAST_PEER_BASE[1], last_base[0] - LAST_PEER_BASE[0]))
-                    LAST_PEER_BASE = None
-                    
-                    # big_car_init_xyt
-                    send_initpose(big_car_init_xyt)
-                    break
+            while LAST_PEER_BASE == None: # Wait LAST_PEER_BASE
                 time.sleep(1)
                 rospy.loginfo("[fsm] Waiting for peer robot to send last localization infomation")
-        
+
+            big_car_init_xyt =\
+            ((last_base[0] + LAST_PEER_BASE[0]) / 2.0,
+             (last_base[1] + LAST_PEER_BASE[1]) / 2.0,
+             atan2(last_base[1] - LAST_PEER_BASE[1], last_base[0] - LAST_PEER_BASE[0]))
+            LAST_PEER_BASE = None
+            
+            # big_car_init_xyt
+            send_initpose(big_car_init_xyt)
+            
     
     elif from_mode == "Single_Assembled" and to_mode == "Single_AMR":
         change_footprint(0.22)
@@ -163,18 +162,16 @@ def transit_mode(from_mode, to_mode):
         last_base_leader = None
         last_base_follower = None
         if ROLE == "leader":
-            while:
-                if last_base_leader == None or last_base_follower == None:
-                    last_base_leader   = get_tf(TFBUFFER, "carB/map", "car1/base_link")
-                    last_base_follower = get_tf(TFBUFFER, "carB/map", "car2/base_link")
-                    break
-                else:
-                    time.sleep(1)
+            while last_base_leader == None or last_base_follower == None:
+                last_base_leader   = get_tf(TFBUFFER, "carB/map", "car1/base_link")
+                last_base_follower = get_tf(TFBUFFER, "carB/map", "car2/base_link")
+                time.sleep(1)
             
-        # Switch launch file 
+        # Switch launch file
         switch_launch(ROSLAUNCH_PATH_SINGLE_AMR)
         time.sleep(5) # Wait
 
+        # Send peer last base 
         if ROLE == "leader":
             PUB_CUR_STATE.publish("peer_last_base:" +
                                    str(last_base_follower[0]) + ":" +
@@ -183,12 +180,9 @@ def transit_mode(from_mode, to_mode):
             rospy.loginfo("[fsm] Send to follower its last localization : " + str(last_base_follower))
             send_initpose(last_base_leader)
         elif ROLE == "follower":
-            while:
-                if LAST_PEER_BASE != None:
-                    send_initpose(LAST_PEER_BASE)
-                    break
-                else:
-                    time.sleep(1)
+            while LAST_PEER_BASE == None: # Wait for last peer base
+                time.sleep(1)
+            send_initpose(LAST_PEER_BASE)
     
     elif from_mode == "Double_Assembled" and to_mode == "Single_Assembled":
         switch_launch(ROSLAUNCH_PATH_SINGLE_AMR)
@@ -390,13 +384,13 @@ class Initial_State(smach.State):
 
     def execute(self, userdata):
         if INIT_STATE == 'Single_AMR':
-            transit_mode('Double_Assembled', 'Single_AMR')
+            switch_launch(ROSLAUNCH_PATH_SINGLE_AMR)
         elif INIT_STATE == 'Single_Assembled':
             PUB_GATE_CMD.publish(Bool(True))
-            transit_mode('Double_Assembled', 'Single_AMR')
+            switch_launch(ROSLAUNCH_PATH_SINGLE_AMR)
         elif INIT_STATE == 'Double_Assembled':
             PUB_GATE_CMD.publish(Bool(True))
-            transit_mode('Single_AMR', 'Double_Assembled')
+            switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
         return INIT_STATE
 
 class Single_AMR(smach.State):
@@ -874,7 +868,7 @@ if __name__ == "__main__":
     PUB_GATE_CMD = rospy.Publisher("/gate_cmd", Bool, queue_size = 1)
     PUB_CMD_VEL = rospy.Publisher("/" + ROBOT_NAME + "/cmd_vel", Twist, queue_size = 1)
     PUB_CUR_STATE = rospy.Publisher("/" + ROBOT_NAME + "/current_state", String, queue_size = 1)
-    PUB_INIT_POSE = rospy.Publisher("/" + ROBOT_NAME + "/initialpose", PoseWithCovarianceStamped, queue_size = 1)\
+    PUB_INIT_POSE = rospy.Publisher("/" + ROBOT_NAME + "/initialpose", PoseWithCovarianceStamped, queue_size = 1)
     PUB_GLOBAL_FOOTPRINT = rospy.Publisher("/" + ROBOT_NAME + "/move_base/local_costmap/footprint", Polygon, queue_size = 1)
     PUB_LOCAL_FOOTPRINT = rospy.Publisher("/" + ROBOT_NAME + "/move_base/global_costmap/footprint", Polygon, queue_size = 1)
     
