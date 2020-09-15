@@ -172,10 +172,6 @@ def transit_mode(from_mode, to_mode):
 
         # Send peer last base 
         if ROLE == "leader":
-            # PUB_CUR_STATE.publish("peer_last_base:" +
-            #                        str(last_base_follower[0]) + ":" +
-            #                        str(last_base_follower[1]) + ":" +
-            #                        str(last_base_follower[2]))
             MEASURE_PEER_XYT = last_base_follower
             rospy.loginfo("[fsm] Send to follower its last localization : " + str(last_base_follower))
             send_initpose(last_base_leader)
@@ -393,6 +389,7 @@ class Initial_State(smach.State):
 
     def execute(self, userdata):
         if INIT_STATE == 'Single_AMR':
+            PUB_GATE_CMD.publish(Bool(False))
             switch_launch(ROSLAUNCH_PATH_SINGLE_AMR)
         elif INIT_STATE == 'Single_Assembled':
             PUB_GATE_CMD.publish(Bool(True))
@@ -673,11 +670,15 @@ class Go_Double_Goal(smach.State):
                     goal_xy = vec_trans_coordinate((1,0), (goal_xyt[0], goal_xyt[1], goal_xyt[2]-pi/2))
                     GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], goal_xyt[2]+pi/2), "carB/map")
 
+                # TODO test 
+                time.sleep(5)
+                return 'done'
                 # Wait goal reached
                 if GOAL_MANAGER.is_reached:
-                    rospy.logerr("[FSM] GGGGGGGGGGGGGGGGGGGGGgggg GOAL reached")
+                    # rospy.logerr("[FSM] GGGGGGGGGGGGGGGGGGGGGgggg GOAL reached")
                     # TODO test stuck here forever
                     # return 'done'
+                    pass
             elif ROLE == "follower":
                 # Listen to car1 state
                 if PEER_ROBOT_STATE == "Dock_Out": # If peer dockout, you dockout too
@@ -708,7 +709,7 @@ class Dock_Out(smach.State):
         
         # Open gate
         PUB_GATE_CMD.publish(Bool(False))
-        time.sleep(2) # wait shelf become static
+        
         GATE_REPLY = None
         
         if TASK.mode == "single_AMR":
@@ -716,7 +717,7 @@ class Dock_Out(smach.State):
         elif TASK.mode == "double_AMR":
             transit_mode("Double_Assembled", "Single_AMR")
         
-        PUB_SEARCH_CENTER.publish(Point(0, 0, 0))
+        time.sleep(2) # wait shelf become static
         twist = Twist()
         KP = 1.0
         #------------  in-place rotation -------------# 
@@ -732,6 +733,9 @@ class Dock_Out(smach.State):
                 error_theta = normalize_angle( normalize_angle(choose_point[2]) - base_link_xyt[2])
                 rospy.loginfo("ERROR theta: " + str(error_theta))
                 twist.angular.z = KP*error_theta
+            else:
+                # init search center
+                PUB_SEARCH_CENTER.publish(Point(0, 0, 0))
             PUB_CMD_VEL.publish(twist)
             time.sleep(TIME_INTERVAL)
         
@@ -749,8 +753,7 @@ class Dock_Out(smach.State):
             time.sleep(TIME_INTERVAL)
         
         #------------  in-place rotation -------------# 
-        # TODO 
-
+        # TODO, not figure it out yet
 
         # Send zero velocity
         twist = Twist()

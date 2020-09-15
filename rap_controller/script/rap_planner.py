@@ -29,7 +29,7 @@ class Rap_planner():
         # Publisher
         self.viz_marker = Marker_Manager("/rap_planner/markers")
         self.pub_global_path = rospy.Publisher("/rap_planner/global_path", Path,queue_size = 1,latch=False)
-        self.pub_goal_result = rospy.Publisher("/" + ROBOT_NAME + "/move_base/result", MoveBaseActionResult, queue_size = 1, latch=False)
+        self.pub_goal_result = rospy.Publisher("/car1/move_base/result", MoveBaseActionResult, queue_size = 1, latch=False)
         # Debug publisher
         self.pub_alpha = rospy.Publisher("/alpha", Float64,queue_size = 1,latch=False)
         self.alpha = 0.0
