@@ -43,7 +43,21 @@ class Task(object):
 def check_running():
     global IS_RUN
     while not rospy.is_shutdown():
-        PUB_CUR_STATE.publish(str(CUR_STATE))
+        # Package formet string = "<CUR_STATE>|<x,y,t>"
+        send_str = str(CUR_STATE)
+        last_base = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
+        if last_base != None:
+            send_str += "|"\
+                     + str(last_base[0]) + ","\
+                     + str(last_base[1]) + ","\
+                     + str(last_base[2])
+        if MEASURE_PEER_XYT != None:
+            send_str += "|"\
+                     + str(MEASURE_PEER_XYT[0]) + ","\
+                     + str(MEASURE_PEER_XYT[1]) + ","\
+                     + str(MEASURE_PEER_XYT[2])
+        PUB_CUR_STATE.publish(send_str)
+        # rospy.loginfo("[fsm] Send to leader my last localization : " + str(last_base))
         time.sleep(1)
     IS_RUN = False
 
@@ -111,39 +125,39 @@ def send_initpose(xyt):
     PUB_INIT_POSE.publish(initpose)
 
 def transit_mode(from_mode, to_mode):
-    global LAST_PEER_BASE
+    global PEER_BASE_XYT, MEASURE_PEER_XYT
     if   from_mode == "Single_AMR" and to_mode == "Single_Assembled":
         change_footprint(0.45)
         change_smart_layer_base_radius(0.45*sqrt(2))
 
     elif from_mode == "Single_AMR" and to_mode == "Double_Assembled":
-        # Record the last base_link localization
-        last_base = None
-        while last_base == None:
-            last_base = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
-            time.sleep(1)
+        # # Record the last base_link localization
+        # last_base = None
+        # while last_base == None:
+        #     last_base = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
+        #     time.sleep(1)
         
-        if ROLE == "follower":
-            # Send last_base to peer robot
-            PUB_CUR_STATE.publish("peer_last_base:" +
-                                   str(last_base[0]) + ":" +
-                                   str(last_base[1]) + ":" + 
-                                   str(last_base[2]))
-            rospy.loginfo("[fsm] Send to leader my last localization : " + str(last_base))
+        # if ROLE == "follower":
+        #     # Send last_base to peer robot
+        #     PUB_CUR_STATE.publish("peer_last_base:" +
+        #                            str(last_base[0]) + ":" +
+        #                            str(last_base[1]) + ":" + 
+        #                            str(last_base[2]))
+        #     rospy.loginfo("[fsm] Send to leader my last localization : " + str(last_base))
 
         switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
         time.sleep(5)
-        # Use last_base and LAST_PEER_BASE to calculate , TODO need test
+        # Use last_base and PEER_BASE_XYT to calculate , TODO need test
         if ROLE == "leader":
-            while LAST_PEER_BASE == None: # Wait LAST_PEER_BASE
+            while PEER_BASE_XYT == None: # Wait PEER_BASE_XYT
                 time.sleep(1)
                 rospy.loginfo("[fsm] Waiting for peer robot to send last localization infomation")
 
             big_car_init_xyt =\
-            ((last_base[0] + LAST_PEER_BASE[0]) / 2.0,
-             (last_base[1] + LAST_PEER_BASE[1]) / 2.0,
-             atan2(last_base[1] - LAST_PEER_BASE[1], last_base[0] - LAST_PEER_BASE[0]))
-            LAST_PEER_BASE = None
+            ((last_base[0] + PEER_BASE_XYT[0]) / 2.0,
+             (last_base[1] + PEER_BASE_XYT[1]) / 2.0,
+             atan2(last_base[1] - PEER_BASE_XYT[1], last_base[0] - PEER_BASE_XYT[0]))
+            PEER_BASE_XYT = None
             
             # big_car_init_xyt
             send_initpose(big_car_init_xyt)
@@ -173,16 +187,18 @@ def transit_mode(from_mode, to_mode):
 
         # Send peer last base 
         if ROLE == "leader":
-            PUB_CUR_STATE.publish("peer_last_base:" +
-                                   str(last_base_follower[0]) + ":" +
-                                   str(last_base_follower[1]) + ":" + 
-                                   str(last_base_follower[2]))
+            # PUB_CUR_STATE.publish("peer_last_base:" +
+            #                        str(last_base_follower[0]) + ":" +
+            #                        str(last_base_follower[1]) + ":" +
+            #                        str(last_base_follower[2]))
+            MEASURE_PEER_XYT = last_base_follower
             rospy.loginfo("[fsm] Send to follower its last localization : " + str(last_base_follower))
             send_initpose(last_base_leader)
         elif ROLE == "follower":
-            while LAST_PEER_BASE == None: # Wait for last peer base
+            while MEASURE_PEER_XYT == None: # Wait for last peer base
                 time.sleep(1)
-            send_initpose(LAST_PEER_BASE)
+                rospy.loginfo("[fsm] Waiting for leader sending my localization")
+            send_initpose(MEASURE_PEER_XYT)
     
     elif from_mode == "Double_Assembled" and to_mode == "Single_Assembled":
         switch_launch(ROSLAUNCH_PATH_SINGLE_AMR)
@@ -269,13 +285,22 @@ def gate_reply_cb(data):
     GATE_REPLY = data.data
 
 def peer_robot_state_cb(data):
-    global PEER_ROBOT_STATE, LAST_PEER_BASE
-    if data.data[:14] == "peer_last_base":
-        LAST_PEER_BASE = data.data.split(':')[1:]
-        rospy.loginfo("[fsm] Received peer robot localization info. : " + str(LAST_PEER_BASE))
-    else:
-        PEER_ROBOT_STATE = data.data
+    global PEER_ROBOT_STATE, PEER_BASE_XYT, MEASURE_PEER_XYT
+    data_list = data.data.split('|')
+    PEER_ROBOT_STATE = data_list[0]
+    try:
+        xyt = data_list[1].split(',')
+        PEER_BASE_XYT = (float(xyt[0]), float(xyt[1]), float(xyt[2]))
+    except IndexError:
+        pass
+    
+    try:
+        xyt = data_list[2].split(',')
+        MEASURE_PEER_XYT = (float(xyt[0]), float(xyt[1]), float(xyt[2]))
+    except IndexError:
+        pass
 
+    
 class Goal_Manager(object):
     def __init__(self):
         self.pub_simple_goal = rospy.Publisher("/" + ROBOT_NAME + "/move_base_simple/goal", PoseStamped, queue_size = 1)
@@ -877,7 +902,8 @@ if __name__ == "__main__":
     ROSLAUNCH = None
     IS_RUN = True
     CUR_STATE = None
-    LAST_PEER_BASE = None 
+    PEER_BASE_XYT = None 
+    MEASURE_PEER_XYT = None
     # Goal manager
     GOAL_MANAGER = Goal_Manager()
     
