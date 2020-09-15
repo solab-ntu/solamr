@@ -131,22 +131,9 @@ def transit_mode(from_mode, to_mode):
         change_smart_layer_base_radius(0.45*sqrt(2))
 
     elif from_mode == "Single_AMR" and to_mode == "Double_Assembled":
-        # # Record the last base_link localization
-        # last_base = None
-        # while last_base == None:
-        #     last_base = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
-        #     time.sleep(1)
-        
-        # if ROLE == "follower":
-        #     # Send last_base to peer robot
-        #     PUB_CUR_STATE.publish("peer_last_base:" +
-        #                            str(last_base[0]) + ":" +
-        #                            str(last_base[1]) + ":" + 
-        #                            str(last_base[2]))
-        #     rospy.loginfo("[fsm] Send to leader my last localization : " + str(last_base))
         switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
         time.sleep(5)
-        # Use last_base and PEER_BASE_XYT to calculate , TODO need test
+        # Use last_base and PEER_BASE_XYT to calculate
         if ROLE == "leader":
             while PEER_BASE_XYT == None: # Wait PEER_BASE_XYT
                 time.sleep(1)
@@ -688,7 +675,9 @@ class Go_Double_Goal(smach.State):
 
                 # Wait goal reached
                 if GOAL_MANAGER.is_reached:
-                    return 'done'
+                    rospy.logerr("[FSM] GGGGGGGGGGGGGGGGGGGGGgggg GOAL reached")
+                    # TODO test stuck here forever
+                    # return 'done'
             elif ROLE == "follower":
                 # Listen to car1 state
                 if PEER_ROBOT_STATE == "Dock_Out": # If peer dockout, you dockout too
