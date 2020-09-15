@@ -3,7 +3,7 @@
     <arg name="robot_name" default="car1" />
     <arg name="role" default="leader" />
     <!-- MQTT -->
-    <node pkg="ros_mqtt_bridge" type="$(arg role).py"  name="ros_mqtt_bridge" output='screen'/>
+    <node pkg="ros_mqtt_bridge" type="double_AMR_$(arg role).py"  name="ros_mqtt_bridge" output='screen'/>
 
     <!-- Odom Fuser -->
     <node pkg="solamr" type="odom_fuser_big_car.py" name="odom_big_car" output="screen"/>

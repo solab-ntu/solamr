@@ -10,9 +10,11 @@ import tf2_ros
 class Ros_mqtt_bridge():
     def __init__(self, client_id , broker_ip , port , keepalive, clean_session):
         self.mqtt_obj = MQTT_OBJ(client_id, broker_ip, port, keepalive, clean_session)
+        # container
         self.publisher = {} # {ros_topic : (mqtt_topic,data_type)}
         self.subscriber= {} # {mqtt_topic: (ros_topic, data_type, ros_pub_handle)}
         self.tf_subscriber = {} # {mqtt_topic: (frame_id, child_id)}
+        # Tf
         self.tfBuffer = tf2_ros.Buffer()
         self.listener = tf2_ros.TransformListener(self.tfBuffer)
         self.tfBroadcast = tf2_ros.TransformBroadcaster()
@@ -62,7 +64,7 @@ class Ros_mqtt_bridge():
         '''
         subscirbe content int mqtt_topic, and relay it to ROS topic and publish 
         '''
-        if mqtt_topic in self.subscriber: 
+        if mqtt_topic in self.subscriber:
             rospy.logwarn("[Ros_mqtt_bridge] Subscribe Topic name: " + mqtt_topic + " already exist. Reject init.")
         else:
             pub = rospy.Publisher(ros_topic  , roslib.message.get_message_class(data_type)  ,queue_size = 1,  latch=False)
