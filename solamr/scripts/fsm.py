@@ -222,7 +222,6 @@ def task_cb(req):
     
     elif req.data[:3] == "jp2":
         # Jump to assign state
-        #  = req.data.split(' ')
         task_tmp = Task()
         task_tmp.task_flow = [CUR_STATE, req.data[3:]]
         TASK = task_tmp
@@ -567,7 +566,6 @@ class Dock_In(smach.State):
                     twist.linear.x = VX_MAX * sign(twist.linear.x)
                 elif abs(twist.linear.x) < VX_MIN:
                     twist.linear.x = VX_MIN * sign(twist.linear.x)
-                # rospy.logerr("[TEST] " + str(atan2(shelf_xyt[1], shelf_xyt[0])))
                 if rho > 0.05: # To avoid strang things
                     twist.angular.z = KP_T*atan2(shelf_xyt[1], shelf_xyt[0])
                 else:
@@ -605,8 +603,15 @@ class Go_Way_Point(smach.State):
         GOAL_MANAGER.send_goal(TASK.wait_location, ROBOT_NAME + "/map", tolerance = (0.3,  pi/6))
         while IS_RUN and TASK != None:
             if GOAL_MANAGER.is_reached:
-                # TODO Wait and evaluate possiability to get to final goal
-                return 'done'
+                # TODO Wait peer robot to go away, need TEST
+                if  PEER_ROBOT_STATE == "Single_Assembled" or\
+                    PEER_ROBOT_STATE == "Single_AMR" or\
+                    PEER_ROBOT_STATE == "Find_Shelf" or\
+                    PEER_ROBOT_STATE == "Dock_In" or\
+                    PEER_ROBOT_STATE == "Go_Dock_Standby":
+                    pass
+                else:
+                    return 'done'
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
@@ -655,7 +660,6 @@ class Go_Double_Goal(smach.State):
         global CUR_STATE
         CUR_STATE = "Go_Double_Goal"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
-        
         
         seen_tag = False
         while IS_RUN and TASK != None:
