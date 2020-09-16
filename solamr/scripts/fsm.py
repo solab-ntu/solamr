@@ -567,7 +567,7 @@ class Dock_In(smach.State):
                     twist.linear.x = VX_MAX * sign(twist.linear.x)
                 elif abs(twist.linear.x) < VX_MIN:
                     twist.linear.x = VX_MIN * sign(twist.linear.x)
-                
+                # rospy.logerr("[TEST] " + str(atan2(shelf_xyt[1], shelf_xyt[0])))
                 if rho > 0.05: # To avoid strang things
                     twist.angular.z = KP_T*atan2(shelf_xyt[1], shelf_xyt[0])
                 else:
@@ -656,10 +656,8 @@ class Go_Double_Goal(smach.State):
         CUR_STATE = "Go_Double_Goal"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
         
-        # Send goal 
-        if ROLE == "leader":
-            GOAL_MANAGER.send_goal(TASK.goal_location, "carB/map")
         
+        seen_tag = False
         while IS_RUN and TASK != None:
             if ROLE == "leader":
                 # Tag navigation
@@ -667,6 +665,9 @@ class Go_Double_Goal(smach.State):
                 if goal_xyt != None:
                     goal_xy = vec_trans_coordinate((1,0), (goal_xyt[0], goal_xyt[1], goal_xyt[2]-pi/2))
                     GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], goal_xyt[2]), "carB/map")
+                    seen_tag = True
+                if not seen_tag:
+                    GOAL_MANAGER.send_goal(TASK.goal_location, "carB/map")
                 
                 # Wait goal reached
                 if GOAL_MANAGER.is_reached:
@@ -744,14 +745,16 @@ class Dock_Out(smach.State):
                     PUB_CMD_VEL.publish(twist_1)
                     PUB_CMD_VEL_PEER.publish(twist_2)
         '''
-        
+        elif TASK.mode == "double_AMR":
+            time.sleep(2) # Wait rap_controller return to origin orientation
+            PUB_CMD_VEL.publish(Twist()) # Stop AMR
         # Switch launch file
         if TASK.mode == "single_AMR":
             transit_mode("Single_Assembled", "Single_AMR")
+            time.sleep(2) # wait shelf become static
         elif TASK.mode == "double_AMR":
             transit_mode("Double_Assembled", "Single_AMR")
-        time.sleep(2) # wait shelf become static
-
+        
         # Double AMR in-place rotation 
         if TASK.mode == "double_AMR":
             twist.linear.x = 0.0

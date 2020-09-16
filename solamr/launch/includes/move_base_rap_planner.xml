@@ -26,6 +26,6 @@
 		<param name="controller_frequency" value="5.0" />
 		<param name="controller_patience" value="15.0" />
 		<param name="clearing_rotation_allowed" value="true" /> <!-- if carlike: not able to rotate in place -->
-		
+		<remap from='cmd_vel' to='/car1/cmd_vel/dummy'/>
 	</node>
 </launch>
