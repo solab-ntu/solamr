@@ -72,7 +72,7 @@ class Odom_Fuser_Single_AMR():
         # Update TF
         map_rtabmap_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/raw/map", ROBOT_NAME+"/raw/odom")
         odom_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/raw/odom", ROBOT_NAME+"/raw/base_link")
-        
+        ''' # APriltag localization, disable due to the bad orientation estimation
         # Get Markers
         marker1_xyt = get_tf(self.tfBuffer, ROBOT_NAME+"/raw/base_link", ROBOT_NAME + "/raw/marker1", is_warn = False)
         
@@ -100,8 +100,6 @@ class Odom_Fuser_Single_AMR():
                 if i != None:
                     sum_error += abs(avg - i[2])
             
-            #print ("sum_error = " + str(sum_error))
-        #print ("valid_num = " + str(valid_num))
         if sum_error != None and sum_error < 0.02:
             if marker1_xyt != None and marker1_xyt != self.marker1_xyt_last:
                 if sqrt(marker1_xyt[0]**2 + marker1_xyt[1]**2) < 2.0:
@@ -127,7 +125,7 @@ class Odom_Fuser_Single_AMR():
 
                     # Flags
                     self.marker1_xyt_last = marker1_xyt
-
+        '''
         if odom_xyt != None:
             self.odom_xyt = odom_xyt
         if map_rtabmap_xyt != None:
