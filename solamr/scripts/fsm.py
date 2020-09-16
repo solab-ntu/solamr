@@ -629,10 +629,10 @@ class Go_Way_Point(smach.State):
                     continue
             
             if GOAL_MANAGER.is_reached:
+                GOAL_MANAGER.is_reached = False
                 try:
                     rospy.loginfo("[fsm] Finish current goal : " + str(current_goal))
                     current_goal = goal_list[ goal_list.index(current_goal) + 1 ]
-                    GOAL_MANAGER.is_reached = False
                     # Wait goal to calm down
                     # time.sleep(1) Need to TEST
                 except IndexError:
@@ -656,27 +656,24 @@ class Go_Goal(smach.State):
         if IS_DUMMY_TEST:
             time.sleep(2)
             return 'done'
-        if TASK.mode == "single_AMR":
-            GOAL_MANAGER.send_goal(TASK.goal_location, ROBOT_NAME + "/map")
-        elif TASK.mode == "double_AMR":
-            GOAL_MANAGER.send_goal(TASK.goal_location, "carB/map")
+        
+        GOAL_MANAGER.send_goal(TASK.goal_location, ROBOT_NAME + "/map")
         
         while IS_RUN and TASK != None:
             # Tag navigation, TODO need to exchange shelf
-            if TASK.mode == "single_AMR":
-                if  ROBOT_NAME == "car1":
-                    goal_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/B_site")
-                elif ROBOT_NAME == "car2":
-                    goal_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/A_site")
-            elif TASK.mode == "double_AMR":
-                goal_xyt = get_tf(TFBUFFER, "carB/map", ROBOT_NAME + "/B_site")
+            if  ROBOT_NAME == "car1":
+                goal_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/B_site")
+            elif ROBOT_NAME == "car2":
+                goal_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/A_site")
             
-            if goal_xyt != None:
-                goal_xy = vec_trans_coordinate((1,0), (goal_xyt[0], goal_xyt[1], goal_xyt[2]-pi/2))
-                GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], goal_xyt[2]+pi/2), ROBOT_NAME + "/map")
-
             if GOAL_MANAGER.is_reached:
+                GOAL_MANAGER.is_reached = False
                 return 'done'
+            else:
+                if goal_xyt != None:
+                    goal_xy = vec_trans_coordinate((0.7,0), (goal_xyt[0], goal_xyt[1], goal_xyt[2]-pi/2))
+                    GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], goal_xyt[2]+pi/2), ROBOT_NAME + "/map")
+
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
@@ -876,19 +873,20 @@ class Go_Home(smach.State):
         while IS_RUN and TASK != None:
             # Check goal reached
             if GOAL_MANAGER.is_reached:
+                GOAL_MANAGER.is_reached = False
                 TASK = None
                 rospy.loginfo("[fsm] task done")
                 return 'done'
-            
-            # GOAL_MANAGER.send_goal(TASK.home_location, ROBOT_NAME + "/map")
-            # Send goal
-            home_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/home")
-            if home_xyt != None:
-                if ROBOT_NAME == "car1":
-                    goal_xy = vec_trans_coordinate((0.6, 0.75), (home_xyt[0], home_xyt[1], home_xyt[2]-pi/2))
-                elif ROBOT_NAME == "car2":
-                    goal_xy = vec_trans_coordinate((0.6,-0.75), (home_xyt[0], home_xyt[1], home_xyt[2]-pi/2))
-                GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], home_xyt[2]-pi/2), ROBOT_NAME + "/map")
+            else:
+                # GOAL_MANAGER.send_goal(TASK.home_location, ROBOT_NAME + "/map")
+                # Send goal
+                home_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/home")
+                if home_xyt != None:
+                    if ROBOT_NAME == "car1":
+                        goal_xy = vec_trans_coordinate((0.6, 0.75), (home_xyt[0], home_xyt[1], home_xyt[2]-pi/2))
+                    elif ROBOT_NAME == "car2":
+                        goal_xy = vec_trans_coordinate((0.6,-0.75), (home_xyt[0], home_xyt[1], home_xyt[2]-pi/2))
+                    GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], home_xyt[2]-pi/2), ROBOT_NAME + "/map")
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
