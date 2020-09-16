@@ -661,22 +661,36 @@ class Go_Double_Goal(smach.State):
         CUR_STATE = "Go_Double_Goal"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
         
+        goal_list = [(4.35, 1.12, -1.5708),
+                     (3.68, 0.13, 3.1416),
+                     (1.4,  0.13,  3.1416), 
+                     (1.37, 1.18, 1.5708),
+                     (0.57, 1.17, 1.5708)]
+        current_goal = goal_list[0]
         seen_tag = False
         while IS_RUN and TASK != None:
             if ROLE == "leader":
                 # Tag navigation
                 goal_xyt = get_tf(TFBUFFER, "carB/map", ROBOT_NAME + "/B_site")
+                ''' # TMP ignore tag
                 if goal_xyt != None:
                     goal_xy = vec_trans_coordinate((1,0), (goal_xyt[0], goal_xyt[1], goal_xyt[2]-pi/2))
                     GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], goal_xyt[2]), "carB/map")
                     seen_tag = True
+                '''
                 if not seen_tag:
-                    GOAL_MANAGER.send_goal(TASK.goal_location, "carB/map")
+                    # GOAL_MANAGER.send_goal(TASK.goal_location, "carB/map")
+                    GOAL_MANAGER.send_goal(current_goal, "carB/map")
                 
                 # Wait goal reached
                 if GOAL_MANAGER.is_reached:
-                    return 'done'
-                
+                    try:
+                        rospy.loginfo("[fsm] Finish current goal : " + str(current_goal))
+                        current_goal = goal_list[ goal_list.index(current_goal) + 1 ]
+                    except IndexError:
+                        rospy.loginfo("[fsm] Finish all goal list!")
+                        return 'done'
+
             elif ROLE == "follower":
                 # Listen to car1 state
                 if PEER_ROBOT_STATE == "Dock_Out": # If peer dockout, you dockout too
