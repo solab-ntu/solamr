@@ -722,29 +722,29 @@ class Dock_Out(smach.State):
                     PUB_SEARCH_CENTER.publish(Point(0, 0, 0))
                 PUB_CMD_VEL.publish(twist)
                 time.sleep(TIME_INTERVAL)
-        '''
-        elif TASK.mode == "double_AMR" and ROLE == "leader":
-            # NEED TODO test, give up this one, because rap planner will also publish cmd_vel 
-            # at thsi point, tow cmd will collide
-            
-            twist_1 = Twist()
-            twist_2 = Twist()
-            error_1 = float('inf')
-            error_2 = float('inf')
-            while (abs(error_1) > 0.01 and abs(error_2) > 0.01):
-                carB_xyt = get_tf(TFBUFFER, "carB/map", "carB/base_link")
-                theta_1 = get_tf(TFBUFFER, "carB/map", "car1/base_link")
-                theta_2 = get_tf(TFBUFFER, "carB/map", "car2/base_link")
-                if theta_1 != None and theta_2 != None and carB_xyt != None:
-                    error_1 = normalize_angle(carB_xyt[2] + pi/2) - theta_1[2]
-                    error_2 = normalize_angle(carB_xyt[2] + pi/2) - theta_2[2]
-                    rospy.loginfo("ERROR error_1: " + str(error_1))
-                    rospy.loginfo("ERROR error_2: " + str(error_2))
-                    twist_1.angular.z = KP*error_1
-                    twist_2.angular.z = KP*error_2
-                    PUB_CMD_VEL.publish(twist_1)
-                    PUB_CMD_VEL_PEER.publish(twist_2)
-        '''
+            '''
+            elif TASK.mode == "double_AMR" and ROLE == "leader":
+                # NEED TODO test, give up this one, because rap planner will also publish cmd_vel 
+                # at thsi point, tow cmd will collide
+                
+                twist_1 = Twist()
+                twist_2 = Twist()
+                error_1 = float('inf')
+                error_2 = float('inf')
+                while (abs(error_1) > 0.01 and abs(error_2) > 0.01):
+                    carB_xyt = get_tf(TFBUFFER, "carB/map", "carB/base_link")
+                    theta_1 = get_tf(TFBUFFER, "carB/map", "car1/base_link")
+                    theta_2 = get_tf(TFBUFFER, "carB/map", "car2/base_link")
+                    if theta_1 != None and theta_2 != None and carB_xyt != None:
+                        error_1 = normalize_angle(carB_xyt[2] + pi/2) - theta_1[2]
+                        error_2 = normalize_angle(carB_xyt[2] + pi/2) - theta_2[2]
+                        rospy.loginfo("ERROR error_1: " + str(error_1))
+                        rospy.loginfo("ERROR error_2: " + str(error_2))
+                        twist_1.angular.z = KP*error_1
+                        twist_2.angular.z = KP*error_2
+                        PUB_CMD_VEL.publish(twist_1)
+                        PUB_CMD_VEL_PEER.publish(twist_2)
+            '''
         elif TASK.mode == "double_AMR":
             time.sleep(2) # Wait rap_controller return to origin orientation
             PUB_CMD_VEL.publish(Twist()) # Stop AMR
@@ -754,7 +754,7 @@ class Dock_Out(smach.State):
             time.sleep(2) # wait shelf become static
         elif TASK.mode == "double_AMR":
             transit_mode("Double_Assembled", "Single_AMR")
-        
+
         # Double AMR in-place rotation 
         if TASK.mode == "double_AMR":
             twist.linear.x = 0.0
