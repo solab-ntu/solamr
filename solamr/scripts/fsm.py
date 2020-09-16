@@ -435,11 +435,13 @@ class Find_Shelf(smach.State):
             return 'done'
 
         # TODO use yaml.
-        find_points = [(2.6, 0.4, -pi/2), (2, 1.2, pi), (2.6, 2.1, pi/2), (3.5, 1.2, 0.0)]
+        # find_points = [(2.6, 0.4, -pi/2), (2, 1.2, pi), (4.0, 1.16, pi/2), (3.5, 1.2, 0.0)]
+
+        find_points = [ (1.4, 1.16, pi) (4.0, 1.16,  0.0)]
         if ROBOT_NAME == "car1":
-            goal = find_points[3]
-        elif ROBOT_NAME == "car2":
             goal = find_points[1]
+        elif ROBOT_NAME == "car2":
+            goal = find_points[0]
         GOAL_MANAGER.is_reached = False
         while IS_RUN and TASK != None:
             # Check goal reached or not 
