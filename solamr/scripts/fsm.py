@@ -217,8 +217,7 @@ def task_cb(req):
         # Cacelled all goal
         GOAL_MANAGER.cancel_goal()
         # Zero velocity
-        twist = Twist()
-        PUB_CMD_VEL.publish(twist)
+        PUB_CMD_VEL.publish(Twist())
         return 'abort OK'
     
     elif req.data[:3] == "jp2":
@@ -581,8 +580,7 @@ class Dock_In(smach.State):
             if GATE_REPLY == True:
                 # Get reply, Dockin successfully
                 # Send zero velocity
-                twist = Twist()
-                PUB_CMD_VEL.publish(twist)
+                PUB_CMD_VEL.publish(Twist())
                 
                 next_state = TASK.task_flow[TASK.task_flow.index('Dock_In')+1]
                 transit_mode('Single_AMR', next_state)
