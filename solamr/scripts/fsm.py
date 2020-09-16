@@ -998,7 +998,7 @@ if __name__ == "__main__":
         smach.StateMachine.add(
             label='Dock_In',
             state=Dock_In(),
-            transitions={'abort': 'Single_AMR', # For abort
+            transitions={'abort': 'Find_Shelf', # For abort
                          'Single_Assembled': 'Single_Assembled', # Dock succeeed, single assembled 
                          'Double_Assembled': 'Double_Assembled', }) # # Dock succeeed, double assembled 
 
