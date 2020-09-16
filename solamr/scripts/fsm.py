@@ -127,7 +127,8 @@ def send_initpose(xyt):
 def transit_mode(from_mode, to_mode):
     global PEER_BASE_XYT, MEASURE_PEER_XYT
     if   from_mode == "Single_AMR" and to_mode == "Single_Assembled":
-        change_footprint(0.45)
+        change_footprint(0.35)
+        # change_footprint(0.45)
         # change_smart_layer_base_radius(0.45*sqrt(2)) # Some times can still see the shelf
         change_smart_layer_base_radius(0.7)
 
