@@ -128,7 +128,8 @@ def transit_mode(from_mode, to_mode):
     global PEER_BASE_XYT, MEASURE_PEER_XYT
     if   from_mode == "Single_AMR" and to_mode == "Single_Assembled":
         change_footprint(0.45)
-        change_smart_layer_base_radius(0.45*sqrt(2))
+        # change_smart_layer_base_radius(0.45*sqrt(2)) # Some times can still see the shelf
+        change_smart_layer_base_radius(1.4)
 
     elif from_mode == "Single_AMR" and to_mode == "Double_Assembled":
         switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
@@ -602,10 +603,10 @@ class Go_Way_Point(smach.State):
             time.sleep(2)
             return 'done'
 
-        GOAL_MANAGER.send_goal(TASK.wait_location, ROBOT_NAME + "/map", tolerance = (0.3,  pi/6))
+        # GOAL_MANAGER.send_goal(TASK.wait_location, ROBOT_NAME + "/map", tolerance = (0.3,  pi/6))
         while IS_RUN and TASK != None:
+            GOAL_MANAGER.send_goal(TASK.wait_location, ROBOT_NAME + "/map", tolerance = (0.3,  pi/6))
             if GOAL_MANAGER.is_reached:
-                # TODO Wait peer robot to go away, need TEST
                 if  PEER_ROBOT_STATE == "Single_Assembled" or\
                     PEER_ROBOT_STATE == "Single_AMR" or\
                     PEER_ROBOT_STATE == "Find_Shelf" or\
@@ -853,16 +854,15 @@ class Go_Home(smach.State):
                 rospy.loginfo("[fsm] task done")
                 return 'done'
             
-            # TODO using tag??????
             # GOAL_MANAGER.send_goal(TASK.home_location, ROBOT_NAME + "/map")
             # Send goal
             home_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/home")
             if home_xyt != None:
                 if ROBOT_NAME == "car1":
-                    goal_xy = vec_trans_coordinate((1, 1), (home_xyt[0], home_xyt[1], home_xyt[2]-pi/2))
+                    goal_xy = vec_trans_coordinate((0.6, 0.75), (home_xyt[0], home_xyt[1], home_xyt[2]-pi/2))
                 elif ROBOT_NAME == "car2":
-                    goal_xy = vec_trans_coordinate((1,-1), (home_xyt[0], home_xyt[1], home_xyt[2]-pi/2))
-                GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], home_xyt[2]+pi/2), ROBOT_NAME + "/map")
+                    goal_xy = vec_trans_coordinate((0.6,-0.75), (home_xyt[0], home_xyt[1], home_xyt[2]-pi/2))
+                GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], home_xyt[2]-pi/2), ROBOT_NAME + "/map")
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
