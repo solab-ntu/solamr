@@ -589,6 +589,17 @@ class Dock_In(smach.State):
                 # Send zero velocity
                 PUB_CMD_VEL.publish(Twist())
                 
+                if TASK.mode == "single_AMR":
+                    # SIngle AMR in-place rotation
+                    twist = Twist()
+                    twist.linear.x = 0.0
+                    twist.angular.z = 0.6
+                    t_start = rospy.get_rostime().to_sec()
+                    while IS_RUN and TASK != None and\
+                        rospy.get_rostime().to_sec() - t_start < pi/twist.angular.z: # sec
+                        PUB_CMD_VEL.publish(twist)
+                        time.sleep(TIME_INTERVAL)
+                
                 next_state = TASK.task_flow[TASK.task_flow.index('Dock_In')+1]
                 transit_mode('Single_AMR', next_state)
                 return next_state
@@ -616,7 +627,6 @@ class Go_Way_Point(smach.State):
         current_goal = goal_list[0]
 
         GOAL_MANAGER.send_goal(current_goal, ROBOT_NAME + "/map", tolerance = (0.3,  pi/6))
-        # GOAL_MANAGER.send_goal(TASK.wait_location, ROBOT_NAME + "/map", tolerance = (0.3,  pi/6))
         while IS_RUN and TASK != None:
             # GOAL_MANAGER.send_goal(TASK.wait_location, ROBOT_NAME + "/map", tolerance = (0.3,  pi/6))
             if current_goal == goal_list[2]: # Wait peer robot here
