@@ -129,7 +129,7 @@ def transit_mode(from_mode, to_mode):
     if   from_mode == "Single_AMR" and to_mode == "Single_Assembled":
         change_footprint(0.45)
         # change_smart_layer_base_radius(0.45*sqrt(2)) # Some times can still see the shelf
-        change_smart_layer_base_radius(1.4)
+        change_smart_layer_base_radius(0.7)
 
     elif from_mode == "Single_AMR" and to_mode == "Double_Assembled":
         switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
@@ -625,14 +625,14 @@ class Go_Way_Point(smach.State):
                     PEER_ROBOT_STATE == "Dock_In" or\
                     PEER_ROBOT_STATE == "Go_Dock_Standby":
                     rospy.loginfo("[fsm] Waiting for peer robot state ....")
-                    time.sleep(TIME_INTERVAL)
+                    time.sleep(1)
                     continue
             
             if GOAL_MANAGER.is_reached:
                 try:
                     rospy.loginfo("[fsm] Finish current goal : " + str(current_goal))
                     current_goal = goal_list[ goal_list.index(current_goal) + 1 ]
-                    # GOAL_MANAGER.is_reached = False
+                    GOAL_MANAGER.is_reached = False
                     # Wait goal to calm down
                     # time.sleep(1) Need to TEST
                 except IndexError:
