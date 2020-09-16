@@ -613,7 +613,8 @@ class Go_Way_Point(smach.State):
         elif ROBOT_NAME == "car2":
             goal_list = [(1.48, 0.5, -pi/4), (2.77, 0.08, 0.0), (4.08, 0.277, pi/4)]
         current_goal = goal_list[0]
-        
+
+        GOAL_MANAGER.send_goal(current_goal, ROBOT_NAME + "/map", tolerance = (0.3,  pi/6))
         # GOAL_MANAGER.send_goal(TASK.wait_location, ROBOT_NAME + "/map", tolerance = (0.3,  pi/6))
         while IS_RUN and TASK != None:
             # GOAL_MANAGER.send_goal(TASK.wait_location, ROBOT_NAME + "/map", tolerance = (0.3,  pi/6))
@@ -623,11 +624,10 @@ class Go_Way_Point(smach.State):
                     PEER_ROBOT_STATE == "Find_Shelf" or\
                     PEER_ROBOT_STATE == "Dock_In" or\
                     PEER_ROBOT_STATE == "Go_Dock_Standby":
+                    rospy.loginfo("[fsm] Waiting for peer robot state ....")
                     time.sleep(TIME_INTERVAL)
                     continue
             
-            GOAL_MANAGER.send_goal(current_goal, ROBOT_NAME + "/map", tolerance = (0.3,  pi/6))
-
             if GOAL_MANAGER.is_reached:
                 try:
                     rospy.loginfo("[fsm] Finish current goal : " + str(current_goal))
@@ -638,7 +638,9 @@ class Go_Way_Point(smach.State):
                 except IndexError:
                     rospy.loginfo("[fsm] Finish all goal list!")
                     return 'done'
-
+            else:
+                GOAL_MANAGER.send_goal(current_goal, ROBOT_NAME + "/map", tolerance = (0.3,  pi/6))
+            
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
