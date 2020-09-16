@@ -369,7 +369,7 @@ class Goal_Manager(object):
         move_base_msgs/MoveBaseResult result
         '''
         if data.status.status == 3: # SUCCEEDED
-            rospy.loginfo("[fsm] Goal Reached")
+            rospy.loginfo("[fsm] simple_goal_cb : Goal Reached")
             self.is_reached = True
         elif data.status.status == 2: # PREEMPTED
             pass
@@ -687,6 +687,9 @@ class Go_Double_Goal(smach.State):
                     try:
                         rospy.loginfo("[fsm] Finish current goal : " + str(current_goal))
                         current_goal = goal_list[ goal_list.index(current_goal) + 1 ]
+                        # GOAL_MANAGER.is_reached = False
+                        # Wait goal to calm down
+                        time.sleep(1)
                     except IndexError:
                         rospy.loginfo("[fsm] Finish all goal list!")
                         return 'done'
