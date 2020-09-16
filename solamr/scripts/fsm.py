@@ -310,11 +310,11 @@ class Goal_Manager(object):
                 float64 z
                 float64 w
         '''
+        self.is_reached = False
         # Check goal latch time
         if time.time() - self.time_last_goal < SEND_GOAL_INTERVAL: # sec
             return
 
-        self.is_reached = False
         if  self.xy_goal_tolerance != tolerance[0] or\
             self.yaw_goal_tolerance != tolerance[1]:
             # Need to set new tolerance
@@ -607,19 +607,38 @@ class Go_Way_Point(smach.State):
         if IS_DUMMY_TEST:
             time.sleep(2)
             return 'done'
-
+        
+        if ROBOT_NAME == "car1":
+            goal_list = [(4.05, 2.18, 3*pi/4), (2.77, 2.4, pi), (1.45, 2.09, -3*pi/4)]
+        elif ROBOT_NAME == "car2":
+            goal_list = [(1.48, 0.5, -pi/4), (2.77, 0.08, 0.0), (4.08, 0.277, pi/4)]
+        current_goal = goal_list[0]
+        
         # GOAL_MANAGER.send_goal(TASK.wait_location, ROBOT_NAME + "/map", tolerance = (0.3,  pi/6))
         while IS_RUN and TASK != None:
-            GOAL_MANAGER.send_goal(TASK.wait_location, ROBOT_NAME + "/map", tolerance = (0.3,  pi/6))
-            if GOAL_MANAGER.is_reached:
+            # GOAL_MANAGER.send_goal(TASK.wait_location, ROBOT_NAME + "/map", tolerance = (0.3,  pi/6))
+            if current_goal == goal_list[2]: # Wait peer robot here
                 if  PEER_ROBOT_STATE == "Single_Assembled" or\
                     PEER_ROBOT_STATE == "Single_AMR" or\
                     PEER_ROBOT_STATE == "Find_Shelf" or\
                     PEER_ROBOT_STATE == "Dock_In" or\
                     PEER_ROBOT_STATE == "Go_Dock_Standby":
-                    pass
-                else:
+                    time.sleep(TIME_INTERVAL)
+                    continue
+            
+            GOAL_MANAGER.send_goal(current_goal, ROBOT_NAME + "/map", tolerance = (0.3,  pi/6))
+
+            if GOAL_MANAGER.is_reached:
+                try:
+                    rospy.loginfo("[fsm] Finish current goal : " + str(current_goal))
+                    current_goal = goal_list[ goal_list.index(current_goal) + 1 ]
+                    # GOAL_MANAGER.is_reached = False
+                    # Wait goal to calm down
+                    # time.sleep(1) Need to TEST
+                except IndexError:
+                    rospy.loginfo("[fsm] Finish all goal list!")
                     return 'done'
+
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
