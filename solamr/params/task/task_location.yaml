@@ -4,7 +4,7 @@ single_AMR:
   shelf_location_car2: [1.23, 1.33, 3.1415926]
   # first spot Assembled AMR need to go 
   wait_location_car1: [2.8, 2.13, 3.1415926]
-  wait_location_car2: [2.8, 0.1, 0.0]
+  wait_location_car2: [2.6, 0.1, 0.0]
   # Final goal 
   goal_location_car1: [0.7, 1.26, 3.1415926]
   goal_location_car2: [4.65, 1.24, 0.0]

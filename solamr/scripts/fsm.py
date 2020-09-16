@@ -286,6 +286,7 @@ class Goal_Manager(object):
         self.pub_goal_cancel = rospy.Publisher("/" + ROBOT_NAME + "/move_base/cancel", GoalID, queue_size = 1)
         rospy.Subscriber("/" + ROBOT_NAME + "/move_base/result", MoveBaseActionResult, self.simple_goal_cb)
         self.is_reached = False
+        self.time_last_reached = time.time()
         self.goal = None
         # self.goal_xyt = [None, None, None]
         self.xy_goal_tolerance = None
@@ -370,8 +371,12 @@ class Goal_Manager(object):
         move_base_msgs/MoveBaseResult result
         '''
         if data.status.status == 3: # SUCCEEDED
-            rospy.loginfo("[fsm] simple_goal_cb : Goal Reached")
-            self.is_reached = True
+            if time.time() - self.time_last_reached > 2.5: # sec, You can't reached goal so quickly
+                rospy.loginfo("[fsm] simple_goal_cb : Goal Reached")
+                self.time_last_reached = time.time()
+                self.is_reached = True
+            else:
+                rospy.logwarn("[fsm] Received reached too often, Ignore reached msg")
         elif data.status.status == 2: # PREEMPTED
             pass
             # rospy.loginfo("[fsm] Goal has been preempted by a new goal")
@@ -452,7 +457,7 @@ class Find_Shelf(smach.State):
                 except IndexError:
                     goal = find_points[0]
                 # Wait goal to calm down
-                time.sleep(1)
+                # time.sleep(1) TODO, use time latch instead, need TEST
             
             # Send a serial of goal
             GOAL_MANAGER.send_goal(goal, ROBOT_NAME + "/map", tolerance = (0.3, pi/6))
@@ -692,7 +697,7 @@ class Go_Double_Goal(smach.State):
                         current_goal = goal_list[ goal_list.index(current_goal) + 1 ]
                         # GOAL_MANAGER.is_reached = False
                         # Wait goal to calm down
-                        time.sleep(1)
+                        # time.sleep(1) Need to TEST
                     except IndexError:
                         rospy.loginfo("[fsm] Finish all goal list!")
                         return 'done'
