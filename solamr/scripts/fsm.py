@@ -6,7 +6,7 @@ from __future__ import division
 import yaml
 import os
 import time
-from math import pi,sqrt, atan2
+from math import pi, sqrt, atan2
 import threading
 # ROS
 import rospy
@@ -15,7 +15,6 @@ import rospkg
 import roslaunch
 import tf2_ros
 import tf # For tf.transformations.euler_from_quaternion(quaternion)
-import actionlib
 import smach
 import smach_ros
 # Ros message
@@ -41,6 +40,9 @@ class Task(object):
         self.task_flow = None
 
 def check_running():
+    '''
+    This threading run at background, checking node shutdown and passing msg to peer 
+    '''
     global IS_RUN, BASE_XYT
     while not rospy.is_shutdown():
         # Package formet string = "<CUR_STATE>|<x,y,t>"
@@ -68,7 +70,6 @@ def switch_launch(file_path):
         if ROSLAUNCH != None:
             rospy.loginfo("[fsm] Shuting down single_AMR launch file")
             ROSLAUNCH.shutdown()
-            # time.sleep(5) # TODO DO WE need it ?
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
         roslaunch.configure_logging(uuid=uuid)
         ROSLAUNCH = roslaunch.parent.ROSLaunchParent(run_id=uuid, roslaunch_files=((file_path,)))
@@ -125,6 +126,9 @@ def send_initpose(xyt):
     PUB_INIT_POSE.publish(initpose)
 
 def transit_mode(from_mode, to_mode):
+    '''
+    Define what to do, when transiting from one mode to another.
+    '''
     global PEER_BASE_XYT, MEASURE_PEER_XYT
     if   from_mode == "Single_AMR" and to_mode == "Single_Assembled":
         change_footprint(0.35)
@@ -158,7 +162,6 @@ def transit_mode(from_mode, to_mode):
         switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
 
     elif from_mode == "Double_Assembled" and to_mode == "Single_AMR":
-        
         # Record last localization result of big car
         last_base_leader = None
         last_base_follower = None
@@ -179,15 +182,14 @@ def transit_mode(from_mode, to_mode):
             send_initpose(last_base_leader)
         elif ROLE == "follower":
             while MEASURE_PEER_XYT == None: # Wait for last peer base
-                time.sleep(1)
                 rospy.loginfo("[fsm] Waiting for leader sending my localization")
+                time.sleep(1)
             send_initpose(MEASURE_PEER_XYT)
     
     elif from_mode == "Double_Assembled" and to_mode == "Single_Assembled":
         switch_launch(ROSLAUNCH_PATH_SINGLE_AMR)
     else:
         rospy.logerr("[fsm] Undefine transit mode : " + str(from_mode) + " -> " + str(to_mode))
-        pass
 
 def get_chosest_goal(laser_center,ref_point):
     '''
@@ -289,7 +291,6 @@ class Goal_Manager(object):
         self.is_reached = False
         self.time_last_reached = time.time()
         self.goal = None
-        # self.goal_xyt = [None, None, None]
         self.xy_goal_tolerance = None
         self.yaw_goal_tolerance = None
         self.time_last_goal = time.time()
@@ -440,23 +441,21 @@ class Find_Shelf(smach.State):
         if IS_DUMMY_TEST:
             time.sleep(2)
             return 'done'
+        
+        # find_points = [(1.4, 1.16, pi), (4.0, 1.16,  0.0)]
+        # if ROBOT_NAME == "car1":
+        #     goal = find_points[1]
+        # elif ROBOT_NAME == "car2":
+        #     goal = find_points[0]
 
-        # TODO use yaml.
-        # find_points = [(2.6, 0.4, -pi/2), (2, 1.2, pi), (4.0, 1.16, pi/2), (3.5, 1.2, 0.0)]
-
-        find_points = [(1.4, 1.16, pi), (4.0, 1.16,  0.0)]
-        if ROBOT_NAME == "car1":
-            goal = find_points[1]
-        elif ROBOT_NAME == "car2":
-            goal = find_points[0]
         GOAL_MANAGER.is_reached = False
         while IS_RUN and TASK != None:
-            # Check goal reached or not 
+            # Check goal reached or not
             if GOAL_MANAGER.is_reached:
                 try:
-                    goal = find_points[find_points.index(goal)+1]
+                    goal = TASK.shelf_location[TASK.shelf_location.index(goal)+1]
                 except IndexError:
-                    goal = find_points[0]
+                    goal = TASK.shelf_location[0]
                 # Wait goal to calm down
                 # time.sleep(1) TODO, use time latch instead, need TEST
             
@@ -620,16 +619,17 @@ class Go_Way_Point(smach.State):
             time.sleep(2)
             return 'done'
         
-        if ROBOT_NAME == "car1":
-            goal_list = [(4.05, 2.18, 3*pi/4), (2.77, 2.4, pi), (1.45, 2.09, -3*pi/4)]
-        elif ROBOT_NAME == "car2":
-            goal_list = [(1.48, 0.5, -pi/4), (2.77, 0.08, 0.0), (4.08, 0.277, pi/4)]
-        current_goal = goal_list[0]
+        # if ROBOT_NAME == "car1":
+        #     goal_list = [(4.05, 2.18, 3*pi/4), (2.77, 2.4, pi), (1.45, 2.09, -3*pi/4)]
+        # elif ROBOT_NAME == "car2":
+        #     goal_list = [(1.48, 0.5, -pi/4), (2.77, 0.08, 0.0), (4.08, 0.277, pi/4)]
+        # goal_list = TASK.wait_location
+        current_goal = TASK.wait_location[0]
 
         GOAL_MANAGER.send_goal(current_goal, ROBOT_NAME + "/map", tolerance = (0.3,  pi/6))
         while IS_RUN and TASK != None:
             # GOAL_MANAGER.send_goal(TASK.wait_location, ROBOT_NAME + "/map", tolerance = (0.3,  pi/6))
-            if current_goal == goal_list[2]: # Wait peer robot here
+            if current_goal == TASK.wait_location[-1]: # Wait peer robot here
                 if  PEER_ROBOT_STATE == "Single_Assembled" or\
                     PEER_ROBOT_STATE == "Single_AMR" or\
                     PEER_ROBOT_STATE == "Find_Shelf" or\
@@ -643,9 +643,7 @@ class Go_Way_Point(smach.State):
                 GOAL_MANAGER.is_reached = False
                 try:
                     rospy.loginfo("[fsm] Finish current goal : " + str(current_goal))
-                    current_goal = goal_list[ goal_list.index(current_goal) + 1 ]
-                    # Wait goal to calm down
-                    # time.sleep(1) Need to TEST
+                    current_goal = TASK.wait_location[ TASK.wait_location.index(current_goal) + 1 ]
                 except IndexError:
                     rospy.loginfo("[fsm] Finish all goal list!")
                     return 'done'
@@ -698,12 +696,12 @@ class Go_Double_Goal(smach.State):
         CUR_STATE = "Go_Double_Goal"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
         
-        goal_list = [(4.35, 1.12, -1.5708),
-                     (3.68, 0.13, 3.1416),
-                     (1.4,  0.13,  3.1416), 
-                     (1.37, 1.18, 1.5708),
-                     (0.57, 1.17, 1.5708)]
-        current_goal = goal_list[0]
+        # goal_list = [(4.35, 1.12, -1.5708),
+        #              (3.68, 0.13, 3.1416),
+        #              (1.4,  0.13,  3.1416), 
+        #              (1.37, 1.18, 1.5708),
+        #              (0.57, 1.17, 1.5708)]
+        current_goal = TASK.goal_location[0]
         seen_tag = False
         while IS_RUN and TASK != None:
             if ROLE == "leader":
@@ -715,22 +713,22 @@ class Go_Double_Goal(smach.State):
                     GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], goal_xyt[2]), "carB/map")
                     seen_tag = True
                 '''
-                if not seen_tag:
-                    # GOAL_MANAGER.send_goal(TASK.goal_location, "carB/map")
-                    GOAL_MANAGER.send_goal(current_goal, "carB/map")
-                
+
                 # Wait goal reached
                 if GOAL_MANAGER.is_reached:
                     try:
                         rospy.loginfo("[fsm] Finish current goal : " + str(current_goal))
-                        current_goal = goal_list[ goal_list.index(current_goal) + 1 ]
+                        current_goal = TASK.goal_location[ TASK.goal_location.index(current_goal) + 1 ]
                         # GOAL_MANAGER.is_reached = False
                         # Wait goal to calm down
                         # time.sleep(1) Need to TEST
                     except IndexError:
                         rospy.loginfo("[fsm] Finish all goal list!")
                         return 'done'
-
+                else:
+                    if not seen_tag:
+                        # GOAL_MANAGER.send_goal(TASK.goal_location, "carB/map")
+                        GOAL_MANAGER.send_goal(current_goal, "carB/map")
             elif ROLE == "follower":
                 # Listen to car1 state
                 if PEER_ROBOT_STATE == "Dock_Out": # If peer dockout, you dockout too
@@ -738,7 +736,6 @@ class Go_Double_Goal(smach.State):
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
-
 class Dock_Out(smach.State):
 
     def __init__(self):
@@ -824,7 +821,7 @@ class Dock_Out(smach.State):
             while IS_RUN and TASK != None and\
                 rospy.get_rostime().to_sec() - t_start < (pi/2)/abs(twist.angular.z): # sec
                 PUB_CMD_VEL.publish(twist)
-                PUB_SEARCH_CENTER.publish(Point(0, 0, 0)) # TODO is this need?
+                PUB_SEARCH_CENTER.publish(Point(0, 0, 0))
                 time.sleep(TIME_INTERVAL)
         
         # Open gate

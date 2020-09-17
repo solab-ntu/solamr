@@ -1,28 +1,43 @@
 single_AMR:
   # Location of shelf tags
-  shelf_location_car1: [4.68, 1.21, 0,0]
-  shelf_location_car2: [1.23, 1.33, 3.1415926]
-  # first spot Assembled AMR need to go 
-  wait_location_car1: [2.8, 2.13, 3.1415926]
-  wait_location_car2: [2.6, 0.1, 0.0]
+  # shelf_location_car1: [4.68, 1.21, 0,0]
+  # shelf_location_car2: [1.23, 1.33, 3.1416]
+  # [[1.4, 1.16, 3.1416], [4.0, 1.16,  0.0]]
+  shelf_location_car1: [[4.0, 1.16,  0.0],
+                        [1.4, 1.16, 3.1416]]
+  shelf_location_car2: [[1.4, 1.16, 3.1416],
+                        [4.0, 1.16,  0.0]]
+  
+  wait_location_car1: [[4.05, 2.18, 2.3562],
+                       [2.77, 2.4, 3.1416],
+                       [1.45, 2.09, -2.3562]]
+  wait_location_car2: [[1.48, 0.5, -0.7854],
+                       [2.77, 0.08, 0.0],
+                       [4.08, 0.277, 0.7854]]
   # Final goal 
-  goal_location_car1: [0.7, 1.26, 3.1415926]
+  goal_location_car1: [0.7, 1.26, 3.1416]
   goal_location_car2: [4.65, 1.24, 0.0]
   # Return home location
   home_location_car1: [3.5, 2.7, -1.57]
   home_location_car2: [2.0, 2.7, -1.57]
 
 double_AMR:
-  shelf_location_car1: [1.23, 1.33, 3.1415926]
-  shelf_location_car2: [1.23, 1.33, 3.1415926]
+  shelf_location_car1: [1.23, 1.33, 3.1416]
+  shelf_location_car2: [1.23, 1.33, 3.1416]
 
-  # Car2 is dummy, wait_location_dummy
-  wait_location_car1: [3.0, 2.1, 3.1415926]
-  wait_location_car2: [3.0, 2.1, 3.1415926]
+  # Wait_location_dummy
+  wait_location_car1: [0.0, 0.0, 0.0]
+  wait_location_car2: [0.0, 0.0, 0.0]
 
   # Car2 is dummy
-  goal_location_car1: [1.0, 1.26, 1.57]
-  goal_location_car2: [1.0, 1.26, 1.57]
+  # goal_location_car1: [1.0, 1.26, 1.57]
+  goal_location_car1: [[4.35, 1.12, -1.5708],
+                       [3.68, 0.13,  3.1416],
+                       [1.4,  0.13,  3.1416], 
+                       [1.37, 1.18, 1.5708],
+                       [0.57, 1.17, 1.5708]]
+  
+  goal_location_car2: [0.0, 0.0, 0.0]
 
   home_location_car1: [3.5, 2.78, -1.57]
   home_location_car2: [2.2, 2.78, -1.57]
