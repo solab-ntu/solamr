@@ -110,23 +110,34 @@ class Odom_fuser():
             self.car2_xyt = car2_xyt
         
         # Update carB_map , TODO need TEST
+        L = 0.93# meter
         if car1_map != self.car1_map:
             rospy.loginfo("[odom_fuser_big_car] car1 get map->odom tf update")
             self.car1_map = car1_map
             (init_car1_x, init_car1_y) = vec_trans_coordinate(car1_xyt[:2], self.car1_map)
             init_car1_t = self.car1_map[2] + car1_xyt[2]
-            rospy.loginfo("[odom_fuser_big_car] init_car1 = " + str((init_car1_x, init_car1_y, init_car1_t)))
-            (init_carB_x, init_carB_y) = vec_trans_coordinate( (cos(-self.theta1)*(L/2),
-                                                                sin(-self.theta1)*(L/2)),
+            # rospy.loginfo("[odom_fuser_big_car] init_car1 = " + str((init_car1_x, init_car1_y, init_car1_t)))
+            (init_carB_x, init_carB_y) = vec_trans_coordinate( (cos(-self.theta1)*(-L/2),
+                                                                sin(-self.theta1)*(-L/2)),
                                          (init_car1_x, init_car1_y, init_car1_t) )
             init_carB_t = init_car1_t - self.theta1
-            rospy.loginfo("[odom_fuser_big_car] init_carB = " + str((init_carB_x, init_carB_y, init_carB_t)))
-            update_global_localization((init_carB_x, init_carB_y, init_carB_t))
+            # rospy.loginfo("[odom_fuser_big_car] init_carB = " + str((init_carB_x, init_carB_y, init_carB_t)))
+            # TODO Test
+            self.update_global_localization((init_carB_x, init_carB_y, init_carB_t))
+        
+        ''' # Use only car1 rtabmap currently, because if use both , localization will be too jumpy
+        if car2_map != self.car2_map:
+            rospy.loginfo("[odom_fuser_big_car] car2 get map->odom tf update")
+            self.car2_map = car2_map
 
-        #if car2_map != self.car2_map:
-        #    self.car2_map = car2_map
-        # TODO CAR2 map localization 
-
+            (init_car2_x, init_car2_y) = vec_trans_coordinate(car2_xyt[:2], self.car2_map)
+            init_car2_t = self.car2_map[2] + car2_xyt[2]
+            (init_carB_x, init_carB_y) = vec_trans_coordinate( (cos(-self.theta2)*(-L/2),
+                                                                sin(-self.theta2)*(-L/2)),
+                                         (init_car2_x, init_car2_y, init_car2_t) )
+            init_carB_t = init_car2_t - (self.theta2 + pi)
+            self.update_global_localization((init_carB_x, init_carB_y, init_carB_t))
+        '''
         # Check last data
         if self.car1_xyt_last == None or self.car2_xyt_last == None:
             self.car1_xyt_last = self.car1_xyt
