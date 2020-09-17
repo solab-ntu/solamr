@@ -690,7 +690,7 @@ class Go_Goal(smach.State):
 
 class Go_Double_Goal(smach.State):
     def __init__(self):
-        super(Go_Double_Goal, self).__init__(outcomes=['Dock_Out', 'abort', 'Double_Assembled'], input_keys=["target"], output_keys=["behavior"])
+        super(Go_Double_Goal, self).__init__(outcomes=['Dock_Out', 'abort', 'Double_Assembled', 'done'], input_keys=["target"], output_keys=["behavior"])
 
     def execute(self, userdata):
         global CUR_STATE
