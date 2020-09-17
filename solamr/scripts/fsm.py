@@ -447,7 +447,7 @@ class Find_Shelf(smach.State):
         #     goal = find_points[1]
         # elif ROBOT_NAME == "car2":
         #     goal = find_points[0]
-
+        goal = TASK.shelf_location[0]
         GOAL_MANAGER.is_reached = False
         while IS_RUN and TASK != None:
             # Check goal reached or not
