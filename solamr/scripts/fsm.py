@@ -210,6 +210,11 @@ def get_chosest_goal(laser_center,ref_point):
             output_xyt = (x_laser, y_laser, laser_center[2] + i*pi/2 + pi)
     return output_xyt
 
+def reconfig_rap_goal_tolerance(xy_tolerance, yaw_tolerance):
+    client = dynamic_reconfigure.client.Client("rap_planner", timeout=5)
+    client.update_configuration({"xy_tolerance": xy_tolerance, "yaw_tolerance": yaw_tolerance})
+    rospy.loginfo("[fsm] reconfig rap planner tolerance to " + str((xy_tolerance, yaw_tolerance)))
+
 def task_cb(req):
     '''
     Load yaml file and change parameter by req.data file path
@@ -697,11 +702,8 @@ class Go_Double_Goal(smach.State):
         CUR_STATE = "Go_Double_Goal"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
         
-        # goal_list = [(4.35, 1.12, -1.5708),
-        #              (3.68, 0.13, 3.1416),
-        #              (1.4,  0.13,  3.1416), 
-        #              (1.37, 1.18, 1.5708),
-        #              (0.57, 1.17, 1.5708)]
+        # Change goal tolerance 
+        reconfig_rap_goal_tolerance(0.3, 30.0)
         current_goal = TASK.goal_location[0]
         seen_tag = False
         while IS_RUN and TASK != None:
@@ -720,6 +722,9 @@ class Go_Double_Goal(smach.State):
                     try:
                         rospy.loginfo("[fsm] Finish current goal : " + str(current_goal))
                         current_goal = TASK.goal_location[ TASK.goal_location.index(current_goal) + 1 ]
+                        # Change to stricker tolerance if it's last goal
+                        if current_goal == TASK.goal_location[-1]:
+                            reconfig_rap_goal_tolerance(0.1, 10.0)
                     except IndexError:
                         rospy.loginfo("[fsm] Finish all goal list!")
                         # return 'done'
@@ -987,6 +992,7 @@ if __name__ == "__main__":
     PUB_LOCAL_FOOTPRINT = rospy.Publisher("/" + ROBOT_NAME + "/move_base/global_costmap/footprint", Polygon, queue_size = 1)
     if ROLE == "leader":
         PUB_CMD_VEL_PEER = rospy.Publisher("/" + ROBOT_PEER_NAME + "/cmd_vel", Twist, queue_size = 1)
+    
     # Global variable 
     TASK = None # store task information
     ROSLAUNCH = None

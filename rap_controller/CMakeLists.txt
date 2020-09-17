@@ -13,6 +13,7 @@ find_package(catkin
              std_msgs 
              rospy 
              roscpp 
+             dynamic_reconfigure
              message_generation)
 
 ## System dependencies are found with CMake's conventions
@@ -93,6 +94,10 @@ generate_messages(
 #   cfg/DynReconf1.cfg
 #   cfg/DynReconf2.cfg
 # )
+generate_dynamic_reconfigure_options(
+  cfg/RapController.cfg
+)
+
 
 ###################################
 ## catkin specific configuration ##
@@ -108,8 +113,9 @@ catkin_package(
 #  LIBRARIES rap_controller
 #  CATKIN_DEPENDS other_catkin_pkg
   DEPENDS message_runtime
+  # CATKIN_DEPENDS
+  #   dynamic_reconfigure
 )
-
 ###########
 ## Build ##
 ###########

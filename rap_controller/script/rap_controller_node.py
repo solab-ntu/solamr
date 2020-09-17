@@ -525,7 +525,7 @@ class Rap_controller():
 
 
 if __name__ == '__main__':
-    rospy.init_node('rap_controller',anonymous=False)
+    rospy.init_node('rap_controller_node',anonymous=False)
     # Get launch file parameters
     ROBOT_NAME    = rospy.get_param(param_name="~robot_name", default="car1")
     ROLE          = rospy.get_param(param_name="~role", default="leader")

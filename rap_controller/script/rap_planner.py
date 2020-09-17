@@ -9,9 +9,11 @@ from visualization_msgs.msg import Marker, MarkerArray # Debug drawing
 from geometry_msgs.msg import Point, Twist, PoseStamped
 from nav_msgs.msg import Path, OccupancyGrid
 import time # for testing 
-from rap_controller import Rap_controller
+from rap_controller_node import Rap_controller
 from lucky_utility.ros.rospy_utility import get_tf, Marker_Manager,normalize_angle,sign
 from move_base_msgs.msg import MoveBaseActionResult # For publish goal result
+from dynamic_reconfigure.server import Server # For dynamic reconfig server
+from rap_controller.cfg import RapControllerConfig
 NUM_CIRCLE_POINT = 100
 USE_CRAB_FOR_HEADING = True
 USE_COSTMAP = False # TODO Giving up 
@@ -71,6 +73,8 @@ class Rap_planner():
         self.viz_marker.update_marker("a2_crab", (0,0), radius = LOOK_AHEAD_DIST,
                     angle_range = ( pi/2 - ASIDE_GOAL_ANG/2,  pi/2 + ASIDE_GOAL_ANG/2))
         self.viz_marker.publish()
+        # Dynamic reconfiguration
+        Server(RapControllerConfig, self.dynamic_reconfig_cb)
 
     def goal_cb(self, data):
         '''
@@ -148,6 +152,13 @@ class Rap_planner():
         self.costmap = data
         # print (self.costmap.info)
         # print (data.data[self.costmap.info.width/2 +  (self.costmap.info.height/2)*self.costmap.info.width])
+
+    def dynamic_reconfig_cb(self, config, level):
+        global GOAL_TOLERANCE_XY, GOAL_TOLERANCE_T
+        GOAL_TOLERANCE_XY = config['xy_tolerance']
+        GOAL_TOLERANCE_T = config['yaw_tolerance']*pi/180
+        rospy.loginfo("[rap_planner] dynamic_reconfig_cb, GOAL_TOLERANCE_XY=" + str(GOAL_TOLERANCE_XY) + ", GOAL_TOLERANCE_T=" + str(GOAL_TOLERANCE_T))
+        return config
 
     def idx2XY (self, idx):
         '''
@@ -554,8 +565,10 @@ if __name__ == '__main__':
     DIFF_KP_VEL = rospy.get_param(param_name="~diff_kp_vel", default="2")
     ROTA_KP_VEL = rospy.get_param(param_name="~rota_kp_vel", default="0.2") # radian/s
     LOOK_AHEAD_DIST = rospy.get_param(param_name="~look_ahead_dist", default="0.8")
-    GOAL_TOLERANCE_XY = rospy.get_param(param_name="~goal_tolerance_xy", default="0.1")
-    GOAL_TOLERANCE_T  = rospy.get_param(param_name="~goal_tolerance_t", default="10")*pi/180
+    # GOAL_TOLERANCE_XY = rospy.get_param(param_name="~goal_tolerance_xy", default="0.1")
+    GOAL_TOLERANCE_XY = None
+    # GOAL_TOLERANCE_T  = rospy.get_param(param_name="~goal_tolerance_t", default="10")*pi/180
+    GOAL_TOLERANCE_T = None
     ASIDE_GOAL_ANG = rospy.get_param(param_name="~aside_goal_ang", default="60")*pi/180 # Degree
 
     # System
