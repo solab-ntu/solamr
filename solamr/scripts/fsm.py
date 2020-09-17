@@ -295,7 +295,7 @@ class Goal_Manager(object):
         self.yaw_goal_tolerance = None
         self.time_last_goal = time.time()
 
-    def send_goal(self, xyt, frame_id, tolerance=(0.12,0.06), z_offset = 0.1):
+    def send_goal(self, xyt, frame_id, tolerance=(0.12,0.06), z_offset = 0.1, ignore_tolerance = False):
         '''
         std_msgs/Header header
             uint32 seq
@@ -317,8 +317,9 @@ class Goal_Manager(object):
         if time.time() - self.time_last_goal < SEND_GOAL_INTERVAL: # sec
             return
 
-        if  self.xy_goal_tolerance != tolerance[0] or\
-            self.yaw_goal_tolerance != tolerance[1]:
+        if  (not ignore_tolerance) and \
+            (self.xy_goal_tolerance  != tolerance[0] or\
+             self.yaw_goal_tolerance != tolerance[1]):
             # Need to set new tolerance
             try:
                 # TODO 
@@ -689,7 +690,7 @@ class Go_Goal(smach.State):
 
 class Go_Double_Goal(smach.State):
     def __init__(self):
-        super(Go_Double_Goal, self).__init__(outcomes=['done', 'abort'], input_keys=["target"], output_keys=["behavior"])
+        super(Go_Double_Goal, self).__init__(outcomes=['Dock_Out', 'abort', 'Double_Assembled'], input_keys=["target"], output_keys=["behavior"])
 
     def execute(self, userdata):
         global CUR_STATE
@@ -716,23 +717,26 @@ class Go_Double_Goal(smach.State):
 
                 # Wait goal reached
                 if GOAL_MANAGER.is_reached:
+                    GOAL_MANAGER.is_reached = False
                     try:
                         rospy.loginfo("[fsm] Finish current goal : " + str(current_goal))
                         current_goal = TASK.goal_location[ TASK.goal_location.index(current_goal) + 1 ]
-                        # GOAL_MANAGER.is_reached = False
-                        # Wait goal to calm down
-                        # time.sleep(1) Need to TEST
                     except IndexError:
                         rospy.loginfo("[fsm] Finish all goal list!")
-                        return 'done'
+                        # return 'done'
+                        next_state = TASK.task_flow[TASK.task_flow.index('Go_Double_Goal')+1]
+                        return next_state
                 else:
                     if not seen_tag:
                         # GOAL_MANAGER.send_goal(TASK.goal_location, "carB/map")
-                        GOAL_MANAGER.send_goal(current_goal, "carB/map")
+                        GOAL_MANAGER.send_goal(current_goal, "carB/map", ignore_tolerance = True)
             elif ROLE == "follower":
                 # Listen to car1 state
-                if PEER_ROBOT_STATE == "Dock_Out": # If peer dockout, you dockout too
-                    return 'done'
+                #if PEER_ROBOT_STATE == "Dock_Out": # If peer dockout, you dockout too
+                #     return 'done'
+                next_state = TASK.task_flow[TASK.task_flow.index('Go_Double_Goal')+1]
+                if PEER_ROBOT_STATE == next_state:
+                    return next_state
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
@@ -1068,6 +1072,8 @@ if __name__ == "__main__":
             label='Go_Double_Goal',
             state=Go_Double_Goal(),
             transitions={'abort': 'Double_Assembled',
+                         'Double_Assembled': 'Double_Assembled',
+                         'Dock_Out': 'Dock_Out',
                          'done': 'Dock_Out'}) # Successfully reached goal
 
         smach.StateMachine.add(
