@@ -736,6 +736,7 @@ class Go_Double_Goal(smach.State):
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
+
 class Dock_Out(smach.State):
 
     def __init__(self):
