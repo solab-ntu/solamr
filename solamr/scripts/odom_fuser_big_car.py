@@ -28,10 +28,12 @@ class Odom_fuser():
         # /car1/odom -> /car1/base_link
         self.car1_xyt = None # (x,y,theta)
         self.car1_xyt_last = None # 
+        self.car1_map = None
         
         # /car2/odom -> /car2/base_link
         self.car2_xyt = None # (x,y,theta)
         self.car2_xyt_last = None # 
+        self.car2_map = None
         
         # Output, # /carB/odom -> /carB/base_link
         self.carB_odom = [0,0,0]
@@ -95,15 +97,35 @@ class Odom_fuser():
         # Update TF
         car1_xyt = get_tf(self.tfBuffer, "car1/raw/odom", "car1/raw/base_link")
         car2_xyt = get_tf(self.tfBuffer, "car2/raw/odom", "car2/raw/base_link")
-        
+        car1_map = get_tf(self.tfBuffer, "car1/raw/map", "car1/raw/odom")
+        car2_map = get_tf(self.tfBuffer, "car2/raw/map", "car2/raw/odom")
         # Check TF and thetas are valid
-        if car1_xyt == None or car2_xyt == None or\
-           self.theta1 == None or self.theta2 == None: # or car1_map == None or car2_map == None:
+        if  car1_xyt == None or car2_xyt == None or\
+            car1_map == None or car2_map == None or\
+            self.theta1 == None or self.theta2 == None:
             time.sleep(1)
             return False
         else:
             self.car1_xyt = car1_xyt
             self.car2_xyt = car2_xyt
+        
+        # Update carB_map , TODO need TEST
+        if car1_map != self.car1_map:
+            rospy.loginfo("[odom_fuser_big_car] car1 get map->odom tf update")
+            self.car1_map = car1_map
+            (init_car1_x, init_car1_y) = vec_trans_coordinate(car1_xyt[:2], self.car1_map)
+            init_car1_t = self.car1_map[2] + car1_xyt[2]
+            rospy.loginfo("[odom_fuser_big_car] init_car1 = " + str((init_car1_x, init_car1_y, init_car1_t)))
+            (init_carB_x, init_carB_y) = vec_trans_coordinate( (cos(-self.theta1)*(L/2),
+                                                                sin(-self.theta1)*(L/2)),
+                                         (init_car1_x, init_car1_y, init_car1_t) )
+            init_carB_t = init_car1_t - self.theta1
+            rospy.loginfo("[odom_fuser_big_car] init_carB = " + str((init_carB_x, init_carB_y, init_carB_t)))
+            update_global_localization((init_carB_x, init_carB_y, init_carB_t))
+
+        #if car2_map != self.car2_map:
+        #    self.car2_map = car2_map
+        # TODO CAR2 map localization 
 
         # Check last data
         if self.car1_xyt_last == None or self.car2_xyt_last == None:
