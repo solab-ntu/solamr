@@ -693,7 +693,7 @@ class Go_Double_Goal(smach.State):
         super(Go_Double_Goal, self).__init__(outcomes=['Dock_Out', 'abort', 'Double_Assembled', 'done'], input_keys=["target"], output_keys=["behavior"])
 
     def execute(self, userdata):
-        global CUR_STATE
+        global CUR_STATE, TASK
         CUR_STATE = "Go_Double_Goal"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
         
@@ -714,7 +714,6 @@ class Go_Double_Goal(smach.State):
                     GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], goal_xyt[2]), "carB/map")
                     seen_tag = True
                 '''
-
                 # Wait goal reached
                 if GOAL_MANAGER.is_reached:
                     GOAL_MANAGER.is_reached = False
@@ -725,6 +724,8 @@ class Go_Double_Goal(smach.State):
                         rospy.loginfo("[fsm] Finish all goal list!")
                         # return 'done'
                         next_state = TASK.task_flow[TASK.task_flow.index('Go_Double_Goal')+1]
+                        if next_state == TASK.task_flow[-1]: # For double_AMR_goal
+                            TASK = None # finish mission
                         return next_state
                 else:
                     if not seen_tag:
@@ -1042,7 +1043,7 @@ if __name__ == "__main__":
         smach.StateMachine.add(
             label='Dock_Out',
             state=Dock_Out(),
-            transitions={'abort': 'Single_Assembled', # For abort, # TODO decide?
+            transitions={'abort': 'Single_Assembled', # For abort
                          # 'abort': 'Double_Assembled', # For abort
                          'Single_AMR': 'Single_AMR', 
                          'done': 'Go_Home'}) # Successfully dock out
