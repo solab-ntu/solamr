@@ -11,14 +11,15 @@
         <arg name="use_fake_local_planner" value="$(arg use_fake_local_planner)"/>
     </include>
     
+    <node pkg="rap_controller" type="sim_tf_to_theta.py" name="tf2theta" output='screen'/>
     <node pkg="rap_controller" type="rap_planner.py" name="rap_planner" output='screen'>
         <!-- Kinematic -->
         <param name="crab_kp_vel" value="0.5"/>
         <param name="diff_kp_vel" value="0.5"/>
         <param name="rota_kp_vel" value="1"/> <!-- radian/s-->
         <param name="look_ahead_dist" value="0.8"/>
-        <param name="goal_tolerance_xy" value="0.1"/>
-        <param name="goal_tolerance_t" value="10"/> <!-- degree-->
+        <!-- <param name="goal_tolerance_xy" value="0.1"/> -->
+        <!-- <param name="goal_tolerance_t" value="10"/> degree -->
         <param name="aside_goal_ang" value="60"/> <!-- degree-->
         
         <!-- System -->
@@ -41,7 +42,5 @@
         <param name="cmd_vel_topic_follower" value="/cmd_vel_car2"/>
         <param name="goal_topic" value="/move_base_simple/goal"/>
         <param name="costmap_topic" value="/move_base/local_costmap/costmap"/>
-
-        
     </node>
 </launch>
