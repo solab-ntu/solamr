@@ -53,7 +53,7 @@ class Rap_planner():
         self.previous_mode = self.mode
         self.next_mode = None
         self.latch_xy = False
-        self.mode_latch_counter = 0
+        # self.mode_latch_counter = 0
         # Init RVIZ markers
         self.viz_marker.register_marker("local_goal", 2, 
                                          BIG_CAR_FRAME, (0,255,255), 0.1)
@@ -65,13 +65,13 @@ class Rap_planner():
         self.viz_marker.register_marker("a1_crab", 4, BIG_CAR_FRAME, (255,0,0), 0.02)
         self.viz_marker.register_marker("a2_crab", 4, BIG_CAR_FRAME, (255,0,0), 0.02)
         self.viz_marker.update_marker("a1_diff", (0,0), radius = LOOK_AHEAD_DIST,
-                    angle_range = (-pi/2 + ASIDE_GOAL_ANG/2,  pi/2 - ASIDE_GOAL_ANG/2))
+                    angle_range = (-pi/2 + ENTER_CRAB_ANGLE/2,  pi/2 - ENTER_CRAB_ANGLE/2))
         self.viz_marker.update_marker("a2_diff", (0,0), radius = LOOK_AHEAD_DIST,
-                    angle_range = ( pi/2 + ASIDE_GOAL_ANG/2, -pi/2 - ASIDE_GOAL_ANG/2))
+                    angle_range = ( pi/2 + ENTER_CRAB_ANGLE/2, -pi/2 - ENTER_CRAB_ANGLE/2))
         self.viz_marker.update_marker("a1_crab", (0,0), radius = LOOK_AHEAD_DIST,
-                    angle_range = (-pi/2 - ASIDE_GOAL_ANG/2, -pi/2 + ASIDE_GOAL_ANG/2))
+                    angle_range = (-pi/2 - ENTER_CRAB_ANGLE/2, -pi/2 + ENTER_CRAB_ANGLE/2))
         self.viz_marker.update_marker("a2_crab", (0,0), radius = LOOK_AHEAD_DIST,
-                    angle_range = ( pi/2 - ASIDE_GOAL_ANG/2,  pi/2 + ASIDE_GOAL_ANG/2))
+                    angle_range = ( pi/2 - ENTER_CRAB_ANGLE/2,  pi/2 + ENTER_CRAB_ANGLE/2))
         self.viz_marker.publish()
         # Dynamic reconfiguration
         Server(RapControllerConfig, self.dynamic_reconfig_cb)
@@ -289,18 +289,13 @@ class Rap_planner():
         '''
         Transit from current mode to next_mode
         '''
-        if self.mode_latch_counter > 0:
-            rospy.loginfo("[rap_planner] Switch mode rejected by latch. ("\
-                          + str(self.mode_latch_counter) + "/" + str(MODE_SWITCH_LATCH))
-            return False
-        else:
-            self.previous_mode = self.mode
-            self.next_mode = next_mode
-            self.mode = "tran"
-            RAP_CTL.is_transit = True
-            RAP_CTL.next_mode = next_mode
-            rospy.loginfo("[rap_planner] Start transit")
-            return True
+        self.previous_mode = self.mode
+        self.next_mode = next_mode
+        self.mode = "tran"
+        RAP_CTL.is_transit = True
+        RAP_CTL.next_mode = next_mode
+        rospy.loginfo("[rap_planner] Start transit, " + str(self.previous_mode) + "->" + str(self.next_mode))
+        return True
     
     def reset_plan(self):
         '''
@@ -308,10 +303,10 @@ class Rap_planner():
         self.vx_out = 0.0
         self.vy_out = 0.0
         self.wz_out = 0.0
-        self.mode = "diff"
-        self.mode_latch_counter = 0
-        self.previous_mode = "diff"
-        self.next_mode = None
+        # self.mode = "diff"
+        # self.previous_mode = "diff"
+        # self.next_mode = None
+        self.set_tran_mode("diff")
         self.global_path = None
         self.simple_goal = None
         self.latch_xy = False
@@ -399,18 +394,18 @@ class Rap_planner():
         alpha = atan2(y_goal, x_goal)
         
         # Get beta
-        '''
         #  This is Benson's legacy, but it's not very helpful
-        if (not IGNORE_HEADING) and local_goal[2] != None:
+        if (not IGNORE_HEADING) and local_goal[2] != None and self.rho < 0.5:
             beta = normalize_angle(local_goal[2] - alpha - self.big_car_xyt[2])
             if abs(alpha) > pi/2:# Go backward
                 beta = normalize_angle(beta - pi)
         else:
             beta = 0
-        '''
-        pursu_angle = alpha
+        
+        # pursu_angle = alpha
+        pursu_angle = alpha + beta*2.0
         self.alpha = alpha
-        # self.beta = beta
+        self.beta = beta
         # self.angle = pursu_angle
 
         self.viz_marker.update_marker("local_goal", (x_goal, y_goal) )
@@ -420,17 +415,21 @@ class Rap_planner():
         ##################
         ###  Get Flags ###
         ##################
-        # Check where is the goal
-        is_aside_goal = False
-        if abs(abs(alpha) - pi/2) < (ASIDE_GOAL_ANG/2.0):
-            is_aside_goal = True
-        # Check is need to consider heading
+        # Check the direction of the goal
+        allow_enter_crab = False
+        if abs(abs(alpha) - pi/2) < (ENTER_CRAB_ANGLE/2.0):
+            allow_enter_crab = True
+        allow_leave_crab = True
+        if abs(abs(alpha) - pi/2) < (LEAVE_CRAB_ANGLE/2.0):
+            allow_leave_crab = False
+
+        # Check is need to consider goal heading
         d_head = normalize_angle(self.simple_goal[2] - self.big_car_xyt[2])
         need_consider_heading = False
         if (not IGNORE_HEADING) and local_goal[2] != None:
-            
             need_consider_heading = True
-        # Check need to switch to rota
+        
+        # Check need to switch to rota mode(xy is reached)
         is_need_rota = False # current rota only when heading adjment
         if  self.latch_xy: #or\
             #(USE_CRAB_FOR_HEADING and\
@@ -446,7 +445,8 @@ class Rap_planner():
         # States: crab, diff, rota, tran
         if self.mode == "crab":
             if self.latch_xy and (not IGNORE_HEADING):
-                self.set_tran_mode("rota")
+                self.set_tran_mode("rota") # 
+                # TODO here the latch switch mode problem
             else:
                 if need_consider_heading:
                     if is_need_rota: 
@@ -457,17 +457,25 @@ class Rap_planner():
                     else:
                         pass # Stay crab
                 else:
-                    if is_aside_goal:
-                        pass # Stay crab
-                    else:
-                        # Transit to diff mode
+                    # if is_aside_goal:
+                    #     pass # Stay crab
+                    # else:
+                    #     # Transit to diff mode
+                    #     self.set_tran_mode("diff")
+                    if allow_leave_crab:
                         self.set_tran_mode("diff")
+                    else:
+                        pass
         
         elif self.mode == "diff":
             if self.latch_xy and (not IGNORE_HEADING):
                 self.set_tran_mode("rota")
             else:
-                if is_aside_goal:
+                # if is_aside_goal:
+                #     self.set_tran_mode("crab")
+                # else:
+                #     pass
+                if allow_enter_crab:
                     self.set_tran_mode("crab")
                 else:
                     pass
@@ -500,7 +508,7 @@ class Rap_planner():
         elif self.mode == "tran":
             if (not RAP_CTL.is_transit):
                rospy.loginfo("[rap_planner] transit finish, switch to " + self.next_mode)
-               self.mode_latch_counter = MODE_SWITCH_LATCH
+               # self.mode_latch_counter = MODE_SWITCH_LATCH
                self.mode = self.next_mode
 
         else:
@@ -548,8 +556,8 @@ class Rap_planner():
         self.viz_marker.update_marker("mode_text", (0,-0.5), text)
 
         # Latch counts
-        if self.mode_latch_counter > 0:
-            self.mode_latch_counter -= 1
+        #if self.mode_latch_counter > 0:
+        #    self.mode_latch_counter -= 1
 
         return True 
 
@@ -565,11 +573,10 @@ if __name__ == '__main__':
     DIFF_KP_VEL = rospy.get_param(param_name="~diff_kp_vel", default="2")
     ROTA_KP_VEL = rospy.get_param(param_name="~rota_kp_vel", default="0.2") # radian/s
     LOOK_AHEAD_DIST = rospy.get_param(param_name="~look_ahead_dist", default="0.8")
-    # GOAL_TOLERANCE_XY = rospy.get_param(param_name="~goal_tolerance_xy", default="0.1")
     GOAL_TOLERANCE_XY = None
-    # GOAL_TOLERANCE_T  = rospy.get_param(param_name="~goal_tolerance_t", default="10")*pi/180
     GOAL_TOLERANCE_T = None
-    ASIDE_GOAL_ANG = rospy.get_param(param_name="~aside_goal_ang", default="60")*pi/180 # Degree
+    ENTER_CRAB_ANGLE = rospy.get_param(param_name="~enter_crab_angle", default="60")*pi/180 # Degree
+    LEAVE_CRAB_ANGLE = rospy.get_param(param_name="~leave_crab_angle", default="120")*pi/180 # Degree
 
     # System
     CONTROL_FREQ  = rospy.get_param(param_name="~ctl_frequency", default="10")

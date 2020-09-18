@@ -7,9 +7,8 @@
         <param name="diff_kp_vel" value="0.2"/>
         <param name="rota_kp_vel" value="0.2"/> <!-- radian/s-->
         <param name="look_ahead_dist" value="0.8"/>
-        <!-- <param name="goal_tolerance_xy" value="0.1"/> -->
-        <!-- <param name="goal_tolerance_t" value="10"/> degree -->
-        <param name="aside_goal_ang" value="60"/> <!-- degree-->
+        <param name="enter_crab_angle" value="60"/> <!-- degree-->
+        <param name="leave_crab_angle" value="120"/> <!-- degree-->
         <!-- System -->
         <param name="ctl_frequency" value="30"/>
         <param name="sim" value="false"/>
