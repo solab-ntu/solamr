@@ -210,10 +210,16 @@ def get_chosest_goal(laser_center,ref_point):
             output_xyt = (x_laser, y_laser, laser_center[2] + i*pi/2 + pi)
     return output_xyt
 
-def reconfig_rap_goal_tolerance(xy_tolerance, yaw_tolerance):
+def reconfig_rap_setting(setting):
+    '''
+    Setting: (xy_tolerance, yaw_tolerance, use_crab)
+    '''
     client = dynamic_reconfigure.client.Client("rap_planner", timeout=5)
-    client.update_configuration({"xy_tolerance": xy_tolerance, "yaw_tolerance": yaw_tolerance})
-    rospy.loginfo("[fsm] reconfig rap planner tolerance to " + str((xy_tolerance, yaw_tolerance)))
+    client.update_configuration({"xy_tolerance": setting[0],
+                                 "yaw_tolerance": setting[1],
+                                 "use_crab": setting[2],
+                                 })
+    rospy.loginfo("[fsm] reconfig rap planner setting to " + str(setting))
 
 def task_cb(req):
     '''
@@ -703,28 +709,27 @@ class Go_Double_Goal(smach.State):
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
         
         # Change goal tolerance 
-        reconfig_rap_goal_tolerance(0.3, 30.0)
-        current_goal = TASK.goal_location[0]
+        current_goal_set = TASK.goal_location[0]
+        current_goal = current_goal_set[0]
+        reconfig_rap_setting(current_goal_set[1])
         seen_tag = False
         while IS_RUN and TASK != None:
             if ROLE == "leader":
                 # Tag navigation
-                goal_xyt = get_tf(TFBUFFER, "carB/map", ROBOT_NAME + "/B_site")
-                ''' # TMP ignore tag
-                if goal_xyt != None:
-                    goal_xy = vec_trans_coordinate((1,0), (goal_xyt[0], goal_xyt[1], goal_xyt[2]-pi/2))
+                goal_xyt = get_tf(TFBUFFER, "carB/map", ROBOT_NAME + "/B_site", is_warn = False)
+                if goal_xyt != None and current_goal == TASK.goal_location[-1][0]: # Last goal
+                    goal_xy = vec_trans_coordinate((1.5,0), (goal_xyt[0], goal_xyt[1], goal_xyt[2]-pi/2))
                     GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], goal_xyt[2]), "carB/map")
                     seen_tag = True
-                '''
+                
                 # Wait goal reached
                 if GOAL_MANAGER.is_reached:
                     GOAL_MANAGER.is_reached = False
                     try:
                         rospy.loginfo("[fsm] Finish current goal : " + str(current_goal))
-                        current_goal = TASK.goal_location[ TASK.goal_location.index(current_goal) + 1 ]
-                        # Change to stricker tolerance if it's last goal
-                        if current_goal == TASK.goal_location[-1]:
-                            reconfig_rap_goal_tolerance(0.1, 10.0)
+                        current_goal_set = TASK.goal_location[ TASK.goal_location.index(current_goal_set) + 1 ]
+                        current_goal = current_goal_set[0]
+                        reconfig_rap_setting(current_goal_set[1])
                     except IndexError:
                         rospy.loginfo("[fsm] Finish all goal list!")
                         # return 'done'
@@ -734,7 +739,6 @@ class Go_Double_Goal(smach.State):
                         return next_state
                 else:
                     if not seen_tag:
-                        # GOAL_MANAGER.send_goal(TASK.goal_location, "carB/map")
                         GOAL_MANAGER.send_goal(current_goal, "carB/map", ignore_tolerance = True)
             elif ROLE == "follower":
                 # Listen to car1 state

@@ -15,7 +15,7 @@ from move_base_msgs.msg import MoveBaseActionResult # For publish goal result
 from dynamic_reconfigure.server import Server # For dynamic reconfig server
 from rap_controller.cfg import RapControllerConfig
 NUM_CIRCLE_POINT = 100
-USE_CRAB_FOR_HEADING = True
+# USE_CRAB_FOR_HEADING = True
 USE_COSTMAP = False # TODO Giving up 
 
 class Rap_planner():
@@ -154,10 +154,11 @@ class Rap_planner():
         # print (data.data[self.costmap.info.width/2 +  (self.costmap.info.height/2)*self.costmap.info.width])
 
     def dynamic_reconfig_cb(self, config, level):
-        global GOAL_TOLERANCE_XY, GOAL_TOLERANCE_T
+        global GOAL_TOLERANCE_XY, GOAL_TOLERANCE_T, USE_CRAB
         GOAL_TOLERANCE_XY = config['xy_tolerance']
         GOAL_TOLERANCE_T = config['yaw_tolerance']*pi/180
-        rospy.loginfo("[rap_planner] dynamic_reconfig_cb, GOAL_TOLERANCE_XY=" + str(GOAL_TOLERANCE_XY) + ", GOAL_TOLERANCE_T=" + str(GOAL_TOLERANCE_T))
+        USE_CRAB = config['use_crab']
+        rospy.loginfo("[rap_planner] dynamic_reconfig_cb, GOAL_TOLERANCE_XY=" + str(GOAL_TOLERANCE_XY) + ", GOAL_TOLERANCE_T=" + str(GOAL_TOLERANCE_T) + ", USE_CRAB=" + str(USE_CRAB))
         return config
 
     def idx2XY (self, idx):
@@ -300,13 +301,12 @@ class Rap_planner():
     def reset_plan(self):
         '''
         '''
-        self.vx_out = 0.0
-        self.vy_out = 0.0
-        self.wz_out = 0.0
+        #self.vx_out = 0.0 # TODO need test
+        #self.vy_out = 0.0
+        #self.wz_out = 0.0
         # self.mode = "diff"
         # self.previous_mode = "diff"
         # self.next_mode = None
-        self.set_tran_mode("diff")
         self.global_path = None
         self.simple_goal = None
         self.latch_xy = False
@@ -376,6 +376,8 @@ class Rap_planner():
             rospy.loginfo("[rap_planner] Goal xy Reached")
             if IGNORE_HEADING:
                 self.reset_plan()
+                #rospy.loginfo("[rap_planner] rest_plan switch to DIFF mode")
+                #self.set_tran_mode("diff") # TODO why need diff
                 self.publish_reached()
                 return True
             else:
@@ -386,6 +388,8 @@ class Rap_planner():
             if abs(normalize_angle(self.simple_goal[2] - self.big_car_xyt[2])) <\
                 (GOAL_TOLERANCE_T/2.0):
                 self.reset_plan()
+                # rospy.loginfo("[rap_planner] rest_plan switch to DIFF mode")
+                # self.set_tran_mode("diff")
                 self.publish_reached()
                 rospy.loginfo("[rap_planner] Goal Heading Reached")
                 return True
@@ -415,27 +419,16 @@ class Rap_planner():
         ##################
         ###  Get Flags ###
         ##################
-        # Check the direction of the goal
-        allow_enter_crab = False
-        if abs(abs(alpha) - pi/2) < (ENTER_CRAB_ANGLE/2.0):
-            allow_enter_crab = True
-        allow_leave_crab = True
-        if abs(abs(alpha) - pi/2) < (LEAVE_CRAB_ANGLE/2.0):
-            allow_leave_crab = False
-
         # Check is need to consider goal heading
         d_head = normalize_angle(self.simple_goal[2] - self.big_car_xyt[2])
-        need_consider_heading = False
-        if (not IGNORE_HEADING) and local_goal[2] != None:
-            need_consider_heading = True
         
         # Check need to switch to rota mode(xy is reached)
         is_need_rota = False # current rota only when heading adjment
-        if  self.latch_xy: #or\
-            #(USE_CRAB_FOR_HEADING and\
-            #need_consider_heading and\
-            #abs(d_head) > (GOAL_TOLERANCE_T/2.0)): # TODO # ROTA, cause occlication
-            # need to adjust heading
+        if  self.latch_xy and\
+            (not IGNORE_HEADING) and\
+            local_goal[2] != None and\
+            abs(d_head) > (GOAL_TOLERANCE_T/2.0):
+            # rospy.loginfo("[rap_planner] Go to ROTA mode becuase " + str(abs(d_head)) + " > " + str(GOAL_TOLERANCE_T/2.0))
             is_need_rota = True
         
         ############################
@@ -444,71 +437,24 @@ class Rap_planner():
         # Flags: 
         # States: crab, diff, rota, tran
         if self.mode == "crab":
-            if self.latch_xy and (not IGNORE_HEADING):
-                self.set_tran_mode("rota") # 
-                # TODO here the latch switch mode problem
-            else:
-                if need_consider_heading:
-                    if is_need_rota: 
-                        if USE_CRAB_FOR_HEADING:
-                            self.set_tran_mode("rota")
-                        else:
-                            self.set_tran_mode("diff")
-                    else:
-                        pass # Stay crab
-                else:
-                    # if is_aside_goal:
-                    #     pass # Stay crab
-                    # else:
-                    #     # Transit to diff mode
-                    #     self.set_tran_mode("diff")
-                    if allow_leave_crab:
-                        self.set_tran_mode("diff")
-                    else:
-                        pass
+            if is_need_rota:
+                self.set_tran_mode("rota")
+            if not USE_CRAB:
+                self.set_tran_mode("diff")
         
         elif self.mode == "diff":
-            if self.latch_xy and (not IGNORE_HEADING):
+            if is_need_rota:
                 self.set_tran_mode("rota")
-            else:
-                # if is_aside_goal:
-                #     self.set_tran_mode("crab")
-                # else:
-                #     pass
-                if allow_enter_crab:
-                    self.set_tran_mode("crab")
-                else:
-                    pass
-                '''
-                if need_consider_heading:
-                    if USE_CRAB_FOR_HEADING:
-                        # Current diff can't heading adj
-                        # self.set_tran_mode("rota")
-                        pass
-                    else:
-                        pass # Stay here
-                else:
-                    if is_aside_goal:
-                        self.set_tran_mode("crab")
-                    else:
-                        pass
-                '''
+            if USE_CRAB:
+                self.set_tran_mode("crab")
+        
         elif self.mode == "rota":
-            if need_consider_heading:
-                if is_need_rota:
-                    pass# Stay rota
-                else: # Finish rota
-                    if USE_CRAB_FOR_HEADING:
-                        self.set_tran_mode("crab") # Go to goal
-                    else:
-                        self.set_tran_mode("diff") # Go to goal
-            else:
-                self.set_tran_mode("crab") # Leave heading adj
+            if not is_need_rota:
+                self.set_tran_mode("diff")
         
         elif self.mode == "tran":
             if (not RAP_CTL.is_transit):
                rospy.loginfo("[rap_planner] transit finish, switch to " + self.next_mode)
-               # self.mode_latch_counter = MODE_SWITCH_LATCH
                self.mode = self.next_mode
 
         else:
@@ -555,10 +501,6 @@ class Rap_planner():
             text = self.mode
         self.viz_marker.update_marker("mode_text", (0,-0.5), text)
 
-        # Latch counts
-        #if self.mode_latch_counter > 0:
-        #    self.mode_latch_counter -= 1
-
         return True 
 
 if __name__ == '__main__':
@@ -575,6 +517,7 @@ if __name__ == '__main__':
     LOOK_AHEAD_DIST = rospy.get_param(param_name="~look_ahead_dist", default="0.8")
     GOAL_TOLERANCE_XY = None
     GOAL_TOLERANCE_T = None
+    USE_CRAB = None
     ENTER_CRAB_ANGLE = rospy.get_param(param_name="~enter_crab_angle", default="60")*pi/180 # Degree
     LEAVE_CRAB_ANGLE = rospy.get_param(param_name="~leave_crab_angle", default="120")*pi/180 # Degree
 

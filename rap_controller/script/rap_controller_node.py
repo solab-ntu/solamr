@@ -24,7 +24,7 @@ KI = 0
 # If Radius small then this value, switch to rota controller
 INPLACE_ROTATION_R = 0.1  # meter
 # How precise transition it needs to be.
-TRANSITION_ANG_TOLERANCE = 10 # degree
+TRANSITION_ANG_TOLERANCE = 15 # degree
 TRANSITION_ANG_TOLERANCE *= pi/180.0
 
 ROTA_ABS_TOLERANCE = 5 # degree

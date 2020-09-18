@@ -125,7 +125,7 @@ class Odom_fuser():
             # TODO Test
             self.update_global_localization((init_carB_x, init_carB_y, init_carB_t))
         
-        ''' # Use only car1 rtabmap currently, because if use both , localization will be too jumpy
+        # Use only car1 rtabmap currently, because if use both , localization will be too jumpy
         if car2_map != self.car2_map:
             rospy.loginfo("[odom_fuser_big_car] car2 get map->odom tf update")
             self.car2_map = car2_map
@@ -137,7 +137,7 @@ class Odom_fuser():
                                          (init_car2_x, init_car2_y, init_car2_t) )
             init_carB_t = init_car2_t - (self.theta2 + pi)
             self.update_global_localization((init_carB_x, init_carB_y, init_carB_t))
-        '''
+        
         # Check last data
         if self.car1_xyt_last == None or self.car2_xyt_last == None:
             self.car1_xyt_last = self.car1_xyt
