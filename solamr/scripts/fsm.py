@@ -20,8 +20,10 @@ import smach_ros
 # Ros message
 from tf.transformations import quaternion_from_euler
 from geometry_msgs.msg import Twist, Point, PoseStamped, Polygon, Point32, PoseWithCovarianceStamped
-from solamr.srv import StringSrv
 from std_msgs.msg import String, Bool
+# ROS service 
+from solamr.srv import StringSrv
+from std_srvs.srv import Empty, EmptyResponse
 # Move Base
 from move_base_msgs.msg import MoveBaseActionResult
 from actionlib_msgs.msg import GoalID
@@ -220,6 +222,14 @@ def reconfig_rap_setting(setting):
                                  "use_crab": setting[2],
                                  })
     rospy.loginfo("[fsm] reconfig rap planner setting to " + str(setting))
+
+def rap_planner_homing():
+    rospy.loginfo("[fsm] Calling rap planner homing")
+    rospy.wait_for_service('/rap_planner/homing')
+    try:
+        rospy.ServiceProxy('/rap_planner/homing', Empty)
+    except rospy.ServiceException as e:
+        print("Service call failed: %s"%e)
 
 def task_cb(req):
     '''
@@ -695,7 +705,8 @@ class Go_Double_Goal(smach.State):
         CUR_STATE = "Go_Double_Goal"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
         
-        # Change goal tolerance 
+        rap_planner_homing() # TODO is this must to have?
+        # Change goal tolerance
         current_goal_set = TASK.goal_location[0]
         current_goal = current_goal_set[0]
         reconfig_rap_setting(current_goal_set[1])
@@ -720,6 +731,7 @@ class Go_Double_Goal(smach.State):
                         reconfig_rap_setting(current_goal_set[1])
                     except IndexError:
                         rospy.loginfo("[fsm] Finish all goal list!")
+                        rap_planner_homing() # rap_planner homing
                         # return 'done'
                         next_state = TASK.task_flow[TASK.task_flow.index('Go_Double_Goal')+1]
                         if next_state == TASK.task_flow[-1]: # For double_AMR_goal
