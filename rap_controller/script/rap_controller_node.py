@@ -24,13 +24,13 @@ KI = 0
 # If Radius small then this value, switch to rota controller
 INPLACE_ROTATION_R = 0.1  # meter
 # How precise transition it needs to be.
-TRANSITION_ANG_TOLERANCE = 15 # degree
-TRANSITION_ANG_TOLERANCE *= pi/180.0
+TRANSITION_ANG_TOLERANCE = 15 * (pi/180.0)# degree
 
-ROTA_ABS_TOLERANCE = 5 # degree
-ROTA_ABS_TOLERANCE *= pi/180.0
+ROTA_ABS_TOLERANCE = 5 * (pi/180.0)# degree
 # Crab dead zone, car1, car2 heading can't go here
 DEAD_ZONE_ANG = pi/2
+
+CRAB_FAIL_SAFE_ANG = 30 * (pi/180.0) # degree
 
 class Rap_controller():
     def __init__(self, 
@@ -105,13 +105,9 @@ class Rap_controller():
                                       RGB = (102,178,255), size = 0.03)
     
     def theta_car1_cb(self, data):
-        '''
-        '''
         self.theta_L = data.data
 
     def theta_car2_cb(self, data):
-        '''
-        '''
         self.theta_F = data.data
         send_tf((-TOW_CAR_LENGTH/2.0, 0, data.data) ,"carB/base_link", "car2/base_link")
     
@@ -388,10 +384,17 @@ class Rap_controller():
         ####################
         if self.mode == "crab":
             # Get v_out, w_out
-            (self.v_out_L, self.w_out_L) =  self.crab_controller(
-                                            self.Vx, self.Vy, error_theta_L, is_forward)
-            (self.v_out_F, self.w_out_F) =  self.crab_controller(
-                                            self.Vx, self.Vy, error_theta_F, is_forward)
+            
+            if abs(error_theta_L) > CRAB_FAIL_SAFE_ANG/2.0 or\
+               abs(error_theta_F) > CRAB_FAIL_SAFE_ANG/2.0 : # Crab is going to fail
+                # stop and adjust angle
+                (self.v_out_L, self.w_out_L) = (0, self.pi_controller(KP_crab, KI, error_theta_L))
+                (self.v_out_F, self.w_out_F) = (0, self.pi_controller(KP_crab, KI, error_theta_F))
+            else:
+                (self.v_out_L, self.w_out_L) =  self.crab_controller(
+                                                self.Vx, self.Vy, error_theta_L, is_forward)
+                (self.v_out_F, self.w_out_F) =  self.crab_controller(
+                                                self.Vx, self.Vy, error_theta_F, is_forward)
         elif self.mode == "rota":
             (self.v_out_L, self.w_out_L) =  self.rota_controller(
                                             self.Wz,error_theta_L, ref_ang_L)
