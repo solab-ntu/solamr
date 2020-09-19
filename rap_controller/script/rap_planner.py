@@ -5,7 +5,7 @@ import sys
 import time # for testing 
 import rospy
 # Message type 
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, String
 from visualization_msgs.msg import Marker, MarkerArray # Debug drawing
 from geometry_msgs.msg import Point, Twist, PoseStamped
 from nav_msgs.msg import Path, OccupancyGrid
@@ -29,6 +29,7 @@ class Rap_planner():
         # Subscriber
         rospy.Subscriber(GLOBAL_PATH_TOPIC, Path, self.path_cb)
         rospy.Subscriber(GOAL_TOPIC, PoseStamped, self.goal_cb)
+        rospy.Subscriber("/car1/rap_planner/homing", String, self.homing_cb)
         if USE_COSTMAP:
             rospy.Subscriber(COSTMAP_TOPIC,OccupancyGrid ,self.costmap_cb)
             self.costmap = None
@@ -52,7 +53,7 @@ class Rap_planner():
         self.mode = "diff" # "crab"
         self.rho = 0.0
         # Ros Service 
-        rospy.Service(name="~homing", service_class=Empty, handler=self.homing_cb)
+        # rospy.Service(name="~homing", service_class=Empty, handler=self.homing_cb)
         # Tf listner
         self.tfBuffer = tf2_ros.Buffer()
         tf2_ros.TransformListener(self.tfBuffer)
@@ -84,15 +85,18 @@ class Rap_planner():
         # Dynamic reconfiguration
         Server(RapControllerConfig, self.dynamic_reconfig_cb)
 
-    def homing_cb(self, request):
+    def homing_cb(self, data):
+        rospy.loginfo("[rap_planner] Homing planner!")
         self.vx_out = 0.0
         self.vy_out = 0.0
         self.wz_out = 0.0
         self.mode = "diff"
         self.previous_mode = "diff"
         self.next_mode = None
-        rospy.loginfo("[rap_planner] Homing planner!")
-        return EmptyResponse()
+        self.viz_marker.update_marker("mode_text", (0,-0.5), self.mode)
+        self.publish()
+        RAP_CTL.set_cmd(self.vx_out, self.vy_out,
+                        self.wz_out, self.mode)
 
     def goal_cb(self, data):
         '''

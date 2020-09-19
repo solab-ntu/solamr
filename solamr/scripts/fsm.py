@@ -23,7 +23,7 @@ from geometry_msgs.msg import Twist, Point, PoseStamped, Polygon, Point32, PoseW
 from std_msgs.msg import String, Bool
 # ROS service 
 from solamr.srv import StringSrv
-from std_srvs.srv import Empty, EmptyResponse
+# from std_srvs.srv import Empty, EmptyResponse
 # Move Base
 from move_base_msgs.msg import MoveBaseActionResult
 from actionlib_msgs.msg import GoalID
@@ -143,6 +143,7 @@ def transit_mode(from_mode, to_mode):
         time.sleep(5)
         # Use last_base and PEER_BASE_XYT to calculate
         if ROLE == "leader":
+            
             while PEER_BASE_XYT == None: # Wait PEER_BASE_XYT
                 time.sleep(1)
                 rospy.loginfo("[fsm] Waiting for peer robot to send last localization infomation")
@@ -155,6 +156,8 @@ def transit_mode(from_mode, to_mode):
             
             # big_car_init_xyt
             send_initpose(big_car_init_xyt)
+            # 
+            change_smart_layer_base_radius(0.9) # TODO need test
    
     elif from_mode == "Single_Assembled" and to_mode == "Single_AMR":
         change_footprint(0.22)
@@ -224,12 +227,16 @@ def reconfig_rap_setting(setting):
     rospy.loginfo("[fsm] reconfig rap planner setting to " + str(setting))
 
 def rap_planner_homing():
+    '''
+    '''
     rospy.loginfo("[fsm] Calling rap planner homing")
-    rospy.wait_for_service('/rap_planner/homing')
-    try:
-        rospy.ServiceProxy('/rap_planner/homing', Empty)
-    except rospy.ServiceException as e:
-        print("Service call failed: %s"%e)
+    PUB_RAP_HOMING.publish("homing")
+    # rospy.wait_for_service("/" + ROBOT_NAME + "/rap_planner/homing")
+    # rospy.loginfo("[fsm] service DO EXIST!")
+    # try:
+    #     rospy.ServiceProxy("/" + ROBOT_NAME + "/rap_planner/homing", Empty)
+    # except rospy.ServiceException as e:
+    #     rospy.logerr("Service call failed: " + str(e))
 
 def task_cb(req):
     '''
@@ -425,6 +432,8 @@ class Initial_State(smach.State):
         elif INIT_STATE == 'Double_Assembled':
             PUB_GATE_CMD.publish(Bool(True))
             switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
+            if ROLE == "leader":
+                change_smart_layer_base_radius(0.9)
         return INIT_STATE
 
 class Single_AMR(smach.State):
@@ -732,7 +741,7 @@ class Go_Double_Goal(smach.State):
                     except IndexError:
                         rospy.loginfo("[fsm] Finish all goal list!")
                         rap_planner_homing() # rap_planner homing
-                        # return 'done'
+                        GOAL_MANAGER.cancel_goal() # Cancel gaol
                         next_state = TASK.task_flow[TASK.task_flow.index('Go_Double_Goal')+1]
                         if next_state == TASK.task_flow[-1]: # For double_AMR_goal
                             TASK = None # finish mission
@@ -994,6 +1003,7 @@ if __name__ == "__main__":
     PUB_INIT_POSE = rospy.Publisher("/" + ROBOT_NAME + "/initialpose", PoseWithCovarianceStamped, queue_size = 1)
     PUB_GLOBAL_FOOTPRINT = rospy.Publisher("/" + ROBOT_NAME + "/move_base/local_costmap/footprint", Polygon, queue_size = 1)
     PUB_LOCAL_FOOTPRINT = rospy.Publisher("/" + ROBOT_NAME + "/move_base/global_costmap/footprint", Polygon, queue_size = 1)
+    PUB_RAP_HOMING = rospy.Publisher("/" + ROBOT_NAME + "/rap_planner/homing", String, queue_size = 1)
     if ROLE == "leader":
         PUB_CMD_VEL_PEER = rospy.Publisher("/" + ROBOT_PEER_NAME + "/cmd_vel", Twist, queue_size = 1)
     
