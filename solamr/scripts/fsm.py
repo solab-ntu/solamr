@@ -703,12 +703,13 @@ class Go_Double_Goal(smach.State):
         while IS_RUN and TASK != None:
             if ROLE == "leader":
                 # Tag navigation
+                '''
                 goal_xyt = get_tf(TFBUFFER, "carB/map", ROBOT_NAME + "/B_site", is_warn = False)
                 if goal_xyt != None and current_goal == TASK.goal_location[-1][0]: # Last goal
                     goal_xy = vec_trans_coordinate((1.5,0), (goal_xyt[0], goal_xyt[1], goal_xyt[2]-pi/2))
                     GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], goal_xyt[2]), "carB/map")
                     seen_tag = True
-                
+                '''
                 # Wait goal reached
                 if GOAL_MANAGER.is_reached:
                     GOAL_MANAGER.is_reached = False
