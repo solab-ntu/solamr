@@ -10,6 +10,8 @@ from visualization_msgs.msg import Marker, MarkerArray # Debug drawing
 from geometry_msgs.msg import Point, Twist, PoseStamped
 from nav_msgs.msg import Path, OccupancyGrid
 from move_base_msgs.msg import MoveBaseActionResult # For publish goal result
+# Service
+from std_srvs.srv import Empty, EmptyResponse
 # TF
 import tf2_ros
 import tf # conversion euler
@@ -49,6 +51,8 @@ class Rap_planner():
         self.wz_out = None
         self.mode = "diff" # "crab"
         self.rho = 0.0
+        # Ros Service 
+        rospy.Service(name="~homing", service_class=Empty, handler=self.homing_cb)
         # Tf listner
         self.tfBuffer = tf2_ros.Buffer()
         tf2_ros.TransformListener(self.tfBuffer)
@@ -79,6 +83,16 @@ class Rap_planner():
         self.viz_marker.publish()
         # Dynamic reconfiguration
         Server(RapControllerConfig, self.dynamic_reconfig_cb)
+
+    def homing_cb(self, request):
+        self.vx_out = 0.0
+        self.vy_out = 0.0
+        self.wz_out = 0.0
+        self.mode = "diff"
+        self.previous_mode = "diff"
+        self.next_mode = None
+        rospy.loginfo("[rap_planner] Homing planner!")
+        return EmptyResponse()
 
     def goal_cb(self, data):
         '''
@@ -305,12 +319,6 @@ class Rap_planner():
     def reset_plan(self):
         '''
         '''
-        #self.vx_out = 0.0 # TODO need test
-        #self.vy_out = 0.0
-        #self.wz_out = 0.0
-        # self.mode = "diff"
-        # self.previous_mode = "diff"
-        # self.next_mode = None
         self.global_path = None
         self.simple_goal = None
         self.latch_xy = False
