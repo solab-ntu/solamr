@@ -1,21 +1,25 @@
 #!/usr/bin/env python
-import rospy
-import sys
-import tf2_ros
-import tf # conversion euler
+# Python
 from math import atan2,acos,sqrt,pi,sin,cos,tan
+import sys
+import time # for testing 
+import rospy
+# Message type 
 from std_msgs.msg import Float64
 from visualization_msgs.msg import Marker, MarkerArray # Debug drawing
 from geometry_msgs.msg import Point, Twist, PoseStamped
 from nav_msgs.msg import Path, OccupancyGrid
-import time # for testing 
-from rap_controller_node import Rap_controller
-from lucky_utility.ros.rospy_utility import get_tf, Marker_Manager,normalize_angle,sign
 from move_base_msgs.msg import MoveBaseActionResult # For publish goal result
+# TF
+import tf2_ros
+import tf # conversion euler
+# Dynamice reconfiguration
 from dynamic_reconfigure.server import Server # For dynamic reconfig server
 from rap_controller.cfg import RapControllerConfig
-NUM_CIRCLE_POINT = 100
-# USE_CRAB_FOR_HEADING = True
+# Custom import
+from rap_controller_node import Rap_controller
+from lucky_utility.ros.rospy_utility import get_tf, Marker_Manager,normalize_angle,sign
+
 USE_COSTMAP = False # TODO Giving up 
 
 class Rap_planner():
@@ -33,12 +37,12 @@ class Rap_planner():
         self.pub_global_path = rospy.Publisher("/rap_planner/global_path", Path,queue_size = 1,latch=False)
         self.pub_goal_result = rospy.Publisher("/car1/move_base/result", MoveBaseActionResult, queue_size = 1, latch=False)
         # Debug publisher
-        self.pub_alpha = rospy.Publisher("/alpha", Float64,queue_size = 1,latch=False)
-        self.alpha = 0.0
-        self.pub_beta  = rospy.Publisher("/beta", Float64,queue_size = 1,latch=False)
-        self.beta = 0.0
-        self.pub_angle = rospy.Publisher("/angle", Float64,queue_size = 1,latch=False)
-        self.angle = 0.0
+        # self.pub_alpha = rospy.Publisher("/alpha", Float64,queue_size = 1,latch=False)
+        # self.alpha = 0.0
+        # self.pub_beta  = rospy.Publisher("/beta", Float64,queue_size = 1,latch=False)
+        # self.beta = 0.0
+        # self.pub_angle = rospy.Publisher("/angle", Float64,queue_size = 1,latch=False)
+        # self.angle = 0.0
         # Output
         self.vx_out = None
         self.vy_out = None
@@ -278,9 +282,9 @@ class Rap_planner():
         self.viz_marker.publish()
 
         # Dubug msg
-        self.pub_alpha.publish(self.alpha)
-        self.pub_beta.publish(self.beta)
-        self.pub_angle.publish(self.angle)
+        # self.pub_alpha.publish(self.alpha)
+        # self.pub_beta.publish(self.beta)
+        # self.pub_angle.publish(self.angle)
         
         # Global path
         if self.global_path != None:
@@ -398,7 +402,7 @@ class Rap_planner():
         alpha = atan2(y_goal, x_goal)
         
         # Get beta
-        #  This is Benson's legacy, but it's not very helpful
+        #  This is Benson's legacy
         if (not IGNORE_HEADING) and local_goal[2] != None and self.rho < 0.5:
             beta = normalize_angle(local_goal[2] - alpha - self.big_car_xyt[2])
             if abs(alpha) > pi/2:# Go backward
@@ -406,10 +410,9 @@ class Rap_planner():
         else:
             beta = 0
         
-        # pursu_angle = alpha
         pursu_angle = alpha + beta*2.0
-        self.alpha = alpha
-        self.beta = beta
+        # self.alpha = alpha
+        # self.beta = beta
         # self.angle = pursu_angle
 
         self.viz_marker.update_marker("local_goal", (x_goal, y_goal) )
@@ -419,11 +422,10 @@ class Rap_planner():
         ##################
         ###  Get Flags ###
         ##################
-        # Check is need to consider goal heading
-        d_head = normalize_angle(self.simple_goal[2] - self.big_car_xyt[2])
-        
+        # USE_CRAB is decide by reconfig parameter
         # Check need to switch to rota mode(xy is reached)
         is_need_rota = False # current rota only when heading adjment
+        d_head = normalize_angle(self.simple_goal[2] - self.big_car_xyt[2])
         if  self.latch_xy and\
             (not IGNORE_HEADING) and\
             local_goal[2] != None and\

@@ -70,14 +70,6 @@ class Rap_controller():
         # Parameters
         self.dt = 1.0 / self.control_freq
         # Tf listner
-        '''
-        self.tfBuffer = tf2_ros.Buffer()
-        tf2_ros.TransformListener(self.tfBuffer)
-        self.base_link_xyt_L = None # (x,y,theta)
-        self.base_link_xyt_F = None # (x,y,theta)
-        self.big_car_xyt_L = None  # (x,y,theta)
-        self.big_car_xyt_F = None  # (x,y,theta)
-        '''
         rospy.Subscriber("/car1/theta", Float64, self.theta_car1_cb)
         rospy.Subscriber("/car2/theta", Float64, self.theta_car2_cb)
         self.theta_L = None
@@ -359,39 +351,12 @@ class Rap_controller():
             True - Calculate successfully, need publish
             False - Can't finish calculation, don't publish
         '''
-        '''
-        # Update tf
-        t_base_link_L = get_tf(self.tfBuffer, self.map_frame, self.base_link_frame_leader)
-        t_base_link_F = get_tf(self.tfBuffer, self.map_peer_frame, self.base_link_frame_follow)
-        t_big_car_L   = get_tf(self.tfBuffer, self.map_frame, self.big_car_frame_leader)
-        t_big_car_F   = get_tf(self.tfBuffer, self.map_peer_frame, self.big_car_frame_follow)
-
-        if t_base_link_L != None:
-            self.base_link_xyt_L = t_base_link_L
-        if t_big_car_L != None:
-            self.big_car_xyt_L = t_big_car_L
-        if t_base_link_F != None:
-            self.base_link_xyt_F = t_base_link_F
-        if t_big_car_F != None:
-            self.big_car_xyt_F = t_big_car_F
-        
-        if  self.base_link_xyt_L == None or self.big_car_xyt_L == None or\
-            self.base_link_xyt_F == None or self.big_car_xyt_F == None: #tf is invalid
-            time.sleep(1)
-            return False
-        '''
-        # Use theta Instead of /tf # TODO need test
+        # Get theta1, theta2
         if self.theta_L == None or self.theta_F == None:
             rospy.logwarn("[rap_controller] Can't get /car1/theta or /car2/theta")
             time.sleep(1)
             return False
-        # Get current theta
-        '''
-        self.theta_L = normalize_angle(normalize_angle(self.base_link_xyt_L[2])
-                                     - normalize_angle(self.big_car_xyt_L[2]))
-        self.theta_F = normalize_angle(normalize_angle(self.base_link_xyt_F[2])
-                                     - normalize_angle(self.big_car_xyt_F[2]))
-        '''
+
         #########################
         #### Get Errror angle ###
         #########################
@@ -503,12 +468,14 @@ class Rap_controller():
         '''
         # Publish cmd_vel
         cmd_vel = Twist()
+
         # Publish Leader cmd
         cmd_vel.linear.x  = self.v_out_L
         cmd_vel.angular.z = self.w_out_L
         if self.reverse_omega: # This is for weird simulation bug
             cmd_vel.angular.z *= -1
         self.pub_cmd_vel_leader.publish(cmd_vel)
+
         # Publish Follower cmd
         cmd_vel.linear.x  = self.v_out_F
         cmd_vel.angular.z = self.w_out_F
@@ -520,8 +487,8 @@ class Rap_controller():
         self.viz_mark.publish()
         
         # Debug print
-        rospy.logdebug("Leader" + " : V=" + str(round(self.v_out_L, 3))+
-                                   ", W=" + str(round(self.w_out_L, 3)))
+        # rospy.loginfo("Leader" + " : V=" + str(round(self.v_out_L, 3))+
+        #                            ", W=" + str(round(self.w_out_L, 3)))
 
 
 if __name__ == '__main__':
