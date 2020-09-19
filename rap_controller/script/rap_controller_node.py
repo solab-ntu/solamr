@@ -30,7 +30,8 @@ ROTA_ABS_TOLERANCE = 5 * (pi/180.0)# degree
 # Crab dead zone, car1, car2 heading can't go here
 DEAD_ZONE_ANG = pi/2
 
-CRAB_FAIL_SAFE_ANG = 30 * (pi/180.0) # degree
+CRAB_FAIL_SAFE_ENTER_ANG = 30 * (pi/180.0) # degree
+CRAB_FAIL_SAFE_LEAVE_ANG = 10 * (pi/180.0) # degree
 
 class Rap_controller():
     def __init__(self, 
@@ -88,6 +89,7 @@ class Rap_controller():
         self.mode = "diff"
         self.is_transit = False
         self.next_mode = None
+        self.crab_fail_safe = False
         # PID
         self.cmd_last = 0
         self.error_last = 0 
@@ -229,7 +231,7 @@ class Rap_controller():
         if percentage >= 1.0:
             v_con = 0
             w_con = self.pi_controller(KP_diff, KI, error) * percentage
-            print (str(percentage))
+            # print (str(percentage))
         else:
             v_con = (TOW_CAR_LENGTH/2.0)*wz*abs(cos(error)) * (1-percentage)
             w_con = wz*abs(cos(error)) * (1-percentage) + self.pi_controller(KP_diff, KI, error)
@@ -359,7 +361,14 @@ class Rap_controller():
         if self.mode == "crab":
             ((ref_ang_L, error_theta_L),
              (ref_ang_F, error_theta_F), is_forward) = self.crab_get_error_angle()
-
+            # Check crab fail
+            if abs(error_theta_L) > CRAB_FAIL_SAFE_ENTER_ANG/2.0 or\
+               abs(error_theta_F) > CRAB_FAIL_SAFE_ENTER_ANG/2.0 : # Crab is going to fail
+                self.crab_fail_safe = True
+            if abs(error_theta_L) < CRAB_FAIL_SAFE_LEAVE_ANG/2.0 or\
+               abs(error_theta_F) < CRAB_FAIL_SAFE_LEAVE_ANG/2.0 : # Crab is allow now
+                self.crab_fail_safe = False
+        
         elif self.mode == "rota":
             ((ref_ang_L, error_theta_L),
              (ref_ang_F, error_theta_F)) = self.diff_get_error_angle()
@@ -384,10 +393,7 @@ class Rap_controller():
         ####################
         if self.mode == "crab":
             # Get v_out, w_out
-            
-            if abs(error_theta_L) > CRAB_FAIL_SAFE_ANG/2.0 or\
-               abs(error_theta_F) > CRAB_FAIL_SAFE_ANG/2.0 : # Crab is going to fail
-                # stop and adjust angle
+            if self.crab_fail_safe: # Don't move , adjust angle only
                 (self.v_out_L, self.w_out_L) = (0, self.pi_controller(KP_crab, KI, error_theta_L))
                 (self.v_out_F, self.w_out_F) = (0, self.pi_controller(KP_crab, KI, error_theta_F))
             else:

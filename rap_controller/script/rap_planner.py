@@ -87,6 +87,7 @@ class Rap_planner():
 
     def homing_cb(self, data):
         rospy.loginfo("[rap_planner] Homing planner!")
+        self.reset_plan()
         self.vx_out = 0.0
         self.vy_out = 0.0
         self.wz_out = 0.0
@@ -392,8 +393,8 @@ class Rap_planner():
             rospy.loginfo("[rap_planner] Goal xy Reached")
             if IGNORE_HEADING:
                 self.reset_plan()
-                #rospy.loginfo("[rap_planner] rest_plan switch to DIFF mode")
-                #self.set_tran_mode("diff") # TODO why need diff
+                rospy.loginfo("[rap_planner] rest_plan switch to DIFF mode")
+                self.set_tran_mode("diff") # TODO why need diff
                 self.publish_reached()
                 return True
             else:
@@ -404,8 +405,9 @@ class Rap_planner():
             if abs(normalize_angle(self.simple_goal[2] - self.big_car_xyt[2])) <\
                 (GOAL_TOLERANCE_T/2.0):
                 self.reset_plan()
-                # rospy.loginfo("[rap_planner] rest_plan switch to DIFF mode")
-                # self.set_tran_mode("diff")
+                self.mode = "diff"
+                rospy.loginfo("[rap_planner] rest_plan switch to DIFF mode")
+                self.set_tran_mode("diff")
                 self.publish_reached()
                 rospy.loginfo("[rap_planner] Goal Heading Reached")
                 return True
@@ -463,8 +465,10 @@ class Rap_planner():
                 self.set_tran_mode("crab")
         
         elif self.mode == "rota":
-            if not is_need_rota:
-                self.set_tran_mode("diff")
+            # TODO need test, after rotation must be goal reached
+            # if not is_need_rota:
+            #     self.set_tran_mode("diff")
+            pass
         
         elif self.mode == "tran":
             if (not RAP_CTL.is_transit):

@@ -103,8 +103,8 @@ def change_smart_layer_base_radius(r):
     '''
     r = base_raduis
     '''
-    rospy.wait_for_service("/" + ROBOT_NAME + "/move_base/global_costmap/smartobstacle_layer/set_parameters", 5.0)
-    rospy.wait_for_service("/" + ROBOT_NAME + "/move_base/local_costmap/smartobstacle_layer/set_parameters", 5.0)
+    rospy.wait_for_service("/" + ROBOT_NAME + "/move_base/global_costmap/smartobstacle_layer/set_parameters", 30.0)
+    rospy.wait_for_service("/" + ROBOT_NAME + "/move_base/local_costmap/smartobstacle_layer/set_parameters", 30.0)
     client = dynamic_reconfigure.client.Client("/" + ROBOT_NAME + "/move_base/global_costmap/smartobstacle_layer", timeout=30)
     client.update_configuration({"base_radius": r})
     client = dynamic_reconfigure.client.Client("/" + ROBOT_NAME + "/move_base/local_costmap/smartobstacle_layer", timeout=30)
@@ -248,6 +248,7 @@ def task_cb(req):
         TASK = None
         # Cacelled all goal
         GOAL_MANAGER.cancel_goal()
+        PUB_RAP_HOMING.publish("homing")
         # Zero velocity
         PUB_CMD_VEL.publish(Twist())
         return 'abort OK'
@@ -433,6 +434,7 @@ class Initial_State(smach.State):
             PUB_GATE_CMD.publish(Bool(True))
             switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
             if ROLE == "leader":
+                time.sleep(5)
                 change_smart_layer_base_radius(0.9)
         return INIT_STATE
 
