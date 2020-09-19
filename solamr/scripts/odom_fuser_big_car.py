@@ -14,7 +14,7 @@ from std_msgs.msg import Float64
 # Custom import
 from lucky_utility.ros.rospy_utility import get_tf, send_tf, vec_trans_coordinate, normalize_angle
 
-TWO_CAR_LENGTH = 0.93 # m
+TWO_CAR_LENGTH = 0.90 # m
 
 class Odom_fuser():
     def __init__(self):

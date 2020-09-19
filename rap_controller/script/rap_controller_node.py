@@ -13,7 +13,7 @@ import time # for testing
 #########################
 ### Global parameters ###
 #########################
-TOW_CAR_LENGTH = 0.93 # meter, Length between two cars
+TOW_CAR_LENGTH = 0.90 # meter, Length between two cars
 V_MAX = 0.3 # m/s, Max velocity
 W_MAX = 0.8 # rad/s, MAX angular velocity
 KP_crab = 0.8 # KP for crab mode, the bigger the value, the faster it will chase ref_ang

@@ -454,11 +454,6 @@ class Find_Shelf(smach.State):
             time.sleep(2)
             return 'done'
         
-        # find_points = [(1.4, 1.16, pi), (4.0, 1.16,  0.0)]
-        # if ROBOT_NAME == "car1":
-        #     goal = find_points[1]
-        # elif ROBOT_NAME == "car2":
-        #     goal = find_points[0]
         goal = TASK.shelf_location[0]
         GOAL_MANAGER.is_reached = False
         while IS_RUN and TASK != None:
@@ -468,8 +463,6 @@ class Find_Shelf(smach.State):
                     goal = TASK.shelf_location[TASK.shelf_location.index(goal)+1]
                 except IndexError:
                     goal = TASK.shelf_location[0]
-                # Wait goal to calm down
-                # time.sleep(1) TODO, use time latch instead, need TEST
             
             # Send a serial of goal
             GOAL_MANAGER.send_goal(goal, ROBOT_NAME + "/map", tolerance = (0.3, pi/6))
@@ -505,21 +498,20 @@ class Go_Dock_Standby(smach.State):
                 return 'done'
 
             # Update tag location
-            # After choose point is set, we won't consider tag anymore
             # If chose point is not set, we won't consider laser center
             # Choose point only set, when tag and laser are both avaliable
             shelf_tag_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
             shelf_laser_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_center")
             
             if shelf_tag_xyt != None and shelf_laser_xyt != None:
-                tag_goal_xy = vec_trans_coordinate((-0.5, 0),
+                tag_goal_xy = vec_trans_coordinate((-0.36, 0),
                                     (shelf_tag_xyt[0], shelf_tag_xyt[1], shelf_tag_xyt[2] + pi/2))
                 # Assign point to choose point
                 choose_point = get_chosest_goal(shelf_laser_xyt, tag_goal_xy)
             elif  shelf_tag_xyt != None and shelf_laser_xyt == None:
                 # If chose point is not set, we won't consider laser center
                 # Send tag goal, 
-                (x1,y1) = vec_trans_coordinate((-0.5, 0),
+                (x1,y1) = vec_trans_coordinate((-0.36, 0),
                                                 (shelf_tag_xyt[0], 
                                                 shelf_tag_xyt[1], 
                                                 shelf_tag_xyt[2] + pi/2))
@@ -534,7 +526,7 @@ class Go_Dock_Standby(smach.State):
                 GOAL_MANAGER.send_goal(choose_point, ROBOT_NAME + "/map")
 
             # Send search center to shelf detector
-            send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_" + ROBOT_NAME, ROBOT_NAME + "/tag/shelf_center", z_offset=-0.3)
+            send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_" + ROBOT_NAME, ROBOT_NAME + "/tag/shelf_center", z_offset=-0.44)
             laser_shelf_center_xyt = get_tf(TFBUFFER, ROBOT_NAME +"/base_link", ROBOT_NAME +"/shelf_center")
             if laser_shelf_center_xyt != None:
                 # Use laser to publish search center instead of tag
@@ -631,11 +623,6 @@ class Go_Way_Point(smach.State):
             time.sleep(2)
             return 'done'
         
-        # if ROBOT_NAME == "car1":
-        #     goal_list = [(4.05, 2.18, 3*pi/4), (2.77, 2.4, pi), (1.45, 2.09, -3*pi/4)]
-        # elif ROBOT_NAME == "car2":
-        #     goal_list = [(1.48, 0.5, -pi/4), (2.77, 0.08, 0.0), (4.08, 0.277, pi/4)]
-        # goal_list = TASK.wait_location
         current_goal = TASK.wait_location[0]
 
         GOAL_MANAGER.send_goal(current_goal, ROBOT_NAME + "/map", tolerance = (0.3,  pi/6))
