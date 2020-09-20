@@ -238,8 +238,8 @@ def reconfig_rap_setting(setting):
 def stopping_thread():
     while IS_STOPPING_ROBOT:
         rospy.loginfo("[fsm] Inside stopping thread")
-        PUB_CMD_VEL.publish(Twist())
-        time.sleep(1)
+        PUB_CMD_VEL.publish(Twist())    
+        time.sleep(0.1)
 
 def rap_planner_homing():
     '''
