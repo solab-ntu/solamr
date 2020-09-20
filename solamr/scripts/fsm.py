@@ -558,7 +558,7 @@ class Go_Dock_Standby(smach.State):
                 GOAL_MANAGER.send_goal(choose_point, ROBOT_NAME + "/map")
 
             # Send search center to shelf detector
-            send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_" + ROBOT_NAME, ROBOT_NAME + "/tag/shelf_center", z_offset=-0.64)
+            send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_" + ROBOT_NAME, ROBOT_NAME + "/tag/shelf_center", z_offset=-0.50)
             laser_shelf_center_xyt = get_tf(TFBUFFER, ROBOT_NAME +"/base_link", ROBOT_NAME +"/shelf_center")
             if laser_shelf_center_xyt != None:
                 # Use laser to publish search center instead of tag
@@ -841,7 +841,7 @@ class Dock_Out(smach.State):
                 twist.angular.z = -0.6
             t_start = rospy.get_rostime().to_sec()
             while IS_RUN and TASK != None and\
-                rospy.get_rostime().to_sec() - t_start < (pi/2)/abs(twist.angular.z): # sec
+                rospy.get_rostime().to_sec() - t_start < (2*pi/3.0)/abs(twist.angular.z): # sec
                 PUB_CMD_VEL.publish(twist)
                 PUB_SEARCH_CENTER.publish(Point(0, 0, 0))
                 time.sleep(TIME_INTERVAL)

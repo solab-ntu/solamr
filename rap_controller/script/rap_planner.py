@@ -411,6 +411,8 @@ class Rap_planner():
                 self.publish_reached()
                 rospy.loginfo("[rap_planner] Goal Heading Reached")
                 return True
+            else:
+                rospy.loginfo("[rap_planner] latch_xy rota error theta: " + str(normalize_angle(self.simple_goal[2] - self.big_car_xyt[2])))
         
         # Get alpha 
         alpha = atan2(y_goal, x_goal)
