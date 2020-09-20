@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<launch>
+
+    <!-- <arg name="init_state" default="Single_AMR"/> -->
+    <node pkg="solamr" type="task_location_setter.py" name="task_location_setter" output="screen"/>
+    
+    <!-- MAP -->
+    <node name="map_server" pkg="map_server" type="map_server" args="$(find solamr)/maps/sqare_obstacle.yaml"/>
+    
+    <!-- RVIZ -->
+    <node pkg='rviz' type='rviz' name='rviz' args='-d $(find solamr)/rviz/tag_location_setter.rviz'/>
+    
+    <!-- Static TF -->
+    <node pkg="tf" type="static_transform_publisher" name="map2odom" args="0 0 0 0 0 0 1 map odom 100" />
+
+</launch>
