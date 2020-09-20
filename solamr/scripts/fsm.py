@@ -628,7 +628,7 @@ class Go_Way_Point(smach.State):
     def execute(self, userdata):
         global CUR_STATE
         CUR_STATE = "Go_Way_Point"
-        rospy.loginfo('[fsm] Execute ' + CUR_STATE)'
+        rospy.loginfo('[fsm] Execute ' + CUR_STATE)
         
         current_goal = TASK.wait_location[0]
 
