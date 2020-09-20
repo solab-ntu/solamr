@@ -600,6 +600,8 @@ class Dock_In(smach.State):
         while IS_RUN and TASK != None:
             # Send goal
             shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
+            # tag_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
+            rospy.loginfo("[fsm] shelf : " + str(shelf_xyt) + " != " + str(self.last_shelf_xyt))
             # if shelf_xyt != None:
             if shelf_xyt != None or shelf_xyt != self.last_shelf_xyt:
                 rospy.loginfo("[fsm] Dockin error angle: " + str(atan2(shelf_xyt[1], shelf_xyt[0])))
