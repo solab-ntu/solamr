@@ -69,18 +69,18 @@ class Rap_planner():
         self.viz_marker.register_marker("mode_text", 9,
                                          BIG_CAR_FRAME, (0,0,0),  0.2)
         # Circle ARC
-        self.viz_marker.register_marker("a1_diff", 4, BIG_CAR_FRAME, (255,255,0), 0.02)
-        self.viz_marker.register_marker("a2_diff", 4, BIG_CAR_FRAME, (255,255,0), 0.02)
-        self.viz_marker.register_marker("a1_crab", 4, BIG_CAR_FRAME, (255,0,0), 0.02)
-        self.viz_marker.register_marker("a2_crab", 4, BIG_CAR_FRAME, (255,0,0), 0.02)
-        self.viz_marker.update_marker("a1_diff", (0,0), radius = LOOK_AHEAD_DIST,
-                    angle_range = (-pi/2 + ENTER_CRAB_ANGLE/2,  pi/2 - ENTER_CRAB_ANGLE/2))
-        self.viz_marker.update_marker("a2_diff", (0,0), radius = LOOK_AHEAD_DIST,
-                    angle_range = ( pi/2 + ENTER_CRAB_ANGLE/2, -pi/2 - ENTER_CRAB_ANGLE/2))
-        self.viz_marker.update_marker("a1_crab", (0,0), radius = LOOK_AHEAD_DIST,
-                    angle_range = (-pi/2 - ENTER_CRAB_ANGLE/2, -pi/2 + ENTER_CRAB_ANGLE/2))
-        self.viz_marker.update_marker("a2_crab", (0,0), radius = LOOK_AHEAD_DIST,
-                    angle_range = ( pi/2 - ENTER_CRAB_ANGLE/2,  pi/2 + ENTER_CRAB_ANGLE/2))
+        # self.viz_marker.register_marker("a1_diff", 4, BIG_CAR_FRAME, (255,255,0), 0.02)
+        # self.viz_marker.register_marker("a2_diff", 4, BIG_CAR_FRAME, (255,255,0), 0.02)
+        # self.viz_marker.register_marker("a1_crab", 4, BIG_CAR_FRAME, (255,0,0), 0.02)
+        # self.viz_marker.register_marker("a2_crab", 4, BIG_CAR_FRAME, (255,0,0), 0.02)
+        # self.viz_marker.update_marker("a1_diff", (0,0), radius = LOOK_AHEAD_DIST,
+        #             angle_range = (-pi/2 + ENTER_CRAB_ANGLE/2,  pi/2 - ENTER_CRAB_ANGLE/2))
+        # self.viz_marker.update_marker("a2_diff", (0,0), radius = LOOK_AHEAD_DIST,
+        #             angle_range = ( pi/2 + ENTER_CRAB_ANGLE/2, -pi/2 - ENTER_CRAB_ANGLE/2))
+        # self.viz_marker.update_marker("a1_crab", (0,0), radius = LOOK_AHEAD_DIST,
+        #             angle_range = (-pi/2 - ENTER_CRAB_ANGLE/2, -pi/2 + ENTER_CRAB_ANGLE/2))
+        # self.viz_marker.update_marker("a2_crab", (0,0), radius = LOOK_AHEAD_DIST,
+        #             angle_range = ( pi/2 - ENTER_CRAB_ANGLE/2,  pi/2 + ENTER_CRAB_ANGLE/2))
         self.viz_marker.publish()
         # Dynamic reconfiguration
         Server(RapControllerConfig, self.dynamic_reconfig_cb)

@@ -536,14 +536,14 @@ class Go_Dock_Standby(smach.State):
             shelf_laser_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_center")
             
             if shelf_tag_xyt != None and shelf_laser_xyt != None:
-                tag_goal_xy = vec_trans_coordinate((-0.36, 0),
+                tag_goal_xy = vec_trans_coordinate((-0.66, 0),
                                     (shelf_tag_xyt[0], shelf_tag_xyt[1], shelf_tag_xyt[2] + pi/2))
                 # Assign point to choose point
                 choose_point = get_chosest_goal(shelf_laser_xyt, tag_goal_xy)
             elif  shelf_tag_xyt != None and shelf_laser_xyt == None:
                 # If chose point is not set, we won't consider laser center
                 # Send tag goal, 
-                (x1,y1) = vec_trans_coordinate((-0.36, 0),
+                (x1,y1) = vec_trans_coordinate((-0.66, 0),
                                                 (shelf_tag_xyt[0], 
                                                 shelf_tag_xyt[1], 
                                                 shelf_tag_xyt[2] + pi/2))
@@ -558,7 +558,7 @@ class Go_Dock_Standby(smach.State):
                 GOAL_MANAGER.send_goal(choose_point, ROBOT_NAME + "/map")
 
             # Send search center to shelf detector
-            send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_" + ROBOT_NAME, ROBOT_NAME + "/tag/shelf_center", z_offset=-0.44)
+            send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_" + ROBOT_NAME, ROBOT_NAME + "/tag/shelf_center", z_offset=-0.64)
             laser_shelf_center_xyt = get_tf(TFBUFFER, ROBOT_NAME +"/base_link", ROBOT_NAME +"/shelf_center")
             if laser_shelf_center_xyt != None:
                 # Use laser to publish search center instead of tag
