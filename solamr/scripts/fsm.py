@@ -237,7 +237,7 @@ def reconfig_rap_setting(setting):
 
 def stopping_thread():
     while IS_STOPPING_ROBOT:
-        rospy.loginfo("[fsm] Inside stopping thread")
+        # rospy.loginfo("[fsm] Inside stopping thread")
         PUB_CMD_VEL.publish(Twist())    
         time.sleep(0.1)
 
@@ -829,7 +829,7 @@ class Dock_Out(smach.State):
             '''
         elif TASK.mode == "double_AMR":
             PUB_RAP_HOMING.publish("homing")
-            time.sleep(2) # Wait rap_controller homing
+            time.sleep(3) # Wait rap_controller homing
         # Switch launch file
         if TASK.mode == "single_AMR":
             transit_mode("Single_Assembled", "Single_AMR")
@@ -848,6 +848,9 @@ class Dock_Out(smach.State):
             t_start = rospy.get_rostime().to_sec()
             while IS_RUN and TASK != None and\
                 rospy.get_rostime().to_sec() - t_start < (2*pi/3.0)/abs(twist.angular.z): # sec
+                rospy.loginfo("[fsm] Dockout, inplace rotation: (" +\
+                                str(rospy.get_rostime().to_sec() - t_start) + "/"\
+                                str((2*pi/3.0)/abs(twist.angular.z)) + ")")
                 PUB_CMD_VEL.publish(twist)
                 PUB_SEARCH_CENTER.publish(Point(0, 0, 0))
                 time.sleep(TIME_INTERVAL)
@@ -858,7 +861,8 @@ class Dock_Out(smach.State):
         PUB_GATE_CMD.publish(Bool(False))
         while GATE_REPLY != False:
             rospy.loginfo("[fsm] Waiting gate open...")
-            time.sleep(1)
+            PUB_SEARCH_CENTER.publish(Point(0, 0, 0))
+            time.sleep(TIME_INTERVAL)
 
         #------------  dock out -------------# 
         t_start = rospy.get_rostime().to_sec()
