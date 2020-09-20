@@ -827,7 +827,8 @@ class Dock_Out(smach.State):
                         PUB_CMD_VEL_PEER.publish(twist_2)
             '''
         elif TASK.mode == "double_AMR":
-            time.sleep(2) # Wait rap_controller return to origin orientation
+            PUB_RAP_HOMING.publish("homing")
+            time.sleep(2) # Wait rap_controller homing
             PUB_CMD_VEL.publish(Twist()) # Stop AMR
         # Switch launch file
         if TASK.mode == "single_AMR":
@@ -837,6 +838,7 @@ class Dock_Out(smach.State):
             transit_mode("Double_Assembled", "Single_AMR")
 
         # Double AMR in-place rotation 
+        rospy.loginfo("[fsm] Start in-place rotation")
         if TASK.mode == "double_AMR":
             twist.linear.x = 0.0
             if ROLE == "leader":
@@ -849,6 +851,7 @@ class Dock_Out(smach.State):
                 PUB_CMD_VEL.publish(twist)
                 PUB_SEARCH_CENTER.publish(Point(0, 0, 0))
                 time.sleep(TIME_INTERVAL)
+        rospy.loginfo("[fsm] Finish in-place rotation")
         
         # Open gate
         PUB_GATE_CMD.publish(Bool(False))
