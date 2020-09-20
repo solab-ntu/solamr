@@ -7,7 +7,7 @@
     <!--Double_Assembled-->
     <!--Single_Assembled-->
     <!--Single_AMR-->
-    <arg name="init_state" default="Single_Assembled"/>
+    <arg name="init_state" default="Single_AMR"/>
 
     <group ns="$(arg robot_name)">
         <!-- SMACH -->
