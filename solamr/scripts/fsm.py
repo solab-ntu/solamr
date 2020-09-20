@@ -129,7 +129,7 @@ def transit_mode(from_mode, to_mode):
     '''
     Define what to do, when transiting from one mode to another.
     '''
-    global PEER_BASE_XYT, MEASURE_PEER_XYT
+    global PEER_BASE_XYT, MEASURE_PEER_XYT, IS_STOPPING_ROBOT
     if   from_mode == "Single_AMR" and to_mode == "Single_Assembled":
         change_footprint(0.35)
         # change_footprint(0.45)
