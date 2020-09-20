@@ -19,12 +19,14 @@ single_AMR:
   home_location_car2: [2.0, 2.7, -1.57]
 
 double_AMR:
-  shelf_location_car1: [1.23, 1.33, 3.1416]
-  shelf_location_car2: [1.23, 1.33, 3.1416]
+  shelf_location_car1: [[4.0, 1.16,  0.0],
+                        [1.4, 1.16, 3.1416]]
+  shelf_location_car2: [[4.0, 1.16,  0.0],
+                        [1.4, 1.16, 3.1416]]
 
   # Wait_location_dummy
-  wait_location_car1: [0.0, 0.0, 0.0]
-  wait_location_car2: [0.0, 0.0, 0.0]
+  wait_location_car1: [[0.0, 0.0, 0.0]]
+  wait_location_car2: [[0.0, 0.0, 0.0]]
 
   # Car2 is dummy                             [xy_tolerance, yaw_tolerance, use_crab]
   goal_location_car1: [[[4.35, 1.33, -1.5708], [0.1, 10.0, True]],
