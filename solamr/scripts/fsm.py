@@ -559,7 +559,7 @@ class Go_Dock_Standby(smach.State):
                 GOAL_MANAGER.send_goal(choose_point, ROBOT_NAME + "/map")
 
             # Send search center to shelf detector
-            send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_" + ROBOT_NAME, ROBOT_NAME + "/tag/shelf_center", z_offset=-0.50)
+            send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_" + ROBOT_NAME, ROBOT_NAME + "/tag/shelf_center", z_offset=-0.46)
             laser_shelf_center_xyt = get_tf(TFBUFFER, ROBOT_NAME +"/base_link", ROBOT_NAME +"/shelf_center")
             if laser_shelf_center_xyt != None:
                 # Use laser to publish search center instead of tag
@@ -601,9 +601,10 @@ class Dock_In(smach.State):
             # Send goal
             shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
             # tag_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
-            rospy.loginfo("[fsm] shelf : " + str(shelf_xyt) + " != " + str(self.last_shelf_xyt))
+            # rospy.loginfo("[fsm] shelf : " + str(shelf_xyt) + " != " + str(self.last_shelf_xyt))
+            # can't just equeal 
             # if shelf_xyt != None:
-            if shelf_xyt != None or shelf_xyt != self.last_shelf_xyt:
+            if shelf_xyt != None or shelf_xyt[:2] != self.last_shelf_xyt[:2]:
                 rospy.loginfo("[fsm] Dockin error angle: " + str(atan2(shelf_xyt[1], shelf_xyt[0])))
                 rho = sqrt(shelf_xyt[0]**2 + shelf_xyt[1]**2)
                 twist.linear.x = KP_X*rho
