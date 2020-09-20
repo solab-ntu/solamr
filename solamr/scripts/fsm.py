@@ -849,7 +849,7 @@ class Dock_Out(smach.State):
             while IS_RUN and TASK != None and\
                 rospy.get_rostime().to_sec() - t_start < (2*pi/3.0)/abs(twist.angular.z): # sec
                 rospy.loginfo("[fsm] Dockout, inplace rotation: (" +\
-                                str(rospy.get_rostime().to_sec() - t_start) + "/"\
+                                str(rospy.get_rostime().to_sec() - t_start) + "/" +\
                                 str((2*pi/3.0)/abs(twist.angular.z)) + ")")
                 PUB_CMD_VEL.publish(twist)
                 PUB_SEARCH_CENTER.publish(Point(0, 0, 0))
