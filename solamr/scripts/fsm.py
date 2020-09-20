@@ -63,6 +63,7 @@ def check_running():
                      + str(MEASURE_PEER_XYT[2])
         PUB_CUR_STATE.publish(send_str)
         time.sleep(1)
+    PUB_CMD_VEL.publish(Twist())
     IS_RUN = False
 
 def switch_launch(file_path):
@@ -167,6 +168,12 @@ def transit_mode(from_mode, to_mode):
         # Record last localization result of big car
         last_base_leader = None
         last_base_follower = None
+
+        # Create a stopping robot thread
+        IS_STOPPING_ROBOT = True
+        t_stopping_robot = threading.Thread(target=stopping_thread)
+        t_stopping_robot.start()
+
         if ROLE == "leader":
             while last_base_leader == None or last_base_follower == None:
                 last_base_leader   = get_tf(TFBUFFER, "carB/map", "car1/base_link")
@@ -187,7 +194,12 @@ def transit_mode(from_mode, to_mode):
                 rospy.loginfo("[fsm] Waiting for leader sending my localization")
                 time.sleep(1)
             send_initpose(MEASURE_PEER_XYT)
-    
+
+        # join the stopping thread
+        IS_STOPPING_ROBOT = False
+        t_stopping_robot.join()
+        rospy.loginfo("[fsm] Join stopping thread")
+
     elif from_mode == "Double_Assembled" and to_mode == "Single_Assembled":
         switch_launch(ROSLAUNCH_PATH_SINGLE_AMR)
     else:
@@ -222,6 +234,12 @@ def reconfig_rap_setting(setting):
                                  "use_crab": setting[2],
                                  })
     rospy.loginfo("[fsm] reconfig rap planner setting to " + str(setting))
+
+def stopping_thread():
+    while IS_STOPPING_ROBOT:
+        rospy.loginfo("[fsm] Inside stopping thread")
+        PUB_CMD_VEL.publish(Twist())
+        time.sleep(1)
 
 def rap_planner_homing():
     '''
@@ -342,13 +360,14 @@ class Goal_Manager(object):
         # Check goal latch time
         if time.time() - self.time_last_goal < SEND_GOAL_INTERVAL: # sec
             return
-
+        else:
+            rospy.loginfo("[fsm] Send goal to move_base")
+        
         if  (not ignore_tolerance) and \
             (self.xy_goal_tolerance  != tolerance[0] or\
              self.yaw_goal_tolerance != tolerance[1]):
             # Need to set new tolerance
             try:
-                # TODO 
                 rospy.wait_for_service("/" + ROBOT_NAME + "/move_base/DWAPlannerROS/set_parameters", 5.0)
                 client = dynamic_reconfigure.client.Client("/" + ROBOT_NAME + "/move_base/DWAPlannerROS", timeout=30)
                 # rospy.wait_for_service("/" + ROBOT_NAME + "/move_base/TebLocalPlannerROS/set_parameters", 5.0)
@@ -805,7 +824,6 @@ class Dock_Out(smach.State):
         elif TASK.mode == "double_AMR":
             PUB_RAP_HOMING.publish("homing")
             time.sleep(2) # Wait rap_controller homing
-            PUB_CMD_VEL.publish(Twist()) # Stop AMR
         # Switch launch file
         if TASK.mode == "single_AMR":
             transit_mode("Single_Assembled", "Single_AMR")
@@ -998,6 +1016,8 @@ if __name__ == "__main__":
     BASE_XYT = None
     PEER_BASE_XYT = None 
     MEASURE_PEER_XYT = None
+    # Flag
+    IS_STOPPING_ROBOT = None
     # Goal manager
     GOAL_MANAGER = Goal_Manager()
     
