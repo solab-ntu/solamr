@@ -7,6 +7,6 @@
         <remap from="/STM32_twist" to="/$(arg robot_name)/STM32_twist"/>
     </node>
 
-    <node pkg="solamr" type="teleop_key.py" name="teleop"/>
+    <node pkg="solamr" type="teleop_key.py" name="teleop" output="screen"/>
 
 </launch>

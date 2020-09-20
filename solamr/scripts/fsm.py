@@ -715,13 +715,15 @@ class Go_Double_Goal(smach.State):
         global CUR_STATE, TASK
         CUR_STATE = "Go_Double_Goal"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
+        if ROLE == "leader":
+            # rap_planner_homing() # TODO is this must to have?
+            # Change goal tolerance
+            current_goal_set = TASK.goal_location[0]
+            current_goal = current_goal_set[0]
+            reconfig_rap_setting(current_goal_set[1])
+            GOAL_MANAGER.is_reached = False
+            seen_tag = False
         
-        rap_planner_homing() # TODO is this must to have?
-        # Change goal tolerance
-        current_goal_set = TASK.goal_location[0]
-        current_goal = current_goal_set[0]
-        reconfig_rap_setting(current_goal_set[1])
-        seen_tag = False
         while IS_RUN and TASK != None:
             if ROLE == "leader":
                 # Tag navigation
@@ -736,7 +738,8 @@ class Go_Double_Goal(smach.State):
                 if GOAL_MANAGER.is_reached:
                     GOAL_MANAGER.is_reached = False
                     try:
-                        rospy.loginfo("[fsm] Finish current goal : " + str(current_goal))
+                        rospy.loginfo("[fsm] Finish current goal " + \
+                            str(TASK.goal_location.index(current_goal_set)) + ": " + str(current_goal))
                         current_goal_set = TASK.goal_location[ TASK.goal_location.index(current_goal_set) + 1 ]
                         current_goal = current_goal_set[0]
                         reconfig_rap_setting(current_goal_set[1])
@@ -782,7 +785,6 @@ class Dock_Out(smach.State):
                 rospy.loginfo("[fsm] task done")
                 return 'Single_AMR'
         
-
         twist = Twist()
         KP = 1.0
         #------------  in-place rotation -------------# 
