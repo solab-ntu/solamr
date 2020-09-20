@@ -68,16 +68,13 @@ def check_running():
 def switch_launch(file_path):
     global ROSLAUNCH
     rospy.loginfo("[fsm] Start launch file: " + file_path)
-    if not IS_DUMMY_TEST:
-        if ROSLAUNCH != None:
-            rospy.loginfo("[fsm] Shuting down single_AMR launch file")
-            ROSLAUNCH.shutdown()
-        uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
-        roslaunch.configure_logging(uuid=uuid)
-        ROSLAUNCH = roslaunch.parent.ROSLaunchParent(run_id=uuid, roslaunch_files=((file_path,)))
-        ROSLAUNCH.start()
-    else:
-        pass
+    if ROSLAUNCH != None:
+        rospy.loginfo("[fsm] Shuting down single_AMR launch file")
+        ROSLAUNCH.shutdown()
+    uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
+    roslaunch.configure_logging(uuid=uuid)
+    ROSLAUNCH = roslaunch.parent.ROSLaunchParent(run_id=uuid, roslaunch_files=((file_path,)))
+    ROSLAUNCH.start()
 
 def change_footprint(L_2):
     '''
@@ -471,11 +468,9 @@ class Find_Shelf(smach.State):
         global CUR_STATE
         CUR_STATE = "Find_Shelf"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
-        if IS_DUMMY_TEST:
-            time.sleep(2)
-            return 'done'
         
-        goal = TASK.shelf_location[0]
+        if TASK != None:
+            goal = TASK.shelf_location[0]
         GOAL_MANAGER.is_reached = False
         while IS_RUN and TASK != None:
             # Check goal reached or not
@@ -507,9 +502,6 @@ class Go_Dock_Standby(smach.State):
         global CUR_STATE
         CUR_STATE = "Go_Dock_Standby"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
-        if IS_DUMMY_TEST:
-            time.sleep(2)
-            return 'done'
         
         GOAL_MANAGER.is_reached = False
         choose_point = None
@@ -571,10 +563,6 @@ class Dock_In(smach.State):
         global CUR_STATE, GATE_REPLY
         CUR_STATE = "Dock_In"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
-        if IS_DUMMY_TEST:
-            time.sleep(2)
-            next_state = TASK.task_flow[TASK.task_flow.index('Dock_In')+1]
-            return next_state
 
         # Open gate
         GATE_REPLY = None
@@ -592,6 +580,7 @@ class Dock_In(smach.State):
             # Send goal
             shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
             if shelf_xyt != None:
+                rospy.loginfo("[fsm] Dockin error angle: " + str(atan2(shelf_xyt[1], shelf_xyt[0])))
                 rho = sqrt(shelf_xyt[0]**2 + shelf_xyt[1]**2)
                 twist.linear.x = KP_X*rho
                 # Saturation velocity
@@ -639,10 +628,7 @@ class Go_Way_Point(smach.State):
     def execute(self, userdata):
         global CUR_STATE
         CUR_STATE = "Go_Way_Point"
-        rospy.loginfo('[fsm] Execute ' + CUR_STATE)
-        if IS_DUMMY_TEST:
-            time.sleep(2)
-            return 'done'
+        rospy.loginfo('[fsm] Execute ' + CUR_STATE)'
         
         current_goal = TASK.wait_location[0]
 
@@ -682,9 +668,6 @@ class Go_Goal(smach.State):
         global CUR_STATE
         CUR_STATE = "Go_Goal"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
-        if IS_DUMMY_TEST:
-            time.sleep(2)
-            return 'done'
         
         GOAL_MANAGER.send_goal(TASK.goal_location, ROBOT_NAME + "/map")
         
@@ -775,15 +758,6 @@ class Dock_Out(smach.State):
         
         CUR_STATE = "Dock_Out"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
-        if IS_DUMMY_TEST:
-            time.sleep(2)
-            next_state = TASK.task_flow[TASK.task_flow.index('Dock_Out')+1]
-            if next_state == 'Go_Home':
-                return 'done'
-            elif next_state == 'Single_AMR':
-                TASK = None
-                rospy.loginfo("[fsm] task done")
-                return 'Single_AMR'
         
         twist = Twist()
         KP = 1.0
@@ -905,10 +879,6 @@ class Go_Home(smach.State):
         global TASK, CUR_STATE
         CUR_STATE = "Dock_Out"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
-        if IS_DUMMY_TEST:
-            time.sleep(2)
-            TASK = None
-            return 'done'
 
         GOAL_MANAGER.is_reached = False
         GOAL_MANAGER.send_goal(TASK.home_location, ROBOT_NAME + "/map")
@@ -998,7 +968,7 @@ if __name__ == "__main__":
     INIT_STATE = rospy.get_param(param_name="~init_state")
     TIME_INTERVAL = 1.0/rospy.get_param(param_name="~frequency")
     SEND_GOAL_INTERVAL = 2
-    IS_DUMMY_TEST = rospy.get_param(param_name="~dummy_test")
+    # IS_DUMMY_TEST = rospy.get_param(param_name="~dummy_test")
     # Service
     rospy.Service(name="~task", service_class=StringSrv, handler=task_cb)
     
