@@ -855,9 +855,12 @@ class Dock_Out(smach.State):
                 time.sleep(TIME_INTERVAL)
         rospy.loginfo("[fsm] Finish in-place rotation")
         
-        # Open gate
-        PUB_GATE_CMD.publish(Bool(False))
+        # Wait open gate
         GATE_REPLY = None
+        PUB_GATE_CMD.publish(Bool(False))
+        while GATE_REPLY != False:
+            rospy.loginfo("[fsm] Waiting gate open...")
+            time.sleep(1)
 
         #------------  dock out -------------# 
         t_start = rospy.get_rostime().to_sec()
@@ -974,7 +977,10 @@ class Double_Assembled(smach.State):
                     
                     if TASK.mode == "double_AMR":
                         # Wait for peer robot finish dock_in
-                        if PEER_ROBOT_STATE == "Double_Assembled" or PEER_ROBOT_STATE == "Go_Double_Goal":
+                        if next_state == "Go_Double_Goal":
+                            if PEER_ROBOT_STATE == "Double_Assembled" or PEER_ROBOT_STATE == "Go_Double_Goal":
+                                return next_state
+                        else:
                             return next_state
                     else:
                         return next_state
