@@ -214,7 +214,7 @@ def get_chosest_goal(laser_center,ref_point):
     min_distance = float('inf')
     output_xyt = None
     for i in range(4): # Which direction is best
-        (x_laser, y_laser) = vec_trans_coordinate((1.0, 0), 
+        (x_laser, y_laser) = vec_trans_coordinate((1.2, 0), 
                                         (laser_center[0], 
                                          laser_center[1], 
                                          laser_center[2] + i*pi/2))
@@ -492,6 +492,11 @@ class Find_Shelf(smach.State):
             goal = TASK.shelf_location[0]
         GOAL_MANAGER.is_reached = False
         while IS_RUN and TASK != None:
+            # Get apriltag shelf location
+            shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME, is_warn = False)
+            if shelf_xyt != None:
+                return 'done'
+            
             # Check goal reached or not
             if GOAL_MANAGER.is_reached:
                 try:
@@ -499,15 +504,9 @@ class Find_Shelf(smach.State):
                 except IndexError:
                     goal = TASK.shelf_location[0]
             
-            # Send a serial of goal
+            # Send goal
             GOAL_MANAGER.send_goal(goal, ROBOT_NAME + "/map", tolerance = (0.3, pi/6))
-            
-            # Get apriltag shelf location
-            shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME, is_warn = False)
 
-            if shelf_xyt != None:
-                return 'done'
-            
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
@@ -537,7 +536,9 @@ class Go_Dock_Standby(smach.State):
             
             if shelf_tag_xyt != None and shelf_laser_xyt != None:
                 tag_goal_xy = vec_trans_coordinate((-0.66, 0),
-                                    (shelf_tag_xyt[0], shelf_tag_xyt[1], shelf_tag_xyt[2] + pi/2))
+                                                   (shelf_tag_xyt[0], 
+                                                    shelf_tag_xyt[1], 
+                                                    shelf_tag_xyt[2] + pi/2))
                 # Assign point to choose point
                 choose_point = get_chosest_goal(shelf_laser_xyt, tag_goal_xy)
             elif  shelf_tag_xyt != None and shelf_laser_xyt == None:
