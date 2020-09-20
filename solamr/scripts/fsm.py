@@ -595,10 +595,12 @@ class Dock_In(smach.State):
         XY_TOLERANCE = 0.01 # m
         twist = Twist()
         rho = float('inf')
+        self.last_shelf_xyt = (None, None, None)
         while IS_RUN and TASK != None:
             # Send goal
             shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
-            if shelf_xyt != None:
+            # if shelf_xyt != None:
+            if shelf_xyt != None or shelf_xyt != self.last_shelf_xyt:
                 rospy.loginfo("[fsm] Dockin error angle: " + str(atan2(shelf_xyt[1], shelf_xyt[0])))
                 rho = sqrt(shelf_xyt[0]**2 + shelf_xyt[1]**2)
                 twist.linear.x = KP_X*rho
@@ -611,9 +613,12 @@ class Dock_In(smach.State):
                     twist.angular.z = KP_T*atan2(shelf_xyt[1], shelf_xyt[0])
                 else:
                     twist.angular.z = 0.0
+                self.last_shelf_xyt = shelf_xyt
             else:
-                rospy.logerr("[fsm] Docking fail")
-                return 'abort'
+                rospy.logerr("[fsm] Docking can't find shelf center")
+                twist.linear.x = 0.0
+                twist.linear.z = 0.0 
+                # return 'abort'
             PUB_CMD_VEL.publish(twist)
             
             if GATE_REPLY == True:
