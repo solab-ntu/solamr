@@ -63,21 +63,19 @@ def check_running():
                      + str(MEASURE_PEER_XYT[2])
         PUB_CUR_STATE.publish(send_str)
         time.sleep(1)
+    PUB_CMD_VEL.publish(Twist())
     IS_RUN = False
 
 def switch_launch(file_path):
     global ROSLAUNCH
     rospy.loginfo("[fsm] Start launch file: " + file_path)
-    if not IS_DUMMY_TEST:
-        if ROSLAUNCH != None:
-            rospy.loginfo("[fsm] Shuting down single_AMR launch file")
-            ROSLAUNCH.shutdown()
-        uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
-        roslaunch.configure_logging(uuid=uuid)
-        ROSLAUNCH = roslaunch.parent.ROSLaunchParent(run_id=uuid, roslaunch_files=((file_path,)))
-        ROSLAUNCH.start()
-    else:
-        pass
+    if ROSLAUNCH != None:
+        rospy.loginfo("[fsm] Shuting down single_AMR launch file")
+        ROSLAUNCH.shutdown()
+    uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
+    roslaunch.configure_logging(uuid=uuid)
+    ROSLAUNCH = roslaunch.parent.ROSLaunchParent(run_id=uuid, roslaunch_files=((file_path,)))
+    ROSLAUNCH.start()
 
 def change_footprint(L_2):
     '''
@@ -131,7 +129,7 @@ def transit_mode(from_mode, to_mode):
     '''
     Define what to do, when transiting from one mode to another.
     '''
-    global PEER_BASE_XYT, MEASURE_PEER_XYT
+    global PEER_BASE_XYT, MEASURE_PEER_XYT, IS_STOPPING_ROBOT
     if   from_mode == "Single_AMR" and to_mode == "Single_Assembled":
         change_footprint(0.35)
         # change_footprint(0.45)
@@ -170,6 +168,12 @@ def transit_mode(from_mode, to_mode):
         # Record last localization result of big car
         last_base_leader = None
         last_base_follower = None
+
+        # Create a stopping robot thread
+        IS_STOPPING_ROBOT = True
+        t_stopping_robot = threading.Thread(target=stopping_thread)
+        t_stopping_robot.start()
+
         if ROLE == "leader":
             while last_base_leader == None or last_base_follower == None:
                 last_base_leader   = get_tf(TFBUFFER, "carB/map", "car1/base_link")
@@ -190,7 +194,12 @@ def transit_mode(from_mode, to_mode):
                 rospy.loginfo("[fsm] Waiting for leader sending my localization")
                 time.sleep(1)
             send_initpose(MEASURE_PEER_XYT)
-    
+
+        # join the stopping thread
+        IS_STOPPING_ROBOT = False
+        t_stopping_robot.join()
+        rospy.loginfo("[fsm] Join stopping thread")
+
     elif from_mode == "Double_Assembled" and to_mode == "Single_Assembled":
         switch_launch(ROSLAUNCH_PATH_SINGLE_AMR)
     else:
@@ -205,7 +214,7 @@ def get_chosest_goal(laser_center,ref_point):
     min_distance = float('inf')
     output_xyt = None
     for i in range(4): # Which direction is best
-        (x_laser, y_laser) = vec_trans_coordinate((1.0, 0), 
+        (x_laser, y_laser) = vec_trans_coordinate((1.2, 0), 
                                         (laser_center[0], 
                                          laser_center[1], 
                                          laser_center[2] + i*pi/2))
@@ -225,6 +234,12 @@ def reconfig_rap_setting(setting):
                                  "use_crab": setting[2],
                                  })
     rospy.loginfo("[fsm] reconfig rap planner setting to " + str(setting))
+
+def stopping_thread():
+    while IS_STOPPING_ROBOT:
+        # rospy.loginfo("[fsm] Inside stopping thread")
+        PUB_CMD_VEL.publish(Twist())    
+        time.sleep(0.1)
 
 def rap_planner_homing():
     '''
@@ -345,13 +360,14 @@ class Goal_Manager(object):
         # Check goal latch time
         if time.time() - self.time_last_goal < SEND_GOAL_INTERVAL: # sec
             return
-
+        else:
+            rospy.loginfo("[fsm] Send goal to move_base")
+        
         if  (not ignore_tolerance) and \
             (self.xy_goal_tolerance  != tolerance[0] or\
              self.yaw_goal_tolerance != tolerance[1]):
             # Need to set new tolerance
             try:
-                # TODO 
                 rospy.wait_for_service("/" + ROBOT_NAME + "/move_base/DWAPlannerROS/set_parameters", 5.0)
                 client = dynamic_reconfigure.client.Client("/" + ROBOT_NAME + "/move_base/DWAPlannerROS", timeout=30)
                 # rospy.wait_for_service("/" + ROBOT_NAME + "/move_base/TebLocalPlannerROS/set_parameters", 5.0)
@@ -471,13 +487,16 @@ class Find_Shelf(smach.State):
         global CUR_STATE
         CUR_STATE = "Find_Shelf"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
-        if IS_DUMMY_TEST:
-            time.sleep(2)
-            return 'done'
         
-        goal = TASK.shelf_location[0]
+        if TASK != None:
+            goal = TASK.shelf_location[0]
         GOAL_MANAGER.is_reached = False
         while IS_RUN and TASK != None:
+            # Get apriltag shelf location
+            shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME, is_warn = False)
+            if shelf_xyt != None:
+                return 'done'
+            
             # Check goal reached or not
             if GOAL_MANAGER.is_reached:
                 try:
@@ -485,15 +504,9 @@ class Find_Shelf(smach.State):
                 except IndexError:
                     goal = TASK.shelf_location[0]
             
-            # Send a serial of goal
+            # Send goal
             GOAL_MANAGER.send_goal(goal, ROBOT_NAME + "/map", tolerance = (0.3, pi/6))
-            
-            # Get apriltag shelf location
-            shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME, is_warn = False)
 
-            if shelf_xyt != None:
-                return 'done'
-            
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
@@ -507,9 +520,6 @@ class Go_Dock_Standby(smach.State):
         global CUR_STATE
         CUR_STATE = "Go_Dock_Standby"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
-        if IS_DUMMY_TEST:
-            time.sleep(2)
-            return 'done'
         
         GOAL_MANAGER.is_reached = False
         choose_point = None
@@ -525,14 +535,16 @@ class Go_Dock_Standby(smach.State):
             shelf_laser_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_center")
             
             if shelf_tag_xyt != None and shelf_laser_xyt != None:
-                tag_goal_xy = vec_trans_coordinate((-0.36, 0),
-                                    (shelf_tag_xyt[0], shelf_tag_xyt[1], shelf_tag_xyt[2] + pi/2))
+                tag_goal_xy = vec_trans_coordinate((-0.66, 0),
+                                                   (shelf_tag_xyt[0], 
+                                                    shelf_tag_xyt[1], 
+                                                    shelf_tag_xyt[2] + pi/2))
                 # Assign point to choose point
                 choose_point = get_chosest_goal(shelf_laser_xyt, tag_goal_xy)
             elif  shelf_tag_xyt != None and shelf_laser_xyt == None:
                 # If chose point is not set, we won't consider laser center
                 # Send tag goal, 
-                (x1,y1) = vec_trans_coordinate((-0.36, 0),
+                (x1,y1) = vec_trans_coordinate((-0.66, 0),
                                                 (shelf_tag_xyt[0], 
                                                 shelf_tag_xyt[1], 
                                                 shelf_tag_xyt[2] + pi/2))
@@ -547,7 +559,7 @@ class Go_Dock_Standby(smach.State):
                 GOAL_MANAGER.send_goal(choose_point, ROBOT_NAME + "/map")
 
             # Send search center to shelf detector
-            send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_" + ROBOT_NAME, ROBOT_NAME + "/tag/shelf_center", z_offset=-0.44)
+            send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_" + ROBOT_NAME, ROBOT_NAME + "/tag/shelf_center", z_offset=-0.46)
             laser_shelf_center_xyt = get_tf(TFBUFFER, ROBOT_NAME +"/base_link", ROBOT_NAME +"/shelf_center")
             if laser_shelf_center_xyt != None:
                 # Use laser to publish search center instead of tag
@@ -571,10 +583,6 @@ class Dock_In(smach.State):
         global CUR_STATE, GATE_REPLY
         CUR_STATE = "Dock_In"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
-        if IS_DUMMY_TEST:
-            time.sleep(2)
-            next_state = TASK.task_flow[TASK.task_flow.index('Dock_In')+1]
-            return next_state
 
         # Open gate
         GATE_REPLY = None
@@ -588,10 +596,16 @@ class Dock_In(smach.State):
         XY_TOLERANCE = 0.01 # m
         twist = Twist()
         rho = float('inf')
+        self.last_shelf_xyt = (None, None, None)
         while IS_RUN and TASK != None:
             # Send goal
             shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
-            if shelf_xyt != None:
+            # tag_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
+            # rospy.loginfo("[fsm] shelf : " + str(shelf_xyt) + " != " + str(self.last_shelf_xyt))
+            # can't just equeal 
+            # if shelf_xyt != None:
+            if shelf_xyt != None or shelf_xyt[:2] != self.last_shelf_xyt[:2]:
+                rospy.loginfo("[fsm] Dockin error angle: " + str(atan2(shelf_xyt[1], shelf_xyt[0])))
                 rho = sqrt(shelf_xyt[0]**2 + shelf_xyt[1]**2)
                 twist.linear.x = KP_X*rho
                 # Saturation velocity
@@ -603,9 +617,12 @@ class Dock_In(smach.State):
                     twist.angular.z = KP_T*atan2(shelf_xyt[1], shelf_xyt[0])
                 else:
                     twist.angular.z = 0.0
+                self.last_shelf_xyt = shelf_xyt
             else:
-                rospy.logerr("[fsm] Docking fail")
-                return 'abort'
+                rospy.logerr("[fsm] Docking can't find shelf center")
+                twist.linear.x = 0.0
+                twist.linear.z = 0.0 
+                # return 'abort'
             PUB_CMD_VEL.publish(twist)
             
             if GATE_REPLY == True:
@@ -640,9 +657,6 @@ class Go_Way_Point(smach.State):
         global CUR_STATE
         CUR_STATE = "Go_Way_Point"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
-        if IS_DUMMY_TEST:
-            time.sleep(2)
-            return 'done'
         
         current_goal = TASK.wait_location[0]
 
@@ -682,9 +696,6 @@ class Go_Goal(smach.State):
         global CUR_STATE
         CUR_STATE = "Go_Goal"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
-        if IS_DUMMY_TEST:
-            time.sleep(2)
-            return 'done'
         
         GOAL_MANAGER.send_goal(TASK.goal_location, ROBOT_NAME + "/map")
         
@@ -715,13 +726,15 @@ class Go_Double_Goal(smach.State):
         global CUR_STATE, TASK
         CUR_STATE = "Go_Double_Goal"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
+        if ROLE == "leader":
+            # rap_planner_homing() # TODO is this must to have?
+            # Change goal tolerance
+            current_goal_set = TASK.goal_location[0]
+            current_goal = current_goal_set[0]
+            reconfig_rap_setting(current_goal_set[1])
+            GOAL_MANAGER.is_reached = False
+            seen_tag = False
         
-        rap_planner_homing() # TODO is this must to have?
-        # Change goal tolerance
-        current_goal_set = TASK.goal_location[0]
-        current_goal = current_goal_set[0]
-        reconfig_rap_setting(current_goal_set[1])
-        seen_tag = False
         while IS_RUN and TASK != None:
             if ROLE == "leader":
                 # Tag navigation
@@ -736,7 +749,8 @@ class Go_Double_Goal(smach.State):
                 if GOAL_MANAGER.is_reached:
                     GOAL_MANAGER.is_reached = False
                     try:
-                        rospy.loginfo("[fsm] Finish current goal : " + str(current_goal))
+                        rospy.loginfo("[fsm] Finish current goal " + \
+                            str(TASK.goal_location.index(current_goal_set)) + ": " + str(current_goal))
                         current_goal_set = TASK.goal_location[ TASK.goal_location.index(current_goal_set) + 1 ]
                         current_goal = current_goal_set[0]
                         reconfig_rap_setting(current_goal_set[1])
@@ -772,17 +786,7 @@ class Dock_Out(smach.State):
         
         CUR_STATE = "Dock_Out"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
-        if IS_DUMMY_TEST:
-            time.sleep(2)
-            next_state = TASK.task_flow[TASK.task_flow.index('Dock_Out')+1]
-            if next_state == 'Go_Home':
-                return 'done'
-            elif next_state == 'Single_AMR':
-                TASK = None
-                rospy.loginfo("[fsm] task done")
-                return 'Single_AMR'
         
-
         twist = Twist()
         KP = 1.0
         #------------  in-place rotation -------------# 
@@ -827,8 +831,8 @@ class Dock_Out(smach.State):
                         PUB_CMD_VEL_PEER.publish(twist_2)
             '''
         elif TASK.mode == "double_AMR":
-            time.sleep(2) # Wait rap_controller return to origin orientation
-            PUB_CMD_VEL.publish(Twist()) # Stop AMR
+            PUB_RAP_HOMING.publish("homing")
+            time.sleep(3) # Wait rap_controller homing
         # Switch launch file
         if TASK.mode == "single_AMR":
             transit_mode("Single_Assembled", "Single_AMR")
@@ -837,6 +841,7 @@ class Dock_Out(smach.State):
             transit_mode("Double_Assembled", "Single_AMR")
 
         # Double AMR in-place rotation 
+        rospy.loginfo("[fsm] Start in-place rotation")
         if TASK.mode == "double_AMR":
             twist.linear.x = 0.0
             if ROLE == "leader":
@@ -845,14 +850,22 @@ class Dock_Out(smach.State):
                 twist.angular.z = -0.6
             t_start = rospy.get_rostime().to_sec()
             while IS_RUN and TASK != None and\
-                rospy.get_rostime().to_sec() - t_start < (pi/2)/abs(twist.angular.z): # sec
+                rospy.get_rostime().to_sec() - t_start < (2*pi/3.0)/abs(twist.angular.z): # sec
+                rospy.loginfo("[fsm] Dockout, inplace rotation: (" +\
+                                str(rospy.get_rostime().to_sec() - t_start) + "/" +\
+                                str((2*pi/3.0)/abs(twist.angular.z)) + ")")
                 PUB_CMD_VEL.publish(twist)
                 PUB_SEARCH_CENTER.publish(Point(0, 0, 0))
                 time.sleep(TIME_INTERVAL)
+        rospy.loginfo("[fsm] Finish in-place rotation")
         
-        # Open gate
-        PUB_GATE_CMD.publish(Bool(False))
+        # Wait open gate
         GATE_REPLY = None
+        PUB_GATE_CMD.publish(Bool(False))
+        while GATE_REPLY != False:
+            rospy.loginfo("[fsm] Waiting gate open...")
+            PUB_SEARCH_CENTER.publish(Point(0, 0, 0))
+            time.sleep(TIME_INTERVAL)
 
         #------------  dock out -------------# 
         t_start = rospy.get_rostime().to_sec()
@@ -897,10 +910,6 @@ class Go_Home(smach.State):
         global TASK, CUR_STATE
         CUR_STATE = "Dock_Out"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
-        if IS_DUMMY_TEST:
-            time.sleep(2)
-            TASK = None
-            return 'done'
 
         GOAL_MANAGER.is_reached = False
         GOAL_MANAGER.send_goal(TASK.home_location, ROBOT_NAME + "/map")
@@ -969,7 +978,10 @@ class Double_Assembled(smach.State):
                     
                     if TASK.mode == "double_AMR":
                         # Wait for peer robot finish dock_in
-                        if PEER_ROBOT_STATE == "Double_Assembled" or PEER_ROBOT_STATE == "Go_Double_Goal":
+                        if next_state == "Go_Double_Goal":
+                            if PEER_ROBOT_STATE == "Double_Assembled" or PEER_ROBOT_STATE == "Go_Double_Goal":
+                                return next_state
+                        else:
                             return next_state
                     else:
                         return next_state
@@ -987,7 +999,7 @@ if __name__ == "__main__":
     INIT_STATE = rospy.get_param(param_name="~init_state")
     TIME_INTERVAL = 1.0/rospy.get_param(param_name="~frequency")
     SEND_GOAL_INTERVAL = 2
-    IS_DUMMY_TEST = rospy.get_param(param_name="~dummy_test")
+    # IS_DUMMY_TEST = rospy.get_param(param_name="~dummy_test")
     # Service
     rospy.Service(name="~task", service_class=StringSrv, handler=task_cb)
     
@@ -1017,6 +1029,8 @@ if __name__ == "__main__":
     BASE_XYT = None
     PEER_BASE_XYT = None 
     MEASURE_PEER_XYT = None
+    # Flag
+    IS_STOPPING_ROBOT = None
     # Goal manager
     GOAL_MANAGER = Goal_Manager()
     
