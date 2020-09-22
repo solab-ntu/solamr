@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:macro name="car" params="name yaw_offset">
+
+        <!-- # include -->
+        <xacro:include filename="$(find solamr_sim)/urdf/inertia.xacro" />
+        <xacro:include filename="$(find solamr_sim)/urdf/property.xacro" />
+        <xacro:include filename="$(find solamr_sim)/urdf/wheel.xacro" />
+        <xacro:include filename="$(find solamr_sim)/urdf/ball.xacro" />
+        <xacro:include filename="$(find solamr_sim)/urdf/lidar.xacro" />
+        <xacro:include filename="$(find solamr_sim)/urdf/imu.xacro" />
+
+        <!-- # base_link -->
+        <link name="${name}">
+            <visual>
+                <origin xyz="0 0 0" rpy="0 0 0" />
+                <geometry>
+                    <box size="0.45 0.45 0.20" />
+                </geometry>
+            </visual>
+            <collision>
+                <origin xyz="0 0 0" rpy="0 0 0" />
+                <geometry>
+                    <box size="0.01 0.01 0.01" />
+                </geometry>
+            </collision>
+            <xacro:box_inertial_matrix m="10.0" w="0.45" h="0.45" d="0.20" />
+        </link>
+
+        <gazebo reference="${name}">
+            <material>Gazebo/Black</material>
+        </gazebo>
+
+        <!-- # Wheel Definitions -->
+        <xacro:wheel lr="right" transY="0.185" parent="${name}" />
+        <xacro:wheel lr="left" transY="-0.185" parent="${name}" />
+
+        <!-- # Ball Definitions -->
+        <xacro:ball fb="front" transX="0.185" parent="${name}" />
+        <xacro:ball fb="back" transX="-0.185" parent="${name}" />
+
+        <!-- Lidar -->
+        <xacro:lidar parent="${name}" />
+
+        <!-- IMU -->
+        <xacro:imu parent="${name}" yaw_offset="${yaw_offset}"/>
+
+    </xacro:macro>
+
+</robot>

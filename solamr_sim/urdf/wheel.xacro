@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <!-- Macro for wheel joint -->
+    <xacro:macro name="wheel" params="lr transY parent">
+        <!-- lr: left, right -->
+        <gazebo reference="wheel_${parent}_${lr}_link">
+            <material>Gazebo/Black</material>
+        </gazebo>
+
+        <gazebo reference="wheel_${parent}_${lr}_link">
+            <mu1>10.0</mu1>
+            <mu2>1.0</mu2>
+            <kp>10000.0</kp>
+            <kd>1.0</kd>
+            <minDepth>0.0</minDepth>
+            <maxVel>100</maxVel>
+            <fdir1>1 0 0</fdir1>
+        </gazebo>
+
+        <joint name="wheel_${parent}_${lr}_joint" type="continuous">
+            <parent link="${parent}"/>
+            <child link="wheel_${parent}_${lr}_link"/>
+            <origin xyz="0 ${transY} -0.135" rpy="0 0 0" />
+            <axis xyz="0 1 0" rpy="0 0 0" />
+        </joint>
+
+        <link name="wheel_${parent}_${lr}_link">
+            <visual>
+                <origin xyz="0 0 0" rpy="0 0 0"/>
+                <geometry>
+                    <mesh filename="package://solamr_sim/mesh/right_tire.stl" scale="0.0015 0.0015 0.0015"/>
+                </geometry>
+            </visual>
+            <collision>
+                <origin xyz="0 0 0" rpy="0 0 0"/>
+                <geometry>
+                    <mesh filename="package://solamr_sim/mesh/right_tire.stl" scale="0.0015 0.0015 0.0015"/>
+                </geometry>
+            </collision>
+            <xacro:cylinder_inertial_matrix m="1.0" r="0.08" h="0.04" />
+        </link>
+
+    </xacro:macro>
+</robot>
