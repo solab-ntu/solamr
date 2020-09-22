@@ -1,15 +1,19 @@
 #!/usr/bin/env python
+# Python 
 import rospy
 import sys
+from math import atan2,acos,sqrt,pi,sin,cos,tan
+import time # for sleep()
+# ROS
 import tf2_ros
 import tf # conversion euler
-from math import atan2,acos,sqrt,pi,sin,cos,tan
+# Ros msg
 from std_msgs.msg import Float64
-from geometry_msgs.msg import Point, Twist# topic /cmd_vel
+from geometry_msgs.msg import Point, Twist
+# Custom import
 from lucky_utility.ros.rospy_utility import get_tf,normalize_angle,\
                                             sign,is_same_sign, Marker_Manager, send_tf
-from visualization_msgs.msg import MarkerArray
-import time # for testing
+
 #########################
 ### Global parameters ###
 #########################
@@ -172,11 +176,26 @@ class Rap_controller():
         '''
         Return leader crab controller result
         '''
-        # v_con = sign(vx) * sqrt(vx**2 + vy**2) * abs(cos(error))
+        # Anti-slip controller
+        ERROR_LIMIT = pi/18.0
+        percentage = abs(error) / ERROR_LIMIT
+        if percentage >= 1.0:
+            v_con = 0
+            w_con = self.pi_controller(KP_crab, KI, error) * percentage
+            # print (str(percentage))
+        else:
+            v_con = sqrt(vx**2 + vy**2) * abs(cos(error)) * (1-percentage)
+            if not is_forward:
+                v_con *= -1.0
+            w_con = self.pi_controller(KP_crab, KI, error)
+
+
+        ''' Original controller
         v_con = sqrt(vx**2 + vy**2) * abs(cos(error))
         if not is_forward:
             v_con *= -1.0
         w_con = self.pi_controller(KP_crab, KI, error)
+        '''
         return (v_con, w_con)
     
     def diff_controller(self,vx,wz,error,ref_ang):
@@ -201,31 +220,7 @@ class Rap_controller():
         '''
         Inplace rotation controller
         '''
-
-        ''' stupid 
-        if abs(error) > ROTA_ABS_TOLERANCE/2:
-            # ABS
-            v_con = 0.0 #  (TOW_CAR_LENGTH/2.0)*wz*abs(cos(error))
-            w_con = self.pi_controller(KP_rota_abs, KI, error)
-        else:
-        '''
-        #v_con = (TOW_CAR_LENGTH/2.0)*wz*abs(cos(error))
-        #w_con = wz*abs(cos(error)) + self.pi_controller(KP_diff, KI, error)
-        '''
-        WHEEL_RADIUS =  0.075
-        WHEEL_SEPERATE_L = 0.33
-        VEL_TOLERANCE = 0.3        
-        v_left  = (v_con - w_con * WHEEL_SEPERATE_L / 2.0) / WHEEL_RADIUS
-        v_right = (v_con + w_con * WHEEL_SEPERATE_L / 2.0) / WHEEL_RADIUS
-        if (abs(v_left) < VEL_TOLERANCE or abs(v_right) < VEL_TOLERANCE ) and wz != 0:
-            print ("BOOST!!!")
-            rospy.loginfo("v_left = " + str(v_left) + ", v_right = " + str(v_right))
-            v_con = 0
-            w_con = self.pi_controller(5, KI, error)
-
-        # rospy.loginfo("v_left = " + str(v_left) + ", v_right = " + str(v_right))
-        '''
-        # Better than original 
+        # Anti-slip controller, better than original 
         ERROR_LIMIT = pi/18.0
         percentage = abs(error) / ERROR_LIMIT
         if percentage >= 1.0:
@@ -235,41 +230,16 @@ class Rap_controller():
         else:
             v_con = (TOW_CAR_LENGTH/2.0)*wz*abs(cos(error)) * (1-percentage)
             w_con = wz*abs(cos(error)) * (1-percentage) + self.pi_controller(KP_diff, KI, error)
-        
 
-        ''' Original 
+        ''' Original controller
         v_con = (TOW_CAR_LENGTH/2.0)*wz*abs(cos(error))
         w_con = wz*abs(cos(error)) + self.pi_controller(KP_diff, KI, error)
         '''
+
         if ref_ang < 0: # ref_ang == -pi/2
             v_con = -v_con
         return (v_con, w_con)
 
-    '''
-    def rota_controller_test(self,wz,error,ref_ang, inner_side):
-        WHEEL_RADIUS =  0.075  
-        WHEEL_SEPERATE_L = 0.33
-        if inner_side == "left":
-            v_left  = -self.pi_controller(10, KI, error)
-            v_right = (TOW_CAR_LENGTH/2.0 + WHEEL_SEPERATE_L/2.0)*wz*10 # *abs(cos(error))
-            
-        elif inner_side == "right":
-            v_left  = -(TOW_CAR_LENGTH/2.0 + WHEEL_SEPERATE_L/2.0)*wz*10 # *abs(cos(error))
-            v_right =  self.pi_controller(10, KI, error)
-            rospy.loginfo("error = " + str(error))
-            rospy.loginfo("v_left = " + str(v_left) + ", v_right = " + str(v_right))
-        
-        #if ref_ang < 0: # ref_ang == -pi/2
-        #    v_left = -v_left
-        
-        v_con = WHEEL_RADIUS*(v_left + v_right)/2.0
-        w_con = WHEEL_RADIUS*(v_right - v_left)/WHEEL_SEPERATE_L
-
-        if inner_side == "right":
-            v_con = -v_con
-
-        return (v_con, w_con)
-    '''
     def get_radius_of_rotation(self,v,w):
         try:
             radius = v / w
@@ -393,6 +363,7 @@ class Rap_controller():
         ####################
         if self.mode == "crab":
             # Get v_out, w_out
+            '''
             if self.crab_fail_safe: # Don't move , adjust angle only
                 (self.v_out_L, self.w_out_L) = (0, self.pi_controller(KP_crab, KI, error_theta_L))
                 (self.v_out_F, self.w_out_F) = (0, self.pi_controller(KP_crab, KI, error_theta_F))
@@ -401,15 +372,17 @@ class Rap_controller():
                                                 self.Vx, self.Vy, error_theta_L, is_forward)
                 (self.v_out_F, self.w_out_F) =  self.crab_controller(
                                                 self.Vx, self.Vy, error_theta_F, is_forward)
+            '''
+            # TODO test anti-slip
+            (self.v_out_L, self.w_out_L) =  self.crab_controller(
+                                            self.Vx, self.Vy, error_theta_L, is_forward)
+            (self.v_out_F, self.w_out_F) =  self.crab_controller(
+                                            self.Vx, self.Vy, error_theta_F, is_forward)
         elif self.mode == "rota":
             (self.v_out_L, self.w_out_L) =  self.rota_controller(
                                             self.Wz,error_theta_L, ref_ang_L)
             (self.v_out_F, self.w_out_F) =  self.rota_controller(
                                             self.Wz,error_theta_F, ref_ang_F)
-            # (self.v_out_L, self.w_out_L) =  self.rota_controller_test(
-            #                                 self.Wz,error_theta_L, ref_ang_L, "left")
-            # (self.v_out_F, self.w_out_F) =  self.rota_controller_test(
-            #                                 self.Wz,error_theta_F, ref_ang_F, "right")
         elif self.mode == "tran":
             if abs(error_theta_L) > (TRANSITION_ANG_TOLERANCE/2.0) or\
                abs(error_theta_F) > (TRANSITION_ANG_TOLERANCE/2.0):
@@ -417,7 +390,6 @@ class Rap_controller():
                 (self.v_out_F, self.w_out_F) = self.head_controller(error_theta_F)
             else:
                 self.is_transit = False # heading adjust completed
-            
         elif self.mode == "diff":
             (self.v_out_L, self.w_out_L) =  self.diff_controller(
                                             self.Vx, self.Wz, error_theta_L, ref_ang_L)

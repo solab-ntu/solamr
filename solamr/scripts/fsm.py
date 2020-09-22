@@ -23,18 +23,19 @@ from geometry_msgs.msg import Twist, Point, PoseStamped, Polygon, Point32, PoseW
 from std_msgs.msg import String, Bool
 # ROS service 
 from solamr.srv import StringSrv
-# from std_srvs.srv import Empty, EmptyResponse
 # Move Base
 from move_base_msgs.msg import MoveBaseActionResult
 from actionlib_msgs.msg import GoalID
 import dynamic_reconfigure.client
-
-# Custom
+# Custom import 
 from lucky_utility.ros.rospy_utility import get_tf, vec_trans_coordinate, send_tf, normalize_angle, sign
 
 class Task(object):
+    '''
+    Record the task information
+    '''
     def __init__(self):
-        self.mode = None
+        self.mode = None # 'single_AMR' or 'double_AMR'
         self.shelf_location = None
         self.wait_location = None
         self.goal_location = None
@@ -43,19 +44,24 @@ class Task(object):
 
 def check_running():
     '''
-    This threading run at background, checking node shutdown and passing msg to peer 
+    This thread run at background, checking node shutdown and passing msg to peer robot.
     '''
     global IS_RUN, BASE_XYT
     while not rospy.is_shutdown():
         # Package formet string = "<CUR_STATE>|<x,y,t>"
+        # Send current state
         send_str = str(CUR_STATE)
-        base_xyt_tmp = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
-        if base_xyt_tmp != None:
-            BASE_XYT = base_xyt_tmp
+        
+        # Send map->base_link to peer robot.
+        base_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/base_link")
+        if base_xyt != None:
+            BASE_XYT = base_xyt
             send_str += "|"\
                      + str(BASE_XYT[0]) + ","\
                      + str(BASE_XYT[1]) + ","\
                      + str(BASE_XYT[2])
+        # Send peer robot's map->base_link. This will be only use at 'double_AMR' DockOut.
+        # Leader needs to inform where follower be after docking out.
         if MEASURE_PEER_XYT != None:
             send_str += "|"\
                      + str(MEASURE_PEER_XYT[0]) + ","\
@@ -63,23 +69,28 @@ def check_running():
                      + str(MEASURE_PEER_XYT[2])
         PUB_CUR_STATE.publish(send_str)
         time.sleep(1)
-    PUB_CMD_VEL.publish(Twist())
     IS_RUN = False
 
 def switch_launch(file_path):
+    '''
+    shutdown ROSLAUNCH if it's already  
+    '''
     global ROSLAUNCH
-    rospy.loginfo("[fsm] Start launch file: " + file_path)
     if ROSLAUNCH != None:
-        rospy.loginfo("[fsm] Shuting down single_AMR launch file")
+        rospy.loginfo("[fsm] Shuting down roslaunch file")
         ROSLAUNCH.shutdown()
     uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
     roslaunch.configure_logging(uuid=uuid)
     ROSLAUNCH = roslaunch.parent.ROSLaunchParent(run_id=uuid, roslaunch_files=((file_path,)))
+    rospy.loginfo("[fsm] Start launch file: " + file_path)
     ROSLAUNCH.start()
 
 def change_footprint(L_2):
     '''
-    L_2: half the footprint 
+    Change move_base footprint size to L_2
+    Argument:
+        L_2: half of the robot perimeter length
+
     std_msgs/Header header
         uint32 seq
         time stamp
@@ -99,7 +110,9 @@ def change_footprint(L_2):
 
 def change_smart_layer_base_radius(r):
     '''
-    r = base_raduis
+    Every laser point inside radius r will be ignore by smart_obstacle_layer
+    Argument:
+        r - float: base_raduis
     '''
     rospy.wait_for_service("/" + ROBOT_NAME + "/move_base/global_costmap/smartobstacle_layer/set_parameters", 30.0)
     rospy.wait_for_service("/" + ROBOT_NAME + "/move_base/local_costmap/smartobstacle_layer/set_parameters", 30.0)
@@ -111,8 +124,10 @@ def change_smart_layer_base_radius(r):
 
 def send_initpose(xyt):
     '''
+    Send initial pose to localize robot
+    Argument:
+        xyt - (float, float, float)
     '''
-    # big_car_init_xyt
     initpose = PoseWithCovarianceStamped()
     initpose.header.stamp = rospy.Time.now()
     initpose.header.frame_id = ROBOT_NAME + "/map"
@@ -236,29 +251,28 @@ def reconfig_rap_setting(setting):
     rospy.loginfo("[fsm] reconfig rap planner setting to " + str(setting))
 
 def stopping_thread():
+    '''
+    During roslaunch switch, we must asure robot stay still
+    This thread will be awake when robot is switching roslaunch.
+    '''
     while IS_STOPPING_ROBOT:
-        # rospy.loginfo("[fsm] Inside stopping thread")
         PUB_CMD_VEL.publish(Twist())    
-        time.sleep(0.1)
+        time.sleep(TIME_INTERVAL)
 
 def rap_planner_homing():
     '''
+    Send homing command to rap_planner 
     '''
     rospy.loginfo("[fsm] Calling rap planner homing")
     PUB_RAP_HOMING.publish("homing")
-    # rospy.wait_for_service("/" + ROBOT_NAME + "/rap_planner/homing")
-    # rospy.loginfo("[fsm] service DO EXIST!")
-    # try:
-    #     rospy.ServiceProxy("/" + ROBOT_NAME + "/rap_planner/homing", Empty)
-    # except rospy.ServiceException as e:
-    #     rospy.logerr("Service call failed: " + str(e))
 
 def task_cb(req):
     '''
-    Load yaml file and change parameter by req.data file path
+    Callback function for rosservice, user may assign task to execute.
+    Argument:
+        req.data - string
     '''
     global TASK
-
     if req.data == "abort":
         TASK = None
         # Cacelled all goal
@@ -308,10 +322,18 @@ def task_cb(req):
         return "Yaml file not found"
 
 def gate_reply_cb(data):
+    '''
+    Callback function for /gate_replay, indicate gate state
+    '''
     global GATE_REPLY
     GATE_REPLY = data.data
 
 def peer_robot_state_cb(data):
+    '''
+    Callback function for /peer_robot_state, get peer_robot_state, peer_robot_localization .etc.
+    Argument:
+        data.data - string
+    '''
     global PEER_ROBOT_STATE, PEER_BASE_XYT, MEASURE_PEER_XYT
     data_list = data.data.split('|')
     PEER_ROBOT_STATE = data_list[0]
@@ -328,15 +350,18 @@ def peer_robot_state_cb(data):
         pass
 
 class Goal_Manager(object):
+    '''
+    Send goal, Receive result, Cancel goal to move_base
+    '''
     def __init__(self):
         self.pub_simple_goal = rospy.Publisher("/" + ROBOT_NAME + "/move_base_simple/goal", PoseStamped, queue_size = 1)
         self.pub_goal_cancel = rospy.Publisher("/" + ROBOT_NAME + "/move_base/cancel", GoalID, queue_size = 1)
         rospy.Subscriber("/" + ROBOT_NAME + "/move_base/result", MoveBaseActionResult, self.simple_goal_cb)
-        self.is_reached = False
+        self.is_reached = False # goal reach flag
         self.time_last_reached = time.time()
         self.goal = None
-        self.xy_goal_tolerance = None
-        self.yaw_goal_tolerance = None
+        self.xy_goal_tolerance = None # float
+        self.yaw_goal_tolerance = None # float
         self.time_last_goal = time.time()
 
     def send_goal(self, xyt, frame_id, tolerance=(0.12,0.06), z_offset = 0.1, ignore_tolerance = False):
@@ -789,7 +814,7 @@ class Dock_Out(smach.State):
         
         twist = Twist()
         KP = 1.0
-        #------------  in-place rotation -------------# 
+        #------------ single_AMR in-place rotation -------------# 
         if TASK.mode == "single_AMR":
             error_theta = float('inf')
             while IS_RUN and TASK != None and abs(error_theta) > 0.01:
@@ -807,40 +832,26 @@ class Dock_Out(smach.State):
                     PUB_SEARCH_CENTER.publish(Point(0, 0, 0))
                 PUB_CMD_VEL.publish(twist)
                 time.sleep(TIME_INTERVAL)
-            '''
-            elif TASK.mode == "double_AMR" and ROLE == "leader":
-                # NEED TODO test, give up this one, because rap planner will also publish cmd_vel 
-                # at thsi point, tow cmd will collide
-                
-                twist_1 = Twist()
-                twist_2 = Twist()
-                error_1 = float('inf')
-                error_2 = float('inf')
-                while (abs(error_1) > 0.01 and abs(error_2) > 0.01):
-                    carB_xyt = get_tf(TFBUFFER, "carB/map", "carB/base_link")
-                    theta_1 = get_tf(TFBUFFER, "carB/map", "car1/base_link")
-                    theta_2 = get_tf(TFBUFFER, "carB/map", "car2/base_link")
-                    if theta_1 != None and theta_2 != None and carB_xyt != None:
-                        error_1 = normalize_angle(carB_xyt[2] + pi/2) - theta_1[2]
-                        error_2 = normalize_angle(carB_xyt[2] + pi/2) - theta_2[2]
-                        rospy.loginfo("ERROR error_1: " + str(error_1))
-                        rospy.loginfo("ERROR error_2: " + str(error_2))
-                        twist_1.angular.z = KP*error_1
-                        twist_2.angular.z = KP*error_2
-                        PUB_CMD_VEL.publish(twist_1)
-                        PUB_CMD_VEL_PEER.publish(twist_2)
-            '''
         elif TASK.mode == "double_AMR":
             PUB_RAP_HOMING.publish("homing")
-            time.sleep(3) # Wait rap_controller homing
-        # Switch launch file
+            time.sleep(3) # Wait rap_controller homin
+        
+        # --------- Switch launch file ------------- #
         if TASK.mode == "single_AMR":
             transit_mode("Single_Assembled", "Single_AMR")
             time.sleep(2) # wait shelf become static
         elif TASK.mode == "double_AMR":
             transit_mode("Double_Assembled", "Single_AMR")
 
-        # Double AMR in-place rotation 
+        # ------- Wait open gate --------- #
+        GATE_REPLY = None
+        PUB_GATE_CMD.publish(Bool(False))
+        while GATE_REPLY != False:
+            rospy.loginfo("[fsm] Waiting gate open...")
+            PUB_SEARCH_CENTER.publish(Point(0, 0, 0))
+            time.sleep(TIME_INTERVAL)
+        
+        # ------- Double AMR in-place rotation --------- #
         rospy.loginfo("[fsm] Start in-place rotation")
         if TASK.mode == "double_AMR":
             twist.linear.x = 0.0
@@ -858,14 +869,6 @@ class Dock_Out(smach.State):
                 PUB_SEARCH_CENTER.publish(Point(0, 0, 0))
                 time.sleep(TIME_INTERVAL)
         rospy.loginfo("[fsm] Finish in-place rotation")
-        
-        # Wait open gate
-        GATE_REPLY = None
-        PUB_GATE_CMD.publish(Bool(False))
-        while GATE_REPLY != False:
-            rospy.loginfo("[fsm] Waiting gate open...")
-            PUB_SEARCH_CENTER.publish(Point(0, 0, 0))
-            time.sleep(TIME_INTERVAL)
 
         #------------  dock out -------------# 
         t_start = rospy.get_rostime().to_sec()
@@ -998,7 +1001,7 @@ if __name__ == "__main__":
     ROLE = rospy.get_param(param_name="~role")
     INIT_STATE = rospy.get_param(param_name="~init_state")
     TIME_INTERVAL = 1.0/rospy.get_param(param_name="~frequency")
-    SEND_GOAL_INTERVAL = 2
+    SEND_GOAL_INTERVAL = 2.0 # sec
     # IS_DUMMY_TEST = rospy.get_param(param_name="~dummy_test")
     # Service
     rospy.Service(name="~task", service_class=StringSrv, handler=task_cb)
@@ -1023,14 +1026,14 @@ if __name__ == "__main__":
     
     # Global variable 
     TASK = None # store task information
-    ROSLAUNCH = None
-    IS_RUN = True
-    CUR_STATE = None
-    BASE_XYT = None
-    PEER_BASE_XYT = None 
+    ROSLAUNCH = None # roslaunch switch
+    IS_RUN = True # check if ROS is still running
+    CUR_STATE = None # current robot state
+    BASE_XYT = None # localization 
+    PEER_BASE_XYT = None # peer robot localization
     MEASURE_PEER_XYT = None
-    # Flag
     IS_STOPPING_ROBOT = None
+    
     # Goal manager
     GOAL_MANAGER = Goal_Manager()
     
@@ -1074,7 +1077,7 @@ if __name__ == "__main__":
             state=Dock_In(),
             transitions={'abort': 'Find_Shelf', # For abort
                          'Single_Assembled': 'Single_Assembled', # Dock succeeed, single assembled 
-                         'Double_Assembled': 'Double_Assembled', }) # # Dock succeeed, double assembled 
+                         'Double_Assembled': 'Double_Assembled', }) # Dock succeeed, double assembled 
 
         smach.StateMachine.add(
             label='Dock_Out',

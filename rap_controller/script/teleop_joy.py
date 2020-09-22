@@ -46,7 +46,10 @@ def cb_joy(data):
         global VY_LAST
         global WZ_LAST
         twist = Twist()
-        vx = data.axes[VX_AXE] * VX_MAX
+        if abs(data.axes[VX_AXE] * VX_MAX)> 0.1:
+            vx = (data.axes[VX_AXE]) * VX_MAX
+        else:
+            vx = 0.0
         vy = data.axes[VY_AXE] * VY_MAX
         wz = data.axes[WZ_AXE] * WZ_MAX
         if  vx == 0.0 and wz == 0.0 and vy == 0.0 and\
