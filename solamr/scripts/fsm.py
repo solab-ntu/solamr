@@ -289,7 +289,7 @@ def get_chosest_goal(laser_center,ref_point):
     min_distance = float('inf')
     output_xyt = None
     for i in range(4): # Which direction is best
-        (x_laser, y_laser) = vec_trans_coordinate((1.2, 0), 
+        (x_laser, y_laser) = vec_trans_coordinate((1.0, 0), 
                                         (laser_center[0], 
                                          laser_center[1], 
                                          laser_center[2] + i*pi/2))
@@ -641,7 +641,7 @@ class Go_Dock_Standby(smach.State):
             shelf_laser_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_center")
             
             if shelf_tag_xyt != None and shelf_laser_xyt != None:
-                tag_goal_xy = vec_trans_coordinate((-0.66, 0),
+                tag_goal_xy = vec_trans_coordinate((-0.46, 0),
                                                    (shelf_tag_xyt[0], 
                                                     shelf_tag_xyt[1], 
                                                     shelf_tag_xyt[2] + pi/2))
@@ -650,7 +650,7 @@ class Go_Dock_Standby(smach.State):
             elif  shelf_tag_xyt != None and shelf_laser_xyt == None:
                 # If chose point is not set, we won't consider laser center
                 # Send tag goal, 
-                (x1,y1) = vec_trans_coordinate((-0.66, 0),
+                (x1,y1) = vec_trans_coordinate((-0.46, 0),
                                                 (shelf_tag_xyt[0], 
                                                 shelf_tag_xyt[1], 
                                                 shelf_tag_xyt[2] + pi/2))
@@ -666,16 +666,10 @@ class Go_Dock_Standby(smach.State):
 
             # Send search center to shelf detector
             send_tf((0.0, 0.0, 0.0), ROBOT_NAME + "/shelf_" + ROBOT_NAME, ROBOT_NAME + "/tag/shelf_center", z_offset=-0.46)
-            laser_shelf_center_xyt = get_tf(TFBUFFER, ROBOT_NAME +"/base_link", ROBOT_NAME +"/shelf_center")
-            if laser_shelf_center_xyt != None:
-                # Use laser to publish search center instead of tag
-                PUB_SEARCH_CENTER.publish(Point(laser_shelf_center_xyt[0], laser_shelf_center_xyt[1], 0))
-            else:
-                # if laser is not valid use tag
-                tag_xyt = get_tf(TFBUFFER, ROBOT_NAME +"/base_link", ROBOT_NAME +"/tag/shelf_center")
-                if tag_xyt != None:
-                    PUB_SEARCH_CENTER.publish(Point(tag_xyt[0], tag_xyt[1], 0))
-            
+            # if laser is not valid use tag
+            tag_xyt = get_tf(TFBUFFER, ROBOT_NAME +"/base_link", ROBOT_NAME +"/tag/shelf_center")
+            if tag_xyt != None:
+                PUB_SEARCH_CENTER.publish(Point(tag_xyt[0], tag_xyt[1], 0))
             time.sleep(TIME_INTERVAL)
 
         rospy.logwarn('[fsm] task abort')
@@ -706,11 +700,9 @@ class Dock_In(smach.State):
         while IS_RUN and TASK != None:
             # Send goal
             shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/base_link", ROBOT_NAME + "/shelf_center")
-            # tag_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME)
-            # rospy.loginfo("[fsm] shelf : " + str(shelf_xyt) + " != " + str(self.last_shelf_xyt))
             # can't just equeal 
             # if shelf_xyt != None:
-            if shelf_xyt != None or shelf_xyt[:2] != self.last_shelf_xyt[:2]:
+            if shelf_xyt != None:
                 rospy.loginfo("[fsm] Dockin error angle: " + str(atan2(shelf_xyt[1], shelf_xyt[0])))
                 rho = sqrt(shelf_xyt[0]**2 + shelf_xyt[1]**2)
                 twist.linear.x = KP_X*rho
@@ -727,7 +719,7 @@ class Dock_In(smach.State):
             else:
                 rospy.logerr("[fsm] Docking can't find shelf center")
                 twist.linear.x = 0.0
-                twist.linear.z = 0.0 
+                twist.linear.z = 0.0
                 # return 'abort'
             PUB_CMD_VEL.publish(twist)
             
@@ -942,7 +934,7 @@ class Dock_Out(smach.State):
                 twist.angular.z = -0.6
             t_start = rospy.get_rostime().to_sec()
             while IS_RUN and TASK != None and\
-                rospy.get_rostime().to_sec() - t_start < (2*pi/3.0)/abs(twist.angular.z): # sec
+                rospy.get_rostime().to_sec() - t_start < (pi/2.0)/abs(twist.angular.z): # sec
                 rospy.loginfo("[fsm] Dockout, inplace rotation: (" +\
                                 str(rospy.get_rostime().to_sec() - t_start) + "/" +\
                                 str((2*pi/3.0)/abs(twist.angular.z)) + ")")
