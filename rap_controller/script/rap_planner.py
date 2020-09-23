@@ -2,7 +2,8 @@
 # Python
 from math import atan2,acos,sqrt,pi,sin,cos,tan
 import sys
-import time # for testing 
+import time # for sleep
+# ROS
 import rospy
 # Message type 
 from std_msgs.msg import Float64, String
@@ -10,7 +11,6 @@ from visualization_msgs.msg import Marker, MarkerArray # Debug drawing
 from geometry_msgs.msg import Point, Twist, PoseStamped
 from nav_msgs.msg import Path, OccupancyGrid
 from move_base_msgs.msg import MoveBaseActionResult # For publish goal result
-# Service
 from std_srvs.srv import Empty, EmptyResponse
 # TF
 import tf2_ros
@@ -22,17 +22,12 @@ from rap_controller.cfg import RapControllerConfig
 from rap_controller_node import Rap_controller
 from lucky_utility.ros.rospy_utility import get_tf, Marker_Manager,normalize_angle,sign
 
-USE_COSTMAP = False # TODO Giving up 
-
 class Rap_planner():
     def __init__(self):
         # Subscriber
         rospy.Subscriber(GLOBAL_PATH_TOPIC, Path, self.path_cb)
         rospy.Subscriber(GOAL_TOPIC, PoseStamped, self.goal_cb)
         rospy.Subscriber("/car1/rap_planner/homing", String, self.homing_cb)
-        if USE_COSTMAP:
-            rospy.Subscriber(COSTMAP_TOPIC,OccupancyGrid ,self.costmap_cb)
-            self.costmap = None
         self.global_path = None #
         self.simple_goal = None #
         # Publisher
@@ -184,39 +179,6 @@ class Rap_planner():
         rospy.loginfo("[rap_planner] dynamic_reconfig_cb, GOAL_TOLERANCE_XY=" + str(GOAL_TOLERANCE_XY) + ", GOAL_TOLERANCE_T=" + str(GOAL_TOLERANCE_T) + ", USE_CRAB=" + str(USE_CRAB))
         return config
 
-    def idx2XY (self, idx):
-        '''
-        transfer map idx into (x,y) coordinate
-        Input : 
-            idx - must be interger , idx must inside map index.
-        Output: 
-            (x,y) - turple 
-        '''
-        width = self.costmap.info.width
-        reso  = self.costmap.info.resolution
-        origin = (self.costmap.info.origin.position.x , self.costmap.info.origin.position.y)
-
-        x = (idx % width) * reso + origin[0] + reso/2 # Center of point 
-        y = math.floor(idx / width) * reso + origin[1] + reso/2 
-        return (round(x,3), round(y,3))
-
-    def XY2idx(self, XY_coor):
-        '''
-        transfer (x,y) coordinate into  map index 
-        Input : 
-            XY_coor : (x,y) - turple 
-        Output: 
-            idx
-        '''
-        width = self.costmap.info.width
-        reso  = self.costmap.info.resolution
-        origin = (self.costmap.info.origin.position.x , self.costmap.info.origin.position.y)
-        # Y 
-        idx =  round((XY_coor[1] - origin[1]) / reso - 0.5) * width
-        # X 
-        idx += round((XY_coor[0] - origin[0]) / reso - 0.5)
-        return int(idx)
-
     def get_local_goal(self):
         '''
         Return (x,y,theta)
@@ -274,23 +236,6 @@ class Rap_planner():
                     break
                 saddle_count += 1
         self.global_path.poses = self.global_path.poses[prune_point:]
-
-
-        # TODO costmap test
-        if USE_COSTMAP:
-            costmap_idx = self.XY2idx((self.big_car_xyt[:2]))
-            value = self.costmap.data[costmap_idx]
-            print (value)
-
-            tmp_id = 100
-            for idx in range(len(self.global_path.poses)):
-                x = self.global_path.poses[idx].pose.position.x
-                y = self.global_path.poses[idx].pose.position.y
-                costmap_idx = self.XY2idx((x,y))
-                value = self.costmap.data[costmap_idx]
-                if value != 0:
-                    set_sphere(self.marker_point, (x, y) , MAP_FRAME, (0,255,255)  , 0.1, tmp_id)
-                    tmp_id += 1
         return True
 
     def publish(self):
@@ -299,11 +244,6 @@ class Rap_planner():
         '''
         # Debug Markers
         self.viz_marker.publish()
-
-        # Dubug msg
-        # self.pub_alpha.publish(self.alpha)
-        # self.pub_beta.publish(self.beta)
-        # self.pub_angle.publish(self.angle)
         
         # Global path
         if self.global_path != None:
@@ -427,10 +367,7 @@ class Rap_planner():
             beta = 0
         
         pursu_angle = alpha + beta*2.0
-        # self.alpha = alpha
-        # self.beta = beta
-        # self.angle = pursu_angle
-
+        
         self.viz_marker.update_marker("local_goal", (x_goal, y_goal) )
         # p = (cos(alpha)*LOOK_AHEAD_DIST, sin(alpha)*LOOK_AHEAD_DIST)
         # self.viz_marker.update_marker("goal_head", ((0,0), p))

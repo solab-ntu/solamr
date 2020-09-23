@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<robot name="car2" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <!-- # include -->
+    <xacro:include filename="$(find solamr_sim)/urdf/inertia.xacro" />
+    <xacro:include filename="$(find solamr_sim)/urdf/property.xacro" />
+    <xacro:include filename="$(find solamr_sim)/urdf/car.xacro" />
+
+    <!-- # car1/base_link -->
+    <link name="car2/base_link">
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <box size="0.01 0.01 0.01" />
+            </geometry>
+        </visual>
+        <xacro:box_inertial_matrix m="1e-5" w="0.01" h="0.01" d="0.01" />
+    </link>
+
+    <gazebo reference="car2/base_link">
+        <material>Gazebo/Blue</material>
+    </gazebo>
+
+    <!-- # car 1 -->
+    <xacro:car name="car2" yaw_offset="0" />
+
+    <joint name="car2_joint" type="fixed">
+        <parent link="car2/base_link" />
+        <child link="car2" />
+        <origin xyz="0.0 0 0" rpy="0 0 0" />
+    </joint>
+
+    <gazebo>
+        <plugin name="car2_control" filename="libgazebo_ros_diff_drive.so">
+
+            <commandTopic>cmd_vel_car2</commandTopic>
+            <odometryTopic>car2/odom</odometryTopic>
+            <odometryFrame>car2/odom</odometryFrame>
+            <robotBaseFrame>car2/base_link</robotBaseFrame>
+            <publishWheelTF>false</publishWheelTF>
+            <publishWheelJointState>true</publishWheelJointState>
+            <legacyMode>true</legacyMode>
+
+            <wheelSeparation>0.37</wheelSeparation>
+            <wheelDiameter>0.16</wheelDiameter>
+            <wheelAcceleration>1.8</wheelAcceleration>
+            <wheelTorque>100</wheelTorque>
+            <updateRate>30.0</updateRate>
+
+            <leftJoint>wheel_car2_left_joint</leftJoint>
+            <rightJoint>wheel_car2_right_joint</rightJoint>
+
+            <publishTf>true</publishTf>
+
+            <rosDebugLevel>na</rosDebugLevel>
+            <publishOdomTF>true</publishOdomTF>
+
+        </plugin>
+    </gazebo>
+
+</robot>

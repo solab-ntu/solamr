@@ -18,34 +18,38 @@ if __name__ == '__main__':
                        (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/shelf_car2"),
                        (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/home"),
                        (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/A_site"),
-                       (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/B_site"),
-                       (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/marker1"),
-                       (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/marker2"),
-                       (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/marker3")]
+                       (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/B_site")]
+                       #(ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/marker1"),
+                       #(ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/marker2"),
+                       #(ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/marker3")]
 
     br = tf2_ros.TransformBroadcaster()
     rate = rospy.Rate(10.0)
-
+    trans_last_list = [9999.0, 9999.0, 9999.0, 9999.0, 9999.0]
     while not rospy.is_shutdown():
-        for i in tf_request_list:
+        for i in range(len(tf_request_list)):
             try:
-                trans = tfBuffer.lookup_transform(i[0], i[1], rospy.Time(0))
+                trans = tfBuffer.lookup_transform(tf_request_list[i][0],
+                                                  tf_request_list[i][1],
+                                                  rospy.Time(0))
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 continue
             else:
-                # if i == (ROBOT_NAME+"/raw/base_link", ROBOT_NAME+"/raw/marker1"):
-                #     print ((rospy.Time.now() - trans.header.stamp).to_sec())
-                #     if (rospy.Time.now() - trans.header.stamp).to_sec() > 0.5:
-                #         continue
-                # Reset time stamp
-                # trans.header.stamp = rospy.Time.now()
-                # Get rid of /raw/
-                s_list = i[0].split('/')
-                trans.header.frame_id = s_list[0] + "/" + s_list[2]
-                s_list = i[1].split('/')
-                trans.child_frame_id = s_list[0] + "/" + s_list[2]
-                # Z = 0.0
-                trans.transform.translation.z = 0.05
-                br.sendTransform(trans)
+                # Check this is really a different tf
+                if abs(trans_last_list[i] - trans.transform.translation.x ) < 0.00000001:
+                    continue # ignore it 
+                else:
+                    trans_last_list[i] = trans.transform.translation.x
+                    # Reset time stamp
+                    trans.header.stamp = rospy.Time.now() # Substiutde nano timestamp
+                    # Get rid of /raw/
+                    trans.header.frame_id
+                    s_list = trans.header.frame_id.split('/')
+                    trans.header.frame_id = s_list[0] + "/" + s_list[2]
+                    s_list = trans.child_frame_id.split('/')
+                    trans.child_frame_id = s_list[0] + "/" + s_list[2]
+                    # Z = 0.0
+                    trans.transform.translation.z = 0.05
+                    br.sendTransform(trans)
         rate.sleep()
 

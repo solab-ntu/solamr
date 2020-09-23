@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    # Double Assembled Simulation
+-->
+
+<launch>
+
+    <!-- # args -->
+    <arg name="gui" default="true"/>
+
+    <!-- # gazebo -->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <!-- <arg name="world_name" value="$(find solamr_sim)/world/empty.world" /> -->
+        <arg name="world_name" value="$(find solamr_sim)/world/cloister.world" />
+        <!-- <arg name="world_name" value="$(find solamr_sim)/world/cloister_test.world" /> -->
+        <!-- <arg name="world_name" value="$(find solamr_sim)/world/playpen.world" /> -->
+        <!-- <arg name="world_name" value="$(find solamr_sim)/world/factory_sim.world" /> -->
+        <arg name="paused" value="false"/>
+        <arg name="use_sim_time" value="true"/>
+        <arg name="gui" value="$(arg gui)"/>
+        <arg name="headless" value="false"/>
+        <arg name="debug" value="false"/>
+    </include>
+
+    <!-- # load robot description -->
+    <param name="robot_description" command="$(find xacro)/xacro '$(find solamr_sim)/urdf/main_double_shelf.xacro'" />
+
+    <node name="spawner_model" pkg="gazebo_ros" type="spawn_model"
+          args="-x 0
+                -y 0
+                -z 0.24
+                -R 0
+                -P 0
+                -Y 0
+                -urdf
+                -model robot
+                -param robot_description" />
+
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" respawn="false" output="screen" />
+
+    <!-- # static tf -->
+    <node pkg="solamr_sim" type="tf_br_base_to_car1_car2.py" ns="/tf_broadcaster" name="base_to_car1_car2" output="screen">
+        <param name="frame_base_link" value="base_link" />
+        <param name="frame_car1" value="car1" />
+        <param name="frame_car2" value="car2" />
+        <param name="car1_imu" value="/car1/imu" />
+        <param name="car2_imu" value="/car2/imu" />
+        <param name="publish_rate" value="10" />
+    </node>
+
+    <!-- # delay to merge scan -->
+    <include file="$(find timed_roslaunch)/launch/timed_roslaunch.launch">
+        <arg name="time" value="5" />
+        <arg name="pkg" value="solamr_sim" />
+        <arg name="file" value="_merge_scan.launch" />
+    </include>
+
+</launch>

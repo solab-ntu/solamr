@@ -1,0 +1,6 @@
+<library path="lib/libfake_obstacle_layer">
+  <class type="fake_obstacle_layer_namespace::FakeObstacleLayer" base_class_type="costmap_2d::Layer">
+    <description>A costmap layer that adds obstacles to layered costmap</description>
+  </class>
+</library>
+

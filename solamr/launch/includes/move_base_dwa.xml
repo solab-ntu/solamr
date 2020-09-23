@@ -33,12 +33,12 @@
             <rosparam param="local_costmap/robot_base_frame" subst_value="True">$(arg robot_name)/base_link</rosparam>
             <!-- move_base parameters -->
             <param name="base_global_planner" value="global_planner/GlobalPlanner" />
-            <param name="planner_frequency" value="1.0" />
+            <param name="planner_frequency" value="2.0" />
             <param name="planner_patience" value="5.0" />
                 
             <!-- global planner parameters  -->
-            <param name="GlobalPlanner/use_dijkstra " value="true" />
-            <param name="GlobalPlanner/use_grid_path " value="false" />
+            <param name="GlobalPlanner/use_dijkstra " value="false" />
+            <param name="GlobalPlanner/use_grid_path " value="true" />
             <param name="GlobalPlanner/use_quadratic " value="true" />
             <param name="GlobalPlanner/orientation_mode " value="0" />
 

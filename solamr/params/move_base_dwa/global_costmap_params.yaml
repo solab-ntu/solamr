@@ -7,13 +7,10 @@ global_costmap:
   # The "static_map" parameter determines whether or not the costmap 
   # should initialize itself based on a map served by the map_server.
  
-  transform_tolerance: 0.5
+  transform_tolerance: 0.5 # 0.5
   plugins:
     - {name: static_layer,            type: "costmap_2d::StaticLayer"}
 #     - {name: obstacle_layer,          type: "costmap_2d::VoxelLayer"}
-    - {name: smartobstacle_layer,          type: "costmap_2d::SmartobstacleLayer"}
+    - {name: fake_obstacle_layer,     type: "fake_obstacle_layer_namespace::FakeObstacleLayer"}
+    - {name: smartobstacle_layer,     type: "costmap_2d::SmartobstacleLayer"}
     - {name: inflation_layer,         type: "costmap_2d::InflationLayer"}
-
-
-
-
