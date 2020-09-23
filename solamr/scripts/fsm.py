@@ -19,7 +19,7 @@ import smach
 import smach_ros
 # Ros message
 from tf.transformations import quaternion_from_euler
-from geometry_msgs.msg import Twist, Point, PoseStamped, Polygon, Point32, PoseWithCovarianceStamped
+from geometry_msgs.msg import Twist, Point, PoseStamped, Polygon, Point32, PoseWithCovarianceStamped, PoseArray
 from std_msgs.msg import String, Bool
 # ROS service 
 from solamr.srv import StringSrv
@@ -70,6 +70,66 @@ def check_running():
         PUB_CUR_STATE.publish(send_str)
         time.sleep(1)
     IS_RUN = False
+
+def expand_footprint(polygon):
+    '''
+    Transform points -> line 
+    Input : 
+        polygon : 
+            geometry_msgs/Polygon polygon
+                geometry_msgs/Point32[] points
+                    float32 x
+                    float32 y
+                    float32 z
+    output: 
+        pos_arr : PoseArray that publish to fakeObstacleLayer
+    '''
+    output_poseArray = PoseArray()
+    for i in range(len(polygon.points)): # For every polygon edge
+        #------ Get vertex end and start point --------# 
+        vertex_start  = polygon.points[i]
+        if i == len(polygon.points) - 1 :  # Last line 
+            vertex_end = polygon.points[0]
+        else:
+            vertex_end = polygon.points[i+1]
+        
+        #####################################
+        ###   Bresenham's line algorithm  ###
+        #####################################
+        deltax = vertex_end.x - vertex_start.x
+        deltay = vertex_end.y - vertex_start.y
+        if deltax == 0: # To avoid inf slope
+            deltax = 0.01
+
+        deltaerr = abs(deltay / deltax) # slope
+        error = 0.0 # No error at start
+        
+        if deltaerr <= 1: # 0~45 degree
+            y = vertex_start.y
+            for i in range(int(round(abs(deltax) / self.resolution, 0))):
+                x = vertex_start.x + i * self.resolution * self.sign(deltax)
+                tmp_pose = Pose()
+                tmp_pose.position.x = x 
+                tmp_pose.position.y = y 
+                output_poseArray.poses.append(tmp_pose) 
+                error = error + deltaerr * self.resolution
+                if error >= 0.5 * self.resolution:
+                    y = y + self.sign(deltay) * self.resolution
+                    error = error - 1 * self.resolution
+        else:  # 45~90 degree
+            x = vertex_start.x
+            deltaerr = 1 / deltaerr
+            for i in range(int(round(abs(deltay) / self.resolution, 0))):
+                y = vertex_start.y + i * self.resolution * self.sign(deltay)
+                tmp_pose = Pose()
+                tmp_pose.position.x = x 
+                tmp_pose.position.y = y 
+                output_poseArray.poses.append(tmp_pose) 
+                error = error + deltaerr * self.resolution
+                if error >= 0.5 * self.resolution:
+                    x = x + self.sign(deltax) * self.resolution
+                    error = error - 1 * self.resolution
+    return output_poseArray
 
 def switch_launch(file_path):
     '''
@@ -173,8 +233,8 @@ def transit_mode(from_mode, to_mode):
             change_smart_layer_base_radius(0.9) # TODO need test
    
     elif from_mode == "Single_Assembled" and to_mode == "Single_AMR":
-        change_footprint(0.22)
-        change_smart_layer_base_radius(0.22*sqrt(2))
+        change_footprint(SINGLE_AMR_L_2)
+        change_smart_layer_base_radius(SINGLE_AMR_L_2*sqrt(2))
     
     elif from_mode == "Single_Assembled" and to_mode == "Double_Assembled":
         switch_launch(ROSLAUNCH_PATH_DOUBLE_AMR)
@@ -348,6 +408,27 @@ def peer_robot_state_cb(data):
         MEASURE_PEER_XYT = (float(xyt[0]), float(xyt[1]), float(xyt[2]))
     except IndexError:
         pass
+    
+    # Project PEER_BASE_XYT to fake_obstacle_layer(costmap)
+    if  PEER_BASE_XYT != None and\
+        PEER_ROBOT_STATE != None and\
+        PEER_ROBOT_STATE != "Double_Assembled" and\
+        PEER_ROBOT_STATE != "Go_Double_Goal":
+        
+        # Get footprint polygon
+        footprint_list = [(-SINGLE_AMR_L_2, -SINGLE_AMR_L_2), ( SINGLE_AMR_L_2, -SINGLE_AMR_L_2),
+                          ( SINGLE_AMR_L_2,  SINGLE_AMR_L_2), (-SINGLE_AMR_L_2,  SINGLE_AMR_L_2)]
+        poly = Polygon()
+        for i in footprint_list:
+            (x,y) = vec_trans_coordinate(i, PEER_BASE_XYT)
+            poly.points.append(Point(x,y,0))
+        rospy.loginfo(str(poly))
+
+        # expand_footprint
+        pose_array = expand_footprint(poly)
+
+        # Publish obstacle
+        PUB_FAKE_OBSTACLE.publish(pose_array)
 
 class Goal_Manager(object):
     '''
@@ -1002,7 +1083,8 @@ if __name__ == "__main__":
     INIT_STATE = rospy.get_param(param_name="~init_state")
     TIME_INTERVAL = 1.0/rospy.get_param(param_name="~frequency")
     SEND_GOAL_INTERVAL = 2.0 # sec
-    # IS_DUMMY_TEST = rospy.get_param(param_name="~dummy_test")
+    SINGLE_AMR_L_2 = 0.22
+    
     # Service
     rospy.Service(name="~task", service_class=StringSrv, handler=task_cb)
     
@@ -1021,6 +1103,7 @@ if __name__ == "__main__":
     PUB_GLOBAL_FOOTPRINT = rospy.Publisher("/" + ROBOT_NAME + "/move_base/local_costmap/footprint", Polygon, queue_size = 1)
     PUB_LOCAL_FOOTPRINT = rospy.Publisher("/" + ROBOT_NAME + "/move_base/global_costmap/footprint", Polygon, queue_size = 1)
     PUB_RAP_HOMING = rospy.Publisher("/" + ROBOT_NAME + "/rap_planner/homing", String, queue_size = 1)
+    PUB_FAKE_OBSTACLE = rospy.Publisher("/" + ROBOT_NAME + "/move_base/global_costmap/fake_obstacle_layer/markedPoses", PoseArray, queue_size=1)
     if ROLE == "leader":
         PUB_CMD_VEL_PEER = rospy.Publisher("/" + ROBOT_PEER_NAME + "/cmd_vel", Twist, queue_size = 1)
     
