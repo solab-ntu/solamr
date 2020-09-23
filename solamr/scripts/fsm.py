@@ -19,7 +19,7 @@ import smach
 import smach_ros
 # Ros message
 from tf.transformations import quaternion_from_euler
-from geometry_msgs.msg import Twist, Point, PoseStamped, Polygon, Point32, PoseWithCovarianceStamped, PoseArray
+from geometry_msgs.msg import Twist, Point, PoseStamped, Polygon, Point32, PoseWithCovarianceStamped, PoseArray, Pose
 from std_msgs.msg import String, Bool
 # ROS service 
 from solamr.srv import StringSrv
