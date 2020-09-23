@@ -11,7 +11,7 @@ DWAPlannerROS:
    acc_lim_y: 0.0  # zero for a differential drive robot
    acc_lim_theta: 6.28 # 3.14 #  # 2.0
 
-   yaw_goal_tolerance: 0.1 # 0.1
+   yaw_goal_tolerance: 0.18  # 0.1
    xy_goal_tolerance: 0.1 # 0.1
    latch_xy_goal_tolerance: true
 
