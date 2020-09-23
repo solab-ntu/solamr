@@ -103,32 +103,32 @@ def expand_footprint(polygon):
 
         deltaerr = abs(deltay / deltax) # slope
         error = 0.0 # No error at start
-        
+        resolution = 0.05 # m
         if deltaerr <= 1: # 0~45 degree
             y = vertex_start.y
-            for i in range(int(round(abs(deltax) / self.resolution, 0))):
-                x = vertex_start.x + i * self.resolution * self.sign(deltax)
+            for i in range(int(round(abs(deltax) / resolution, 0))):
+                x = vertex_start.x + i * resolution * sign(deltax)
                 tmp_pose = Pose()
                 tmp_pose.position.x = x 
                 tmp_pose.position.y = y 
                 output_poseArray.poses.append(tmp_pose) 
-                error = error + deltaerr * self.resolution
-                if error >= 0.5 * self.resolution:
-                    y = y + self.sign(deltay) * self.resolution
-                    error = error - 1 * self.resolution
+                error = error + deltaerr * resolution
+                if error >= 0.5 * resolution:
+                    y = y + sign(deltay) * resolution
+                    error = error - 1 * resolution
         else:  # 45~90 degree
             x = vertex_start.x
             deltaerr = 1 / deltaerr
-            for i in range(int(round(abs(deltay) / self.resolution, 0))):
-                y = vertex_start.y + i * self.resolution * self.sign(deltay)
+            for i in range(int(round(abs(deltay) / resolution, 0))):
+                y = vertex_start.y + i * resolution * sign(deltay)
                 tmp_pose = Pose()
                 tmp_pose.position.x = x 
                 tmp_pose.position.y = y 
                 output_poseArray.poses.append(tmp_pose) 
-                error = error + deltaerr * self.resolution
-                if error >= 0.5 * self.resolution:
-                    x = x + self.sign(deltax) * self.resolution
-                    error = error - 1 * self.resolution
+                error = error + deltaerr * resolution
+                if error >= 0.5 * resolution:
+                    x = x + sign(deltax) * resolution
+                    error = error - 1 * resolution
     return output_poseArray
 
 def switch_launch(file_path):
