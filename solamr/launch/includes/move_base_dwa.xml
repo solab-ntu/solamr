@@ -33,7 +33,7 @@
             <rosparam param="local_costmap/robot_base_frame" subst_value="True">$(arg robot_name)/base_link</rosparam>
             <!-- move_base parameters -->
             <param name="base_global_planner" value="global_planner/GlobalPlanner" />
-            <param name="planner_frequency" value="2.5" />
+            <param name="planner_frequency" value="2.0" />
             <param name="planner_patience" value="5.0" />
                 
             <!-- global planner parameters  -->
