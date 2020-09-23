@@ -422,7 +422,6 @@ def peer_robot_state_cb(data):
         for i in footprint_list:
             (x,y) = vec_trans_coordinate(i, PEER_BASE_XYT)
             poly.points.append(Point(x,y,0))
-        rospy.loginfo(str(poly))
 
         # expand_footprint
         pose_array = expand_footprint(poly)
