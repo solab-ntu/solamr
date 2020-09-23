@@ -794,6 +794,7 @@ class Go_Goal(smach.State):
         CUR_STATE = "Go_Goal"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
         
+        seen_tag = False
         GOAL_MANAGER.send_goal(TASK.goal_location, ROBOT_NAME + "/map")
         
         while IS_RUN and TASK != None:
@@ -808,8 +809,12 @@ class Go_Goal(smach.State):
                 return 'done'
             else:
                 if goal_xyt != None:
+                    seen_tag = True
                     goal_xy = vec_trans_coordinate((0.7,0), (goal_xyt[0], goal_xyt[1], goal_xyt[2]-pi/2))
                     GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], goal_xyt[2]+pi/2), ROBOT_NAME + "/map")
+                else:
+                    if not seen_tag:
+                        GOAL_MANAGER.send_goal(TASK.goal_location, ROBOT_NAME + "/map")
 
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
