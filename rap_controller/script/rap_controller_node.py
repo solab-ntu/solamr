@@ -366,8 +366,8 @@ class Rap_controller():
             if self.crab_fail_safe: # Don't move , adjust angle only
                 # (self.v_out_L, self.w_out_L) = (0, self.pi_controller(KP_crab, KI, error_theta_L))
                 # (self.v_out_F, self.w_out_F) = (0, self.pi_controller(KP_crab, KI, error_theta_F))
-                (self.v_out_L, self.w_out_L) = (-0.1, self.pi_controller(KP_crab, KI, error_theta_L))
-                (self.v_out_F, self.w_out_F) = (-0.1, self.pi_controller(KP_crab, KI, error_theta_F))
+                (self.v_out_L, self.w_out_L) = (0.03*-1*sign(self.Vx), self.pi_controller(KP_crab, KI, error_theta_L))
+                (self.v_out_F, self.w_out_F) = (0.03*-1*sign(self.Vx), self.pi_controller(KP_crab, KI, error_theta_F))
             else:
                 (self.v_out_L, self.w_out_L) =  self.crab_controller(
                                                 self.Vx, self.Vy, error_theta_L, is_forward)
