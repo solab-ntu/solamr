@@ -795,7 +795,8 @@ class Go_Goal(smach.State):
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
         
         seen_tag = False
-        GOAL_MANAGER.send_goal(TASK.goal_location, ROBOT_NAME + "/map")
+        GOAL_MANAGER.is_reached = False
+        # GOAL_MANAGER.send_goal(TASK.goal_location, ROBOT_NAME + "/map")
         
         while IS_RUN and TASK != None:
             # Tag navigation, TODO need to exchange shelf
@@ -804,6 +805,7 @@ class Go_Goal(smach.State):
             elif ROBOT_NAME == "car2":
                 goal_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/A_site")
             
+            print("seen_tag = " + str(seen_tag))
             if GOAL_MANAGER.is_reached:
                 GOAL_MANAGER.is_reached = False
                 return 'done'
