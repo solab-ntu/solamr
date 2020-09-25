@@ -855,6 +855,16 @@ class Go_Double_Goal(smach.State):
                         current_goal_set = TASK.goal_location[ TASK.goal_location.index(current_goal_set) + 1 ]
                         current_goal = current_goal_set[0]
                         reconfig_rap_setting(current_goal_set[1])
+                        # Prevent crab mode fail at last goal reached
+                        if current_goal_set == TASK.goal_location[-2]:
+                            PUB_RAP_HOMING.publish("homing")
+                            rospy.loginfo("[fsm] wait homing for 2.5 sec")
+                            time.sleep(2.5) # Wait homing!!
+                            twist = Twist()
+                            twist.linear.x = -0.01
+                            rospy.loginfo("[fsm] Preventing crab mode fail")
+                            PUB_CMD_VEL.publish(twist)
+                            time.sleep(0.1)
                     except IndexError:
                         rospy.loginfo("[fsm] Finish all goal list!")
                         rap_planner_homing() # rap_planner homing
