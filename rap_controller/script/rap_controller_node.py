@@ -177,8 +177,8 @@ class Rap_controller():
         Return leader crab controller result
         '''
         # Anti-slip controller
-        '''
-        ERROR_LIMIT = pi/18.0 # pi/9.0 # 20 degree
+        
+        ERROR_LIMIT = pi/9.0 # pi/18.0 # pi/9.0 # 20 degree
         percentage = abs(error) / ERROR_LIMIT
         if percentage >= 1.0:
             v_con = 0
@@ -189,13 +189,14 @@ class Rap_controller():
             if not is_forward:
                 v_con *= -1.0
             w_con = self.pi_controller(KP_crab, KI, error)
-        '''
+        
         #  Original controller
+        '''
         v_con = sqrt(vx**2 + vy**2) * abs(cos(error))
         if not is_forward:
             v_con *= -1.0
         w_con = self.pi_controller(KP_crab, KI, error)
-        
+        '''
         return (v_con, w_con)
     
     def diff_controller(self,vx,wz,error,ref_ang):
@@ -363,22 +364,20 @@ class Rap_controller():
         ####################
         if self.mode == "crab":
             # Get v_out, w_out
-            if self.crab_fail_safe: # Don't move , adjust angle only
-                # (self.v_out_L, self.w_out_L) = (0, self.pi_controller(KP_crab, KI, error_theta_L))
-                # (self.v_out_F, self.w_out_F) = (0, self.pi_controller(KP_crab, KI, error_theta_F))
-                (self.v_out_L, self.w_out_L) = (0.03*-1*sign(self.Vx), self.pi_controller(KP_crab, KI, error_theta_L))
-                (self.v_out_F, self.w_out_F) = (0.03*-1*sign(self.Vx), self.pi_controller(KP_crab, KI, error_theta_F))
-            else:
-                (self.v_out_L, self.w_out_L) =  self.crab_controller(
-                                                self.Vx, self.Vy, error_theta_L, is_forward)
-                (self.v_out_F, self.w_out_F) =  self.crab_controller(
-                                                self.Vx, self.Vy, error_theta_F, is_forward)
+            # if self.crab_fail_safe: # Don't move , adjust angle only
+            #     (self.v_out_L, self.w_out_L) = (0, self.pi_controller(KP_crab, KI, error_theta_L))
+            #     (self.v_out_F, self.w_out_F) = (0, self.pi_controller(KP_crab, KI, error_theta_F))
+            # else:
+            #     (self.v_out_L, self.w_out_L) =  self.crab_controller(
+            #                                     self.Vx, self.Vy, error_theta_L, is_forward)
+            #     (self.v_out_F, self.w_out_F) =  self.crab_controller(
+            #                                     self.Vx, self.Vy, error_theta_F, is_forward)
             
             # TODO test anti-slip
-            # (self.v_out_L, self.w_out_L) =  self.crab_controller(
-            #                                 self.Vx, self.Vy, error_theta_L, is_forward)
-            # (self.v_out_F, self.w_out_F) =  self.crab_controller(
-            #                                 self.Vx, self.Vy, error_theta_F, is_forward)
+            (self.v_out_L, self.w_out_L) =  self.crab_controller(
+                                            self.Vx, self.Vy, error_theta_L, is_forward)
+            (self.v_out_F, self.w_out_F) =  self.crab_controller(
+                                            self.Vx, self.Vy, error_theta_F, is_forward)
         elif self.mode == "rota":
             (self.v_out_L, self.w_out_L) =  self.rota_controller(
                                             self.Wz,error_theta_L, ref_ang_L)
