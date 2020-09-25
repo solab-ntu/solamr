@@ -190,7 +190,6 @@ class Rap_controller():
                 v_con *= -1.0
             w_con = self.pi_controller(KP_crab, KI, error)
         '''
-
         #  Original controller
         v_con = sqrt(vx**2 + vy**2) * abs(cos(error))
         if not is_forward:
@@ -364,21 +363,22 @@ class Rap_controller():
         ####################
         if self.mode == "crab":
             # Get v_out, w_out
-            '''
             if self.crab_fail_safe: # Don't move , adjust angle only
-                (self.v_out_L, self.w_out_L) = (0, self.pi_controller(KP_crab, KI, error_theta_L))
-                (self.v_out_F, self.w_out_F) = (0, self.pi_controller(KP_crab, KI, error_theta_F))
+                # (self.v_out_L, self.w_out_L) = (0, self.pi_controller(KP_crab, KI, error_theta_L))
+                # (self.v_out_F, self.w_out_F) = (0, self.pi_controller(KP_crab, KI, error_theta_F))
+                (self.v_out_L, self.w_out_L) = (-0.1, self.pi_controller(KP_crab, KI, error_theta_L))
+                (self.v_out_F, self.w_out_F) = (-0.1, self.pi_controller(KP_crab, KI, error_theta_F))
             else:
                 (self.v_out_L, self.w_out_L) =  self.crab_controller(
                                                 self.Vx, self.Vy, error_theta_L, is_forward)
                 (self.v_out_F, self.w_out_F) =  self.crab_controller(
                                                 self.Vx, self.Vy, error_theta_F, is_forward)
-            '''
+            
             # TODO test anti-slip
-            (self.v_out_L, self.w_out_L) =  self.crab_controller(
-                                            self.Vx, self.Vy, error_theta_L, is_forward)
-            (self.v_out_F, self.w_out_F) =  self.crab_controller(
-                                            self.Vx, self.Vy, error_theta_F, is_forward)
+            # (self.v_out_L, self.w_out_L) =  self.crab_controller(
+            #                                 self.Vx, self.Vy, error_theta_L, is_forward)
+            # (self.v_out_F, self.w_out_F) =  self.crab_controller(
+            #                                 self.Vx, self.Vy, error_theta_F, is_forward)
         elif self.mode == "rota":
             (self.v_out_L, self.w_out_L) =  self.rota_controller(
                                             self.Wz,error_theta_L, ref_ang_L)
