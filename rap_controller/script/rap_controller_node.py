@@ -177,7 +177,7 @@ class Rap_controller():
         Return leader crab controller result
         '''
         # Anti-slip controller
-        ERROR_LIMIT = pi/9.0
+        ERROR_LIMIT = pi/18.0 # pi/9.0 # 20 degree
         percentage = abs(error) / ERROR_LIMIT
         if percentage >= 1.0:
             v_con = 0
