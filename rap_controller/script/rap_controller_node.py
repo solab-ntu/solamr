@@ -177,6 +177,7 @@ class Rap_controller():
         Return leader crab controller result
         '''
         # Anti-slip controller
+        '''
         ERROR_LIMIT = pi/18.0 # pi/9.0 # 20 degree
         percentage = abs(error) / ERROR_LIMIT
         if percentage >= 1.0:
@@ -188,14 +189,14 @@ class Rap_controller():
             if not is_forward:
                 v_con *= -1.0
             w_con = self.pi_controller(KP_crab, KI, error)
+        '''
 
-
-        ''' Original controller
+        #  Original controller
         v_con = sqrt(vx**2 + vy**2) * abs(cos(error))
         if not is_forward:
             v_con *= -1.0
         w_con = self.pi_controller(KP_crab, KI, error)
-        '''
+        
         return (v_con, w_con)
     
     def diff_controller(self,vx,wz,error,ref_ang):
