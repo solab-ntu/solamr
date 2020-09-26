@@ -633,6 +633,7 @@ class Go_Dock_Standby(smach.State):
         while IS_RUN and TASK != None:
             # Check goal reached or not
             if GOAL_MANAGER.is_reached:
+                GOAL_MANAGER.cancel_goal()
                 return 'done'
 
             # Update tag location
