@@ -828,7 +828,6 @@ class Go_Double_Goal(smach.State):
         CUR_STATE = "Go_Double_Goal"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
         if ROLE == "leader":
-            # rap_planner_homing() # TODO is this must to have?
             # Change goal tolerance
             current_goal_set = TASK.goal_location[0]
             current_goal = current_goal_set[0]
@@ -856,7 +855,7 @@ class Go_Double_Goal(smach.State):
                         current_goal = current_goal_set[0]
                         reconfig_rap_setting(current_goal_set[1])
                         # Prevent crab mode fail at last goal reached
-                        if current_goal_set == TASK.goal_location[-2]:
+                        if current_goal_set == TASK.goal_location[-2]: # TODO need test
                             PUB_RAP_HOMING.publish("homing")
                             rospy.loginfo("[fsm] wait homing for 2.5 sec")
                             time.sleep(2.5) # Wait homing!!
@@ -865,6 +864,18 @@ class Go_Double_Goal(smach.State):
                             rospy.loginfo("[fsm] Preventing crab mode fail")
                             PUB_CMD_VEL.publish(twist)
                             time.sleep(0.1)
+                        elif current_goal_set[1][2] == False: # Use diff mode
+                            rospy.loginfo("[fsm] Publish fake obstacle to prevent A* oscillation")
+                            obstacle_line_start = (2.82, 1.63)
+                            obstacle_line_end = (2.82, 3.38)
+                            poseArray = PoseArray()
+                            for i in range(int((obstacle_line_end[1] - obstacle_line_start[1])/0.05)):
+                                tmp_pose = Pose()
+                                tmp_pose.position.x = obstacle_line_start[0]
+                                tmp_pose.position.y = obstacle_line_start[1] + 0.05*i
+                                poseArray.poses.append(tmp_pose)
+                            PUB_FAKE_OBSTACLE.publish(poseArray)
+
                     except IndexError:
                         rospy.loginfo("[fsm] Finish all goal list!")
                         rap_planner_homing() # rap_planner homing
