@@ -413,7 +413,7 @@ def peer_robot_state_cb(data):
     if  PEER_BASE_XYT != None and\
         PEER_ROBOT_STATE != None and\
         PEER_ROBOT_STATE != "Double_Assembled" and\
-        PEER_ROBOT_STATE != "Go_Double_Goal" and\ 
+        PEER_ROBOT_STATE != "Go_Double_Goal" and\
         CUR_STATE != "Double_Assembled" and\
         CUR_STATE != "Go_Double_Goal":
         
