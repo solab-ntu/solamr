@@ -830,6 +830,8 @@ class Go_Double_Goal(smach.State):
         CUR_STATE = "Go_Double_Goal"
         rospy.loginfo('[fsm] Execute ' + CUR_STATE)
         if ROLE == "leader":
+            # Clear fake obstacle layer
+            PUB_FAKE_OBSTACLE.publish(PoseArray())
             # Change goal tolerance
             current_goal_set = TASK.goal_location[0]
             current_goal = current_goal_set[0]
