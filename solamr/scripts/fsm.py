@@ -86,9 +86,9 @@ def expand_footprint(polygon):
     '''
     output_poseArray = PoseArray()
     for i in range(len(polygon.points)): # For every polygon edge
-        #------ Get vertex end and start point --------# 
+        # Get vertex end and start point
         vertex_start  = polygon.points[i]
-        if i == len(polygon.points) - 1 :  # Last line 
+        if i == len(polygon.points) - 1 : # Last line 
             vertex_end = polygon.points[0]
         else:
             vertex_end = polygon.points[i+1]
@@ -133,7 +133,7 @@ def expand_footprint(polygon):
 
 def switch_launch(file_path):
     '''
-    shutdown ROSLAUNCH if it's already  
+    shutdown ROSLAUNCH if it's already launched, and switch on a new launch file
     '''
     global ROSLAUNCH
     if ROSLAUNCH != None:
@@ -170,7 +170,7 @@ def change_footprint(L_2):
 
 def change_smart_layer_base_radius(r):
     '''
-    Every laser point inside radius r will be ignore by smart_obstacle_layer
+    Every laser point inside radius r will be ignored by smart_obstacle_layer
     Argument:
         r - float: base_raduis
     '''
@@ -186,7 +186,7 @@ def send_initpose(xyt):
     '''
     Send initial pose to localize robot
     Argument:
-        xyt - (float, float, float)
+        xyt - (float, float, float): coordinate relative to map frame
     '''
     initpose = PoseWithCovarianceStamped()
     initpose.header.stamp = rospy.Time.now()
@@ -202,13 +202,11 @@ def send_initpose(xyt):
 
 def transit_mode(from_mode, to_mode):
     '''
-    Define what to do, when transiting from one mode to another.
+    Define what to do when transiting from one mode to another.
     '''
     global PEER_BASE_XYT, MEASURE_PEER_XYT, IS_STOPPING_ROBOT
     if   from_mode == "Single_AMR" and to_mode == "Single_Assembled":
         change_footprint(0.35)
-        # change_footprint(0.45)
-        # change_smart_layer_base_radius(0.45*sqrt(2)) # Some times can still see the shelf
         change_smart_layer_base_radius(0.7)
 
     elif from_mode == "Single_AMR" and to_mode == "Double_Assembled":
@@ -216,7 +214,6 @@ def transit_mode(from_mode, to_mode):
         time.sleep(5)
         # Use last_base and PEER_BASE_XYT to calculate
         if ROLE == "leader":
-            
             while PEER_BASE_XYT == None: # Wait PEER_BASE_XYT
                 time.sleep(1)
                 rospy.loginfo("[fsm] Waiting for peer robot to send last localization infomation")
@@ -230,7 +227,7 @@ def transit_mode(from_mode, to_mode):
             # big_car_init_xyt
             send_initpose(big_car_init_xyt)
             # 
-            change_smart_layer_base_radius(0.9) # TODO need test
+            change_smart_layer_base_radius(0.9)
    
     elif from_mode == "Single_Assembled" and to_mode == "Single_AMR":
         change_footprint(SINGLE_AMR_L_2)
@@ -313,7 +310,7 @@ def reconfig_rap_setting(setting):
 def stopping_thread():
     '''
     During roslaunch switch, we must asure robot stay still
-    This thread will be awake when robot is switching roslaunch.
+    This thread will be awaken when robot is switching roslaunch.
     '''
     while IS_STOPPING_ROBOT:
         PUB_CMD_VEL.publish(Twist())    
@@ -328,20 +325,21 @@ def rap_planner_homing():
 
 def task_cb(req):
     '''
-    Callback function for rosservice, user may assign task to execute.
+    Callback function for rosservice, user may assign task by calling roservice.
     Argument:
         req.data - string
     '''
     global TASK
+
+    # Task abort
     if req.data == "abort":
         TASK = None
-        # Cacelled all goal
         GOAL_MANAGER.cancel_goal()
         PUB_RAP_HOMING.publish("homing")
-        # Zero velocity
-        PUB_CMD_VEL.publish(Twist())
+        PUB_CMD_VEL.publish(Twist())# Zero velocity
         return 'abort OK'
     
+    # Jump from one state to another
     elif req.data[:3] == "jp2":
         # Jump to assign state
         task_tmp = Task()
@@ -349,7 +347,7 @@ def task_cb(req):
         TASK = task_tmp
         return "jump to " + req.data[3:]
 
-    # Check Task is busy
+    # Reject Task if is busy
     if TASK != None:
         rospy.logerr("[fsm] Reject task, because I'm busy now.")
         return "Reject task, I'm busy now"
@@ -371,7 +369,6 @@ def task_cb(req):
             task_tmp.home_location  = params[mode]['home_location_' + ROBOT_NAME]
 
         # TODO need test
-        # path = rospkg.RosPack().get_path('solamr') + "/params/task/" + req.data + ".yaml"
         path = rospkg.RosPack().get_path('solamr') + "/params/task/task_flow.yaml"
         with open(path) as file:
             rospy.loginfo("[shelf_detector] Load yaml file from " + path)
@@ -399,12 +396,15 @@ def peer_robot_state_cb(data):
     global PEER_ROBOT_STATE, PEER_BASE_XYT, MEASURE_PEER_XYT
     data_list = data.data.split('|')
     PEER_ROBOT_STATE = data_list[0]
+    
+    # Get PEER_BASE_XYT
     try:
         xyt = data_list[1].split(',')
         PEER_BASE_XYT = (float(xyt[0]), float(xyt[1]), float(xyt[2]))
     except IndexError:
         pass
     
+    # Get MEASURE_PEER_XYT
     try:
         xyt = data_list[2].split(',')
         MEASURE_PEER_XYT = (float(xyt[0]), float(xyt[1]), float(xyt[2]))
@@ -545,6 +545,9 @@ class Goal_Manager(object):
         self.pub_goal_cancel.publish()
 
 class Initial_State(smach.State):
+    '''
+    The first state fsm will be, and then transit to other useful state
+    '''
     def __init__(self):
         super(Initial_State, self).__init__(outcomes=('Single_AMR', 'Single_Assembled', 'Double_Assembled'))
 
@@ -566,6 +569,7 @@ class Initial_State(smach.State):
 class Single_AMR(smach.State):
     '''
     Waiting State, do nothing
+    This state should be AMR alone, not combined.
     '''
     def __init__(self):
         super(Single_AMR, self).__init__(outcomes=('Find_Shelf','Single_Assembled','Double_Assembled','Go_Home', 'done'), output_keys=[])
@@ -589,6 +593,9 @@ class Single_AMR(smach.State):
         return 'Find_Shelf'
 
 class Find_Shelf(smach.State):
+    '''
+    Find shelf location by apriltag
+    '''
     def __init__(self):
         super(Find_Shelf, self).__init__(outcomes=('abort', 'done'))
 
@@ -621,7 +628,9 @@ class Find_Shelf(smach.State):
         return 'abort'
 
 class Go_Dock_Standby(smach.State):
-
+    '''
+    navigate to dockin standby point
+    '''
     def __init__(self):
         super(Go_Dock_Standby, self).__init__(outcomes=('abort','done'), output_keys=[])
 
@@ -680,6 +689,9 @@ class Go_Dock_Standby(smach.State):
         return 'abort'
 
 class Dock_In(smach.State):
+    '''
+    navigation to shelf center and combine with it.
+    '''
     def __init__(self):
         super(Dock_In, self).__init__(outcomes=('Single_Assembled', 'Double_Assembled', 'abort'), output_keys=["target"])
 
@@ -750,8 +762,11 @@ class Dock_In(smach.State):
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
-
 class Go_Way_Point(smach.State):
+    '''
+    After single_AMR combination, go to task way point and wait until another AMR
+    has leave goal_location
+    '''
     def __init__(self):
         super(Go_Way_Point, self).__init__(outcomes=['done', 'abort'], input_keys=["target"], output_keys=["behavior"])
 
@@ -790,6 +805,9 @@ class Go_Way_Point(smach.State):
         return 'abort'
 
 class Go_Goal(smach.State):
+    '''
+    Navigate to final goal location
+    '''
     def __init__(self):
         super(Go_Goal, self).__init__(outcomes=['done', 'abort'], input_keys=["target"], output_keys=["behavior"])
 
@@ -825,6 +843,9 @@ class Go_Goal(smach.State):
         return 'abort'
 
 class Go_Double_Goal(smach.State):
+    '''
+    After double_AMR combination, navigate to a serial of goals.
+    '''
     def __init__(self):
         super(Go_Double_Goal, self).__init__(outcomes=['Dock_Out', 'abort', 'Double_Assembled', 'done'], input_keys=["target"], output_keys=["behavior"])
 
@@ -906,7 +927,9 @@ class Go_Double_Goal(smach.State):
         return 'abort'
 
 class Dock_Out(smach.State):
-
+    '''
+    Leave shelf
+    '''
     def __init__(self):
         super(Dock_Out, self).__init__(outcomes=('abort', 'done', 'Single_AMR'), output_keys=["target"])
 
@@ -1010,6 +1033,9 @@ class Dock_Out(smach.State):
             return 'Single_AMR'
         
 class Go_Home(smach.State):
+    '''
+    Task finish, single_AMR navigate to home_location
+    '''
     def __init__(self):
         super(Go_Home, self).__init__(outcomes=['done', 'abort'], input_keys=["target"], output_keys=["behavior"])
 
@@ -1042,7 +1068,10 @@ class Go_Home(smach.State):
         return 'abort'
 
 class Single_Assembled(smach.State):
-
+    '''
+    Wait state, do nothing
+    In this state means AMR is combined under single shelf
+    '''
     def __init__(self):
         super(Single_Assembled, self).__init__(outcomes=['Dock_Out', 'Go_Way_Point','Single_AMR', 'Double_Assembled', 'Go_Goal'], input_keys=["target"], output_keys=["behavior"])
 
@@ -1064,7 +1093,10 @@ class Single_Assembled(smach.State):
             time.sleep(TIME_INTERVAL)
 
 class Double_Assembled(smach.State):
-
+    '''
+    Wait state, do nothing
+    In this state means AMR is combined under double shelf
+    '''
     def __init__(self):
         super(Double_Assembled, self).__init__(outcomes=['Dock_Out', 'Go_Way_Point','Single_AMR', 'Single_Assembled', 'Go_Double_Goal'], output_keys=["target"])
 

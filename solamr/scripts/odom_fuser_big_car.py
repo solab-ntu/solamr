@@ -122,7 +122,6 @@ class Odom_fuser():
                                          (init_car1_x, init_car1_y, init_car1_t) )
             init_carB_t = init_car1_t - self.theta1
             # rospy.loginfo("[odom_fuser_big_car] init_carB = " + str((init_carB_x, init_carB_y, init_carB_t)))
-            # TODO Test
             self.update_global_localization((init_carB_x, init_carB_y, init_carB_t))
         
         # Use only car1 rtabmap currently, because if use both , localization will be too jumpy
