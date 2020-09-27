@@ -1,5 +1,0 @@
-task_flow: ['Single_AMR',
-            'Find_Shelf',
-            'Go_Dock_Standby',
-            'Dock_In',
-            'Double_Assembled']

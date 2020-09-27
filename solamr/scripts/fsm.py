@@ -355,8 +355,8 @@ def task_cb(req):
         return "Reject task, I'm busy now"
     
     # Load yaml from task_location.yaml
-    # Get mode
     req_list = req.data.split('_')
+    # Get mode
     mode = req_list[0] + "_" + req_list[1]
     try:
         path = rospkg.RosPack().get_path('solamr') + "/params/task/task_location.yaml"
@@ -370,11 +370,13 @@ def task_cb(req):
             task_tmp.goal_location  = params[mode]['goal_location_' + ROBOT_NAME]
             task_tmp.home_location  = params[mode]['home_location_' + ROBOT_NAME]
 
-        path = rospkg.RosPack().get_path('solamr') + "/params/task/" + req.data + ".yaml"
+        # TODO need test
+        # path = rospkg.RosPack().get_path('solamr') + "/params/task/" + req.data + ".yaml"
+        path = rospkg.RosPack().get_path('solamr') + "/params/task/task_flow.yaml"
         with open(path) as file:
             rospy.loginfo("[shelf_detector] Load yaml file from " + path)
             params = yaml.safe_load(file)
-            task_tmp.task_flow = params['task_flow']
+            task_tmp.task_flow = params[req.data]
             TASK = task_tmp
             return "OK"
     except OSError:

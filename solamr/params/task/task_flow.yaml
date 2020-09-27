@@ -1,0 +1,53 @@
+# First state must be 'Single_AMR' or 'Single_Assembled' or 'Double_Assembled'
+# So does the last state
+
+# Main task 
+single_AMR: ['Single_AMR',
+            'Find_Shelf',
+            'Go_Dock_Standby',
+            'Dock_In',
+            'Single_Assembled',
+            'Go_Way_Point',
+            'Go_Goal',
+            'Dock_Out',
+            'Go_Home',
+            'Single_AMR']
+
+single_AMR_dockin: ['Single_AMR',
+                    'Find_Shelf',
+                    'Go_Dock_Standby',
+                    'Dock_In',
+                    'Single_Assembled']
+
+single_AMR_dockout: ['Single_Assembled',
+                     'Dock_Out',
+                     'Single_AMR']
+
+single_AMR_gohome: ['Single_AMR',
+                    'Go_Home',
+                    'Single_AMR']
+
+# Main task
+double_AMR: ['Single_AMR',
+            'Find_Shelf',
+            'Go_Dock_Standby',
+            'Dock_In',
+            'Double_Assembled',
+            'Go_Double_Goal',
+            'Dock_Out',
+            'Go_Home',
+            'Single_AMR']
+
+double_AMR_dockin: ['Single_AMR',
+                    'Find_Shelf',
+                    'Go_Dock_Standby',
+                    'Dock_In',
+                    'Double_Assembled']
+
+double_AMR_dockout: ['Double_Assembled',
+                     'Dock_Out',
+                     'Single_AMR']
+
+double_AMR_goal: ['Double_Assembled',
+                  'Go_Double_Goal',
+                  'Double_Assembled']
