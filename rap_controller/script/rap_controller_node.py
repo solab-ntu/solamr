@@ -34,8 +34,8 @@ ROTA_ABS_TOLERANCE = 5 * (pi/180.0)# degree
 # Crab dead zone, car1, car2 heading can't go here
 DEAD_ZONE_ANG = pi/2
 
-CRAB_FAIL_SAFE_ENTER_ANG = 30 * (pi/180.0) # degree
-CRAB_FAIL_SAFE_LEAVE_ANG = 10 * (pi/180.0) # degree
+# CRAB_FAIL_SAFE_ENTER_ANG = 30 * (pi/180.0) # degree
+# CRAB_FAIL_SAFE_LEAVE_ANG = 10 * (pi/180.0) # degree
 
 class Rap_controller():
     def __init__(self, 
@@ -111,14 +111,21 @@ class Rap_controller():
                                       RGB = (102,178,255), size = 0.03)
     
     def theta_car1_cb(self, data):
+        '''
+        Callback function for /car1/theta
+        '''
         self.theta_L = data.data
 
     def theta_car2_cb(self, data):
+        '''
+        Callback function for /car2/theta
+        '''
         self.theta_F = data.data
         send_tf((-TOW_CAR_LENGTH/2.0, 0, data.data) ,"carB/base_link", "car2/base_link")
     
     def cmd_cb(self,data):
         '''
+        For joystick testing
         Topic /<robot_name>/cmd_vel callback function
         Argument: 
             data - geometry_msgs/Twist
@@ -219,7 +226,7 @@ class Rap_controller():
     
     def rota_controller(self,wz,error,ref_ang):
         '''
-        Inplace rotation controller
+        Big car pure rotation controller
         '''
         # Anti-slip controller, better than original 
         ERROR_LIMIT = pi/18.0
@@ -237,7 +244,7 @@ class Rap_controller():
         w_con = wz*abs(cos(error)) + self.pi_controller(KP_diff, KI, error)
         '''
 
-        if ref_ang < 0: # ref_ang == -pi/2
+        if ref_ang < 0:
             v_con = -v_con
         return (v_con, w_con)
 
@@ -251,10 +258,11 @@ class Rap_controller():
 
     def diff_get_error_angle(self):
         '''
+        Calculate error angle for DIFF mode
         Input:
-            self.Vy
+            self.Vy 
             self.Wz
-            self.theta
+            self.theta 
         Return ( (ref_ang, error_theta) , (ref_ang, error_theta) )
                  ^ leader                  ^ follower
         '''    
@@ -285,6 +293,7 @@ class Rap_controller():
 
     def crab_get_error_angle(self):
         '''
+        Calculate error angle for CRAB mode
         Input:
             self.Vx
             self.Vy
@@ -316,11 +325,11 @@ class Rap_controller():
     def run_once(self):
         '''
         call by main loop, execute every loop.
-        Return: NO, return ref_ang
+        Return:
             True - Calculate successfully, need publish
             False - Can't finish calculation, don't publish
         '''
-        # Get theta1, theta2
+        # Assert theta1, theta2
         if self.theta_L == None or self.theta_F == None:
             rospy.logwarn("[rap_controller] Can't get /car1/theta or /car2/theta")
             time.sleep(1)
@@ -332,13 +341,13 @@ class Rap_controller():
         if self.mode == "crab":
             ((ref_ang_L, error_theta_L),
              (ref_ang_F, error_theta_F), is_forward) = self.crab_get_error_angle()
-            # Check crab fail
-            if abs(error_theta_L) > CRAB_FAIL_SAFE_ENTER_ANG/2.0 or\
-               abs(error_theta_F) > CRAB_FAIL_SAFE_ENTER_ANG/2.0 : # Crab is going to fail
-                self.crab_fail_safe = True
-            if abs(error_theta_L) < CRAB_FAIL_SAFE_LEAVE_ANG/2.0 or\
-               abs(error_theta_F) < CRAB_FAIL_SAFE_LEAVE_ANG/2.0 : # Crab is allow now
-                self.crab_fail_safe = False
+            # Check crab fail or not
+            # if abs(error_theta_L) > CRAB_FAIL_SAFE_ENTER_ANG/2.0 or\
+            #    abs(error_theta_F) > CRAB_FAIL_SAFE_ENTER_ANG/2.0 : # Crab is going to fail
+            #     self.crab_fail_safe = True
+            # if abs(error_theta_L) < CRAB_FAIL_SAFE_LEAVE_ANG/2.0 or\
+            #    abs(error_theta_F) < CRAB_FAIL_SAFE_LEAVE_ANG/2.0 : # Crab is allow now
+            #     self.crab_fail_safe = False
         
         elif self.mode == "rota":
             ((ref_ang_L, error_theta_L),
@@ -390,6 +399,7 @@ class Rap_controller():
                 (self.v_out_F, self.w_out_F) = self.head_controller(error_theta_F)
             else:
                 self.is_transit = False # heading adjust completed
+        
         elif self.mode == "diff":
             (self.v_out_L, self.w_out_L) =  self.diff_controller(
                                             self.Vx, self.Wz, error_theta_L, ref_ang_L)
@@ -470,7 +480,6 @@ class Rap_controller():
         # Debug print
         # rospy.loginfo("Leader" + " : V=" + str(round(self.v_out_L, 3))+
         #                            ", W=" + str(round(self.w_out_L, 3)))
-
 
 if __name__ == '__main__':
     rospy.init_node('rap_controller_node',anonymous=False)

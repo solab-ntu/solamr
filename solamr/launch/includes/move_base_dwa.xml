@@ -14,8 +14,8 @@
     	<arg name="l_half" default="$(eval arg('car_length')/2)" />
     	<arg name="l_half_neg" default="$(eval -arg('car_length')/2)" />
 
-        <!--  ************** Navigation ***************  -->
         <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+            <!-- Load param .yaml -->
             <rosparam file="$(find solamr)/params/move_base_dwa/costmap_common_params_$(arg robot_name).yaml" command="load" ns="global_costmap" />
             <rosparam file="$(find solamr)/params/move_base_dwa/costmap_common_params_$(arg robot_name).yaml" command="load" ns="local_costmap" />
             <rosparam file="$(find solamr)/params/move_base_dwa/local_costmap_params.yaml" command="load" />
@@ -25,12 +25,12 @@
             <!-- take arg to override some of parmas above -->
             <rosparam param="global_costmap/footprint" subst_value="True">[ [$(arg l_half_neg),$(arg l_half_neg)], [$(arg l_half),$(arg l_half_neg)], [$(arg l_half),$(arg l_half)], [$(arg l_half_neg),$(arg l_half)] ]</rosparam>
             <rosparam param="local_costmap/footprint" subst_value="True">[ [$(arg l_half_neg),$(arg l_half_neg)], [$(arg l_half),$(arg l_half_neg)], [$(arg l_half),$(arg l_half)], [$(arg l_half_neg),$(arg l_half)] ]</rosparam>
-            
             <rosparam param="static_layer/map_topic" subst_value="True">$(arg robot_name)/map</rosparam>
             <rosparam param="global_costmap/global_frame" subst_value="True">$(arg robot_name)/map</rosparam>
             <rosparam param="global_costmap/robot_base_frame" subst_value="True">$(arg robot_name)/base_link</rosparam>
             <rosparam param="local_costmap/global_frame" subst_value="True">$(arg robot_name)/odom</rosparam>
             <rosparam param="local_costmap/robot_base_frame" subst_value="True">$(arg robot_name)/base_link</rosparam>
+            
             <!-- move_base parameters -->
             <param name="base_global_planner" value="global_planner/GlobalPlanner" />
             <param name="planner_frequency" value="2.0" />
@@ -42,6 +42,7 @@
             <param name="GlobalPlanner/use_quadratic " value="true" />
             <param name="GlobalPlanner/orientation_mode " value="0" />
 
+            <!-- local planner parameters  -->
             <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
             <param name="controller_frequency" value="10.0" />
             <param name="controller_patience" value="15.0" />
@@ -49,7 +50,5 @@
             <remap from='odom' to='/$(arg robot_name)/raw/zed2/zed_node/odom'/>
             <remap from='cmd_vel' to='/$(arg robot_name)/cmd_vel'/>
         </node>
-
-
 </launch>
 

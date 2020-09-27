@@ -1,3 +1,5 @@
+# Parameters setting used if it's "single_AMR" mode
+
 MODE: "single_AMR"
 # Kinematics
 TOW_CAR_LENGTH: 0.90

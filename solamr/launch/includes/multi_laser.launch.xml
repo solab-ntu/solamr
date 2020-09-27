@@ -1,6 +1,7 @@
 <launch>
   <arg name="robot_name" default="car1"/>  
   
+  <!-- Front Laser scan  -->
   <node name="urg_node" pkg="urg_node" type="urg_node" output="screen" ns="laser_front">
     <param name="ip_address" value=""/>
     <param name="serial_port" value="/dev/laser_urg_front"/>
@@ -12,6 +13,8 @@
     <param name="angle_min" value="-2.094395"/>
     <param name="angle_max" value="2.094395"/>
   </node>
+  
+  <!-- Rear Laser scan  -->
   <node name="urg_node" pkg="urg_node" type="urg_node" output="screen" ns="laser_rear">
     <param name="ip_address" value=""/>
     <param name="serial_port" value="/dev/laser_urg_rear"/>
@@ -23,16 +26,17 @@
     <param name="angle_min" value="-2.094395"/>
     <param name="angle_max" value="2.094395"/>
   </node>
+  
+  <!-- Static TF tree -->
   <node pkg="tf" type="static_transform_publisher" name="base_link2laser_front" args="0.16 0.16 0 0 0 0.25881905 0.96592583 $(arg robot_name)/base_link $(arg robot_name)/laser_front 10" />
   <node pkg="tf" type="static_transform_publisher" name="base_link2laser_rear"  args="-0.16 -0.16 0 0 0 -0.96592583 0.25881905 $(arg robot_name)/base_link $(arg robot_name)/laser_rear 10" />
 
-<!-- merge scans for amcl -->
+  <!-- Merge laser_front and laser_rear into a single laser topic -->
   <node pkg="ira_laser_tools" name="laserscan_multi_merger" type="laserscan_multi_merger" output="screen">
     <param name="destination_frame" value="$(arg robot_name)/base_link"/>
     <param name="cloud_destination_topic" value="merged_cloud"/>
     <param name="scan_destination_topic" value="scan_merged"/>
     <param name="laserscan_topics" value ="/$(arg robot_name)/laser_front/scan /$(arg robot_name)/laser_rear/scan"/> <!-- LIST OF THE LASER SCAN TOPICS TO SUBSCRIBE -->
-
     <param name="angle_min" value="-3.141596"/>
     <param name="angle_max" value="3.141596"/>
     <param name="angle_increment" value="0.006283"/>
@@ -41,9 +45,11 @@
     <param name="range_max" value="5.0"/>
   </node>
 
+  <!-- Filter laser data, rid of single point noise -->
   <node pkg="laser_filters" type="scan_to_scan_filter_chain" name="laser_filter">
     <rosparam command="load" file="$(find solamr)/params/laser_filter_param.yaml" />
     <remap from="scan" to="/$(arg robot_name)/scan_merged" />
     <remap from="scan_filtered" to="/$(arg robot_name)/scan_merged/filtered" />
   </node>
+
 </launch>

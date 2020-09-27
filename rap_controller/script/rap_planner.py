@@ -34,21 +34,12 @@ class Rap_planner():
         self.viz_marker = Marker_Manager("/rap_planner/markers")
         self.pub_global_path = rospy.Publisher("/rap_planner/global_path", Path,queue_size = 1,latch=False)
         self.pub_goal_result = rospy.Publisher("/car1/move_base/result", MoveBaseActionResult, queue_size = 1, latch=False)
-        # Debug publisher
-        # self.pub_alpha = rospy.Publisher("/alpha", Float64,queue_size = 1,latch=False)
-        # self.alpha = 0.0
-        # self.pub_beta  = rospy.Publisher("/beta", Float64,queue_size = 1,latch=False)
-        # self.beta = 0.0
-        # self.pub_angle = rospy.Publisher("/angle", Float64,queue_size = 1,latch=False)
-        # self.angle = 0.0
         # Output
         self.vx_out = None
         self.vy_out = None
         self.wz_out = None
         self.mode = "diff" # "crab"
         self.rho = 0.0
-        # Ros Service 
-        # rospy.Service(name="~homing", service_class=Empty, handler=self.homing_cb)
         # Tf listner
         self.tfBuffer = tf2_ros.Buffer()
         tf2_ros.TransformListener(self.tfBuffer)
@@ -81,6 +72,9 @@ class Rap_planner():
         Server(RapControllerConfig, self.dynamic_reconfig_cb)
 
     def homing_cb(self, data):
+        '''
+        Callback function for /homing
+        '''
         rospy.loginfo("[rap_planner] Homing planner!")
         self.reset_plan()
         self.vx_out = 0.0
@@ -172,6 +166,9 @@ class Rap_planner():
         # print (data.data[self.costmap.info.width/2 +  (self.costmap.info.height/2)*self.costmap.info.width])
 
     def dynamic_reconfig_cb(self, config, level):
+        '''
+        Callback function of Reconfigur, changing settings
+        '''
         global GOAL_TOLERANCE_XY, GOAL_TOLERANCE_T, USE_CRAB
         GOAL_TOLERANCE_XY = config['xy_tolerance']
         GOAL_TOLERANCE_T = config['yaw_tolerance']*pi/180
@@ -189,7 +186,7 @@ class Rap_planner():
         # Find a local goal on global_path
         min_d_dist = float("inf")
         local_goal = None # (x,y)
-        for pose in self.global_path.poses: # TODO This can do some performance improvement
+        for pose in self.global_path.poses:
             dx = pose.pose.position.x - self.big_car_xyt[0]
             dy = pose.pose.position.y - self.big_car_xyt[1]
             d_dist = abs(dx**2 + dy**2 - LOOK_AHEAD_DIST**2)
@@ -215,6 +212,7 @@ class Rap_planner():
 
     def prune_global_path(self):
         '''
+        Prune already passed path, 
         Return T/F, True: prune successfully, False: can't prune path
         '''
         if self.big_car_xyt == None or self.global_path == None:
@@ -228,7 +226,7 @@ class Rap_planner():
             dy = self.global_path.poses[idx].pose.position.y - self.big_car_xyt[1]
             d_dist = dx**2 + dy**2
             if d_dist < min_d_dist:
-                prune_point = idx# (pose.pose.position.x, pose.pose.position.y)
+                prune_point = idx
                 min_d_dist = d_dist
                 saddle_count = 0
             else:
@@ -240,7 +238,7 @@ class Rap_planner():
 
     def publish(self):
         '''
-        Publish debug thing
+        Publish visulization things
         '''
         # Debug Markers
         self.viz_marker.publish()
@@ -304,7 +302,7 @@ class Rap_planner():
             return False
         
         # Update tf
-        t_big_car   = get_tf(self.tfBuffer, MAP_FRAME, BIG_CAR_FRAME)
+        t_big_car = get_tf(self.tfBuffer, MAP_FRAME, BIG_CAR_FRAME)
         if t_big_car != None:
             self.big_car_xyt = t_big_car
         if self.big_car_xyt == None: #tf is invalid
@@ -334,7 +332,7 @@ class Rap_planner():
             if IGNORE_HEADING:
                 self.reset_plan()
                 rospy.loginfo("[rap_planner] rest_plan switch to DIFF mode")
-                self.set_tran_mode("diff") # TODO why need diff
+                self.set_tran_mode("diff")
                 self.publish_reached()
                 return True
             else:
@@ -369,8 +367,6 @@ class Rap_planner():
         pursu_angle = alpha + beta*2.0
         
         self.viz_marker.update_marker("local_goal", (x_goal, y_goal) )
-        # p = (cos(alpha)*LOOK_AHEAD_DIST, sin(alpha)*LOOK_AHEAD_DIST)
-        # self.viz_marker.update_marker("goal_head", ((0,0), p))
 
         ##################
         ###  Get Flags ###
@@ -438,9 +434,10 @@ class Rap_planner():
                         (LOOK_AHEAD_DIST/2.0)**2 )
             if pursu_angle < 0: # alpha = [0,-pi]
                 R = -R
+            
+            # Get vx_out, wz_out
             self.vx_out = sqrt(x_goal**2 + y_goal**2) * DIFF_KP_VEL
             self.vy_out = 0.0
-            # TODO test this , to avoid near-goal weird things
             if self.rho < LOOK_AHEAD_DIST:
                 self.wz_out = (self.vx_out / R) * (self.rho/LOOK_AHEAD_DIST)
             else:
@@ -472,12 +469,8 @@ if __name__ == '__main__':
     DIFF_KP_VEL = rospy.get_param(param_name="~diff_kp_vel", default="2")
     ROTA_KP_VEL = rospy.get_param(param_name="~rota_kp_vel", default="0.2") # radian/s
     LOOK_AHEAD_DIST = rospy.get_param(param_name="~look_ahead_dist", default="0.8")
-    GOAL_TOLERANCE_XY = None
-    GOAL_TOLERANCE_T = None
-    USE_CRAB = None
     ENTER_CRAB_ANGLE = rospy.get_param(param_name="~enter_crab_angle", default="60")*pi/180 # Degree
     LEAVE_CRAB_ANGLE = rospy.get_param(param_name="~leave_crab_angle", default="120")*pi/180 # Degree
-
     # System
     CONTROL_FREQ  = rospy.get_param(param_name="~ctl_frequency", default="10")
     SIM  = rospy.get_param(param_name="~sim", default="true")
@@ -497,7 +490,12 @@ if __name__ == '__main__':
     CMD_VEL_TOPIC_FOLLOW = rospy.get_param(param_name="~cmd_vel_topic_follower", default="/car2/cmd_vel")
     GOAL_TOPIC = rospy.get_param(param_name="~goal_topic", default="/move_base_simple/goal")
     COSTMAP_TOPIC = rospy.get_param(param_name="~costmap_topic", default="/move_base/local_costmap/costmap")
-    # Global variable
+    
+    # Reconfig global variable
+    GOAL_TOLERANCE_XY = None
+    GOAL_TOLERANCE_T = None
+    USE_CRAB = None
+
     # Init naive controller
     rap_planner   = Rap_planner()
     RAP_CTL = Rap_controller("car1",

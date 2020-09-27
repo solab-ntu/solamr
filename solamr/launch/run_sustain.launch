@@ -1,13 +1,12 @@
 <?xml version="1.0"?>
-
+<!-- run_sustain.launch launch all processes that wouldn't be terminated during taskes -->
+<!-- These process will always active -->
 <launch>
     <arg name="robot_name" default="car1" />
     <arg name="robot_peer_name" default="car2"/>
     <arg name="role" default="leader" />
-    <!--Double_Assembled-->
-    <!--Single_Assembled-->
-    <!--Single_AMR-->
-    <arg name="init_state" default="Single_AMR"/>
+    <!-- Initial state for SMACH -->
+    <arg name="init_state" default="Single_AMR"/> <!--Single_AMR, Single_Assembled, Double_Assembled-->
 
     <group ns="$(arg robot_name)">
         <!-- SMACH -->
@@ -35,17 +34,17 @@
             <arg name="role" value="$(arg role)" />
         </include>
 
-        <!-- MAP -->
+        <!-- MAP Server-->
         <node name="map_server" pkg="map_server" type="map_server" args="$(find solamr)/maps/sqare_obstacle.yaml">
             <param name="frame_id" value="$(arg robot_name)/map"/>
         </node>
         
-        <!-- Forwarding topics from nano tf -->
+        <!-- Forwarding /tf from nano-->
         <node pkg="solamr" type="tf_forward_from_nano.py" name="tf_forwarder" output='screen'>
             <param name="robot_name" value="$(arg robot_name)"/>
         </node>
 
-        <!-- Forwarding topics for PC rviz -->
+        <!-- Forwarding topics to server RVIZ -->
         <node pkg="solamr" type="tf_rviz_forwarder.py"  name="tf_rviz_forwarder" output='screen'>
             <param name="robot_name" value="$(arg robot_name)"/>
             <rosparam command="load" file="$(find solamr)/params/tf_rviz/single_AMR_$(arg role).yaml"/>

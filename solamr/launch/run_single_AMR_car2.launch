@@ -1,4 +1,5 @@
 <?xml version="1.0"?>
+<!-- These packages will be launched if robot state is "single_AMR" and robot_name is "car1" -->
 <launch>
     <arg name="robot_name" default="car2"/>
     <arg name="role" default="follower"/>
@@ -20,12 +21,13 @@
         <param name="robot_name" value="$(arg robot_name)"/>
     </node>
 
-    <!-- Shelf_Detector_Param -->
-    <node pkg="rosservice" type="rosservice" name="Shelf_Detector_Param_set" args="call --wait /$(arg robot_name)/shelf_detector/set_mode '$(find obstacle_detector)/param/single_AMR.yaml'" />
-
-    <!-- tf_rviz_forwarder change param -->
-    <node pkg="rosservice" type="rosservice" name="tf_rviz_forwarder_Param_set" args="call --wait /$(arg robot_name)/tf_rviz_forwarder/set_param 'single_AMR_$(arg role)'" />
-
     <!-- MQTT Bridge -->
     <node pkg="ros_mqtt_bridge" type="single_AMR_$(arg role).py"  name="ros_mqtt_bridge" output='screen'/>
+
+    <!-- Call rosservice to change parameters of shelf_detector -->
+    <node pkg="rosservice" type="rosservice" name="Shelf_Detector_Param_set" args="call --wait /$(arg robot_name)/shelf_detector/set_mode '$(find obstacle_detector)/param/single_AMR.yaml'" />
+
+    <!-- Call rosservice to change parameters of tf_rviz_forwarder  -->
+    <node pkg="rosservice" type="rosservice" name="tf_rviz_forwarder_Param_set" args="call --wait /$(arg robot_name)/tf_rviz_forwarder/set_param 'single_AMR_$(arg role)'" />
+
 </launch>

@@ -1,25 +1,27 @@
 <?xml version="1.0"?>
+<!-- These packages will be launched if robot state is "double_AMR" and robot_name is "car1" -->
 <launch>
     <arg name="robot_name" default="car1" />
     <arg name="role" default="leader" />
-    <!-- MQTT -->
-    <node pkg="ros_mqtt_bridge" type="double_AMR_$(arg role).py"  name="ros_mqtt_bridge" output='screen'/>
 
-    <!-- Odom Fuser -->
-    <node pkg="solamr" type="odom_fuser_big_car.py" name="odom_big_car" output="screen"/>
-
-    <!-- Rap Controller -->
-    <include file="$(find rap_controller)/launch/run_planner.launch">
-        <arg name="robot_name" value="$(arg robot_name)"/>
-    </include>
-    
     <!-- Move Base -->
     <include file="$(find solamr)/launch/includes/move_base_rap_planner.xml"/>
 
-    <!-- Shelf Detector change param -->
+    <!-- Big car Odom Fuser -->
+    <node pkg="solamr" type="odom_fuser_big_car.py" name="odom_big_car" output="screen"/>
+
+    <!-- Rap Planner -->
+    <include file="$(find rap_controller)/launch/run_planner.launch">
+        <arg name="robot_name" value="$(arg robot_name)"/>
+    </include>
+
+    <!-- MQTT -->
+    <node pkg="ros_mqtt_bridge" type="double_AMR_$(arg role).py"  name="ros_mqtt_bridge" output='screen'/>
+    
+    <!-- Call rosservice to change parameters of shelf_detector -->
     <node pkg="rosservice" type="rosservice" name="Shelf_Detector_Param_set" args="call --wait /$(arg robot_name)/shelf_detector/set_mode '$(find obstacle_detector)/param/double_AMR.yaml'" />
 
-    <!-- tf_rviz_forwarder change param -->
+    <!-- Call rosservice to change parameters of tf_rviz_forwarder  -->
     <node pkg="rosservice" type="rosservice" name="tf_rviz_forwarder_Param_set" args="call --wait /$(arg robot_name)/tf_rviz_forwarder/set_param 'double_AMR_$(arg role)'" />
 
 </launch>

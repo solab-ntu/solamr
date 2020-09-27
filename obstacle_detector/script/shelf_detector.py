@@ -1,21 +1,23 @@
 #!/usr/bin/env python
-import rospy
+# Python
 import yaml
 import time
+from math import atan2,acos,sqrt,pi,sin,cos
+# ROS
+import rospy
+import tf
+import tf2_ros
 # ROS msg and libraries
 from nav_msgs.msg import OccupancyGrid, Path # Global map 
 from geometry_msgs.msg import TransformStamped, Point, PoseArray, PoseStamped, Pose2D, Pose,PoseWithCovarianceStamped, Quaternion# Global path
 from visualization_msgs.msg import Marker, MarkerArray # Debug drawing
 from std_msgs.msg import String, Float64
-import tf
-import tf2_ros
 from obstacle_detector.msg import Obstacles
-from math import atan2,acos,sqrt,pi,sin,cos
-# Lucky utility
+from obstacle_detector.srv import StringSrv
+# Custom import
 from lucky_utility.ros.rospy_utility import Marker_Manager, get_tf, send_tf,\
                                             normalize_angle,cal_ang_distance,\
                                             cal_avg_angle, vec_trans_coordinate
-from obstacle_detector.srv import StringSrv
 
 class Corner():
     def __init__(self, corner, neighbor1, neighbor2):
@@ -38,12 +40,13 @@ class Corner():
         b = (c3[0] - c1[0] , c3[1] - c1[1])
         return ( ( c1[0] + a[0]/2.0 + b[0]/2.0 , c1[1] + a[1]/2.0 + b[1]/2.0 ) )
     
-
 class Shelf_finder():
+    '''
+    Find a single shelf by given search center
+    '''
     def __init__(self, name):
         self.obstacle = None
         self.center = (None, None, None) # (x,y,theta) - centers of shelf
-        # self.search_center = None# (x,y)
         self.corner_dict = {}
         #------ Parameters --------#
         self.name = name # "base" or "peer"
@@ -210,7 +213,6 @@ class Shelf_finder():
         return avg_center
 
     def publish(self):
-        # 
         if MODE == "double_AMR":
             self.viz_marker.publish()
         elif MODE == "single_AMR":
@@ -237,8 +239,11 @@ class Shelf_finder():
         self.viz_marker.update_marker("edges_"+self.name, line_list)
 
         return True
-    
+
 class Two_shelf_finder():
+    '''
+    Find two shelf in order to get big car orientation
+    '''
     def __init__(self):
         self.big_car_xyt = [None, None, None]
         # 
@@ -455,7 +460,6 @@ if __name__ == '__main__':
         SHELF_MAIN_FINDER.obstacle = OBSTACLE_DATA
         if MODE == "single_AMR":
             if SEARCH_CENTER_SINGLE_AMR != None:
-                # TODO ref_ang need to be passed
                 if SHELF_MAIN_FINDER.run_once(0, SEARCH_CENTER_SINGLE_AMR): # Pass center search
                     SEARCH_CENTER_SINGLE_AMR = SHELF_MAIN_FINDER.center
                     SHELF_MAIN_FINDER.publish()

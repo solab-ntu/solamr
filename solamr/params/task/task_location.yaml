@@ -1,10 +1,16 @@
+# These parameters load when new task is sent to AMR, it indicates every task location
+# it need to finish the whole task.
+# Location format : [x, y, theta], all relative to map frame
+# single_AMR means this task will only use single_AMR to trasport shelf
 single_AMR:
   # Location of shelf tags
+  # Need to place at a location that AMR can see shelf's tag.
   shelf_location_car1: [[4.0, 1.16,  0.0],
                         [1.4, 1.16, 3.1416]]
   shelf_location_car2: [[1.4, 1.16, 3.1416],
                         [4.0, 1.16,  0.0]]
   
+  # AMR will wait at this location until the other AMR has leave goal_location
   wait_location_car1: [
                        # [4.05, 2.18, 2.3562],
                        # [2.77, 2.4, 3.1416],
@@ -13,32 +19,35 @@ single_AMR:
                        # [1.48, 0.5, -0.7854],
                        # [2.77, 0.08, 0.0],
                        [4.08, 0.277, 0.7854]]
-  # Final goal 
+  # Final goal location, usually be A_site or B_site
   goal_location_car1: [0.7, 1.26, 3.1416]
   goal_location_car2: [4.65, 1.24, 0.0]
-  # Return home location
+  # Return home location, where to go when task is finished
   home_location_car1: [3.5, 2.7, -1.57]
   home_location_car2: [2.0, 2.7, -1.57]
 
+# double_AMR means that task will use both AMR to trasport a big shelf
 double_AMR:
+  # Location of shelf tags
   shelf_location_car1: [[4.0, 0.735,  0.0],
                         [1.4, 1.16, 3.1416]]
   shelf_location_car2: [[3.85, 1.67,  0.0],
                         [1.4, 1.16, 3.1416]]
 
-  # Wait_location_dummy
+  # Wait_location is dummy for double_AMR
   wait_location_car1: [[0.0, 0.0, 0.0]]
   wait_location_car2: [[0.0, 0.0, 0.0]]
 
-  # Car2 is dummy                             [xy_tolerance, yaw_tolerance, use_crab]
-  goal_location_car1: [[[4.1, 1.31, -1.5708], [0.1, 10.0, True]],
+  # Car2 is dummy, Only car1 is useful        [xy_tolerance, yaw_tolerance, use_crab]
+  goal_location_car1: [[[4.1, 1.31, -1.5708], [0.1, 10.0, True]], # Crab mode
                        # [[4.0, 0.47, -2.3562],[0.3, 360.0, False]],
                        # [[2.80, -0.07, 3.1416], [0.3, 360.0, False]],
                        # [[1.54, 0.685, 2.3562],   [0.3, 360.0, False]],
                        # [[1.15, 1.52, 1.5708],  [0.3, 10.0, False]],
-                       [[1.33, 1.31, 1.5708],  [0.3, 10.0, False]],
-                       [[0.45, 1.31, 1.5708],  [0.1, 10.0, True]]]
+                       [[1.33, 1.31, 1.5708],  [0.3, 10.0, False]], # Diff mode
+                       [[0.45, 1.31, 1.5708],  [0.1, 10.0, True]]] # Crab mode
   goal_location_car2: [0.0, 0.0, 0.0]
 
+  # Return home location, where to go when task is finished
   home_location_car1: [3.5, 2.78, -1.57]
   home_location_car2: [2.2, 2.78, -1.57]

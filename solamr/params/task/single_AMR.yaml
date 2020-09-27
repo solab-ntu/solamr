@@ -1,5 +1,5 @@
 # First state must be 'Single_AMR' or 'Single_Assembled' or 'Double_Assembled'
-# So does Last state
+# So does the last state
 task_flow: ['Single_AMR',
             'Find_Shelf',
             'Go_Dock_Standby',

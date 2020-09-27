@@ -1,3 +1,5 @@
+# Which tf to forward to server_rviz
+# Format: [frame_id, child_frame_id], frame_id -> child_frame_id
 tf_rviz_list: [
   [car2/base_link, car2/laser_front],
   [car2/base_link, car2/laser_rear],

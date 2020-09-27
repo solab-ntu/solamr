@@ -1,3 +1,5 @@
+# Which tf to forward to server_rviz
+# Format: [frame_id, child_frame_id], frame_id -> child_frame_id
 tf_rviz_list: [
   # General
   [car2/map, car2/odom],

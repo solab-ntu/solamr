@@ -23,6 +23,7 @@
     <rosparam param="ignore_hosts">[]</rosparam>
 
     <!-- This list with names of ROS master to synchronize. Only this ROS master in this list will be synchronized. The ~ignore_hosts list is processed first. -->
+    <!-- Sync only server rviz ip -->
     <rosparam param="sync_hosts">['192.168.50.10']</rosparam>
 
     <!-- The list of nodes, which are to be ignored while a synchroniation. All their topics and services are ignored!
@@ -42,6 +43,7 @@
     -->
 
     <!-- The list of topics to synchronize. The ~ignore_nodes and ~ignore_topics lists are processed first. -->
+    <!-- Subscribe these topic from server -->
     <rosparam param="sync_topics" subst_value="True">[/$(arg robot_name)/raw/initialpose,
                                                       /$(arg robot_name)/move_base_simple/goal,
                                                       /$(arg robot_name)/rap_cmd,

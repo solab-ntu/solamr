@@ -6,10 +6,6 @@
   	 	<rosparam file="$(find solamr)/params/move_base_rap_planner/costmap_common_params.yaml" command="load" ns="local_costmap" />
   		<rosparam file="$(find solamr)/params/move_base_rap_planner/local_costmap_params.yaml" command="load" />
   		<rosparam file="$(find solamr)/params/move_base_rap_planner/global_costmap_params.yaml" command="load" />
-	
-		<!-- take arg to override some of parmas above --> 
-		<!-- <rosparam param="global_costmap/footprint" subst_value="True">[  [-0.875,-0.45], [0.875,-0.45], [0.875,0.45], [-0.875,0.45]  ]</rosparam>
-		<rosparam param="local_costmap/footprint" subst_value="True">[ [-0.875,-0.45], [0.875,-0.45], [0.875,0.45], [-0.875,0.45] ]</rosparam> -->
 
 		<!-- move_base parameters -->
 		<param name="base_global_planner" value="global_planner/GlobalPlanner" />
@@ -22,6 +18,7 @@
 		<param name="GlobalPlanner/use_quadratic " value="true" />
 		<param name="GlobalPlanner/orientation_mode " value="0" />
 
+		<!-- local planner parameters  -->
 		<param name="base_local_planner" value="fake_local_planner/FakeLocalPlannerROS" />
 		<param name="controller_frequency" value="5.0" />
 		<param name="controller_patience" value="15.0" />
