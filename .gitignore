@@ -1,7 +1,3 @@
 .vscode
 *.pyc
 *.log
-obstacle_detector/script/lucky_utility/
-rap_controller/script/lucky_utility/
-ros_mqtt_bridge/script/lucky_utility/
-solamr/scripts/lucky_utility/
