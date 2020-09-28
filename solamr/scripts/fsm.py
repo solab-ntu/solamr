@@ -1054,8 +1054,10 @@ class Go_Home(smach.State):
                 rospy.loginfo("[fsm] task done")
                 return 'done'
             else:
-                # GOAL_MANAGER.send_goal(TASK.home_location, ROBOT_NAME + "/map")
                 # Send goal
+                GOAL_MANAGER.send_goal(TASK.home_location, ROBOT_NAME + "/map")
+                
+                ''' Using tag to give goal will sometime assign a goal too near to obstacle, make global_planner fail to plan
                 home_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/home")
                 if home_xyt != None:
                     if ROBOT_NAME == "car1":
@@ -1063,6 +1065,7 @@ class Go_Home(smach.State):
                     elif ROBOT_NAME == "car2":
                         goal_xy = vec_trans_coordinate((0.6,-0.75), (home_xyt[0], home_xyt[1], home_xyt[2]-pi/2))
                     GOAL_MANAGER.send_goal((goal_xy[0], goal_xy[1], home_xyt[2]-pi/2), ROBOT_NAME + "/map")
+                '''
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
         return 'abort'
