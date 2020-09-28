@@ -1,5 +1,5 @@
 # MQTT
-from lucky_utility.mqtt.lib_mqtt import MQTT_OBJ
+from mqtt.lib_mqtt import MQTT_OBJ
 from rospy_message_converter import json_message_converter
 import roslib.message
 import time

@@ -20,7 +20,7 @@ from dynamic_reconfigure.server import Server # For dynamic reconfig server
 from rap_controller.cfg import RapControllerConfig
 # Custom import
 from rap_controller_node import Rap_controller
-from lucky_utility.ros.rospy_utility import get_tf, Marker_Manager,normalize_angle,sign
+from rospy_tool.rospy_tool_lib import get_tf, Marker_Manager,normalize_angle,sign
 
 class Rap_planner():
     def __init__(self):
