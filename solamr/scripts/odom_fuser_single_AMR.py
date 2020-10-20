@@ -78,8 +78,7 @@ class Odom_Fuser_Single_AMR():
             if map_rtabmap_xyt != self.map_rtabmap_last: # Rtabmap map -> odom has update
                 self.map_xyt = map_rtabmap_xyt
                 # TODO need test, offset rtabmap origin
-                self.map_xyt.transform.translation.x += 0.2
-                self.map_xyt.transform.translation.y += 0.3
+                self.map_xyt = (self.map_xyt[0] + 0.2, self.map_xyt[1] + 0.3, self.map_xyt[2])
                 self.map_rtabmap_last = map_rtabmap_xyt
         
         if self.map_xyt[0] != None and self.odom_xyt[0] != None:
