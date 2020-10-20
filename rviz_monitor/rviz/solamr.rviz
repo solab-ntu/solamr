@@ -118,49 +118,31 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        carB/map:
-          {}
         world:
           car1/map:
             car1/odom:
               car1/base_link:
-                car1/A_site:
-                  {}
                 car1/B_site:
-                  {}
-                car1/home:
                   {}
                 car1/laser_front:
                   {}
                 car1/laser_rear:
                   {}
                 car1/shelf_car1:
-                  car1/tag/shelf_center:
-                    {}
-                car1/shelf_car2:
                   {}
-                car1/shelf_center:
+                car1/shelf_car2:
                   {}
           car2/map:
             car2/odom:
               car2/base_link:
-                car2/A_site:
-                  {}
                 car2/B_site:
-                  {}
-                car2/home:
                   {}
                 car2/laser_front:
                   {}
                 car2/laser_rear:
                   {}
-                car2/shelf_car1:
-                  {}
-                car2/shelf_car2:
-                  car2/tag/shelf_center:
-                    {}
-                car2/shelf_center:
-                  {}
+          carB/map:
+            {}
       Update Interval: 0
       Value: true
     - Alpha: 0.699999988
@@ -297,7 +279,7 @@ Visualization Manager:
       Marker Topic: /car1/obstacle_detector/markers/base
       Name: car1/sheft_finder/base
       Namespaces:
-        tiles: true
+        {}
       Queue Size: 9
       Value: true
     - Class: rviz/MarkerArray
@@ -396,7 +378,7 @@ Visualization Manager:
       Marker Topic: /car2/obstacle_detector/markers/base
       Name: car2/shelf_finder/base
       Namespaces:
-        tiles: true
+        {}
       Queue Size: 10
       Value: true
     - Class: rviz/MarkerArray
@@ -484,7 +466,7 @@ Visualization Manager:
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: carB/map
+    Fixed Frame: world
     Frame Rate: 30
   Name: root
   Tools:
@@ -518,11 +500,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Scale: 124.032181
+      Scale: 127.337578
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz)
-      X: 2.78006864
-      Y: 5.67437029
+      X: 2.55529284
+      Y: 4.38982153
     Saved: ~
 Window Geometry:
   Displays:
