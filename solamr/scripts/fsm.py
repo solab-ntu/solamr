@@ -610,16 +610,18 @@ class Find_Shelf(smach.State):
         while IS_RUN and TASK != None:
             # Get apriltag shelf location
             shelf_xyt = get_tf(TFBUFFER, ROBOT_NAME + "/map", ROBOT_NAME + "/shelf_" + ROBOT_NAME, is_warn = False)
-            if shelf_xyt != None:
-                return 'done'
+            #if shelf_xyt != None:
+            #    return 'done'
             
             # Check goal reached or not
             if GOAL_MANAGER.is_reached:
+                return 'done'
+                '''
                 try:
                     goal = TASK.shelf_location[TASK.shelf_location.index(goal)+1]
                 except IndexError:
                     goal = TASK.shelf_location[0]
-            
+                '''
             # Send goal
             GOAL_MANAGER.send_goal(goal, ROBOT_NAME + "/map", tolerance = (0.3, pi/6))
 
