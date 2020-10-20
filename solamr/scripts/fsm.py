@@ -1029,7 +1029,7 @@ class Dock_Out(smach.State):
 
         #------------  car2 wait 5 sec -------------# 
         if TASK.mode == "double_AMR" and ROLE == "follower":
-            time.sleep(5)
+            time.sleep(10)
         
         # Go to next state
         next_state = TASK.task_flow[TASK.task_flow.index('Dock_Out')+1]
