@@ -1026,6 +1026,10 @@ class Dock_Out(smach.State):
         twist = Twist()
         PUB_CMD_VEL.publish(twist)
 
+        #------------  car2 wait 5 sec -------------# 
+        if TASK.mode == "double_AMR" and ROLE == "follower":
+            time.sleep(5)
+        
         # Go to next state
         next_state = TASK.task_flow[TASK.task_flow.index('Dock_Out')+1]
         if next_state == 'Go_Home':
