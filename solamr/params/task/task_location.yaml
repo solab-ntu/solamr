@@ -5,35 +5,38 @@
 single_AMR:
   # Location of shelf tags
   # Need to place at a location that AMR can see shelf's tag.
-  shelf_location_car1: [[4.0, 1.16,  0.0],
-                        [1.4, 1.16, 3.1416]]
-  shelf_location_car2: [[1.4, 1.16, 3.1416],
-                        [4.0, 1.16,  0.0]]
-  
+  # shelf_location_car1: [[4.0, 1.16,  0.0],
+  #                       [1.4, 1.16, 3.1416]]
+  # shelf_location_car2: [[1.4, 1.16, 3.1416],
+  #                       [4.0, 1.16,  0.0]]
+  shelf_location_car1: [[4.0, 1.3,  0.0],
+                        [1.7, 1.3, 3.1416]]
+  shelf_location_car2: [[1.7, 1.3 , 3.1416],
+                        [4.0, 1.3,  0.0]]
   # AMR will wait at this location until the other AMR has leave goal_location
   wait_location_car1: [
-                       # [4.05, 2.18, 2.3562],
-                       # [2.77, 2.4, 3.1416],
                        [1.45, 2.09, -2.3562]]
   wait_location_car2: [
-                       # [1.48, 0.5, -0.7854],
-                       # [2.77, 0.08, 0.0],
                        [4.08, 0.277, 0.7854]]
   # Final goal location, usually be A_site or B_site
   goal_location_car1: [0.7, 1.26, 3.1416]
   goal_location_car2: [4.65, 1.24, 0.0]
   # Return home location, where to go when task is finished
-  home_location_car1: [3.5, 2.7, -1.57]
-  home_location_car2: [2.0, 2.7, -1.57]
+  home_location_car1: [[3.61, 0.12, 0.0],
+                       [3.5, 2.7, -1.57]]
+  home_location_car2: [[2.0, 2.7, -1.57]]
 
 # double_AMR means that task will use both AMR to trasport a big shelf
 double_AMR:
   # Location of shelf tags
-  shelf_location_car1: [[4.0, 0.735,  0.0],
+  # shelf_location_car1: [[4.0, 0.735,  0.0],
+  #                       [1.4, 1.16, 3.1416]]
+  # shelf_location_car2: [[3.85, 1.67,  0.0],
+  #                       [1.4, 1.16, 3.1416]]
+  shelf_location_car1: [[3.78, 0.682,  0.0],
                         [1.4, 1.16, 3.1416]]
-  shelf_location_car2: [[3.85, 1.67,  0.0],
+  shelf_location_car2: [[3.74, 1.91,  0.0],
                         [1.4, 1.16, 3.1416]]
-
   # Wait_location is dummy for double_AMR
   wait_location_car1: [[0.0, 0.0, 0.0]]
   wait_location_car2: [[0.0, 0.0, 0.0]]
@@ -49,5 +52,5 @@ double_AMR:
   goal_location_car2: [0.0, 0.0, 0.0]
 
   # Return home location, where to go when task is finished
-  home_location_car1: [3.5, 2.78, -1.57]
-  home_location_car2: [2.2, 2.78, -1.57]
+  home_location_car1: [[3.5, 2.78, -1.57]]
+  home_location_car2: [[2.2, 2.78, -1.57]]

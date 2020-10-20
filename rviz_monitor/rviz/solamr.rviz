@@ -122,21 +122,18 @@ Visualization Manager:
           car1/map:
             car1/odom:
               car1/base_link:
-                car1/B_site:
-                  {}
                 car1/laser_front:
                   {}
                 car1/laser_rear:
                   {}
                 car1/shelf_car1:
-                  {}
+                  car1/tag/shelf_center:
+                    {}
                 car1/shelf_car2:
                   {}
           car2/map:
             car2/odom:
               car2/base_link:
-                car2/B_site:
-                  {}
                 car2/laser_front:
                   {}
                 car2/laser_rear:
@@ -500,11 +497,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Scale: 127.337578
+      Scale: 130.731049
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz)
-      X: 2.55529284
-      Y: 4.38982153
+      X: 3.47254825
+      Y: 3.43633342
     Saved: ~
 Window Geometry:
   Displays:
