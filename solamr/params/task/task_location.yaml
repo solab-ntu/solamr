@@ -9,10 +9,10 @@ single_AMR:
   #                       [1.4, 1.16, 3.1416]]
   # shelf_location_car2: [[1.4, 1.16, 3.1416],
   #                       [4.0, 1.16,  0.0]]
-  shelf_location_car1: [[4.0, 1.3,  0.0],
+  shelf_location_car1: [[3.76, 1.3,  0.0],
                         [1.7, 1.3, 3.1416]]
   shelf_location_car2: [[1.7, 1.3 , 3.1416],
-                        [4.0, 1.3,  0.0]]
+                        [3.76, 1.3,  0.0]]
   # AMR will wait at this location until the other AMR has leave goal_location
   wait_location_car1: [
                        [1.45, 2.09, -2.3562]]
