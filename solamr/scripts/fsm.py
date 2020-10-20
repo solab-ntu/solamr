@@ -623,7 +623,8 @@ class Find_Shelf(smach.State):
                     goal = TASK.shelf_location[0]
                 '''
             # Send goal
-            GOAL_MANAGER.send_goal(goal, ROBOT_NAME + "/map", tolerance = (0.3, pi/6))
+            # GOAL_MANAGER.send_goal(goal, ROBOT_NAME + "/map", tolerance = (0.3, pi/6))
+            GOAL_MANAGER.send_goal(goal, ROBOT_NAME + "/map")
 
             time.sleep(TIME_INTERVAL)
         rospy.logwarn('[fsm] task abort')
