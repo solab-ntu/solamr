@@ -35,7 +35,7 @@ double_AMR:
   #                       [1.4, 1.16, 3.1416]]
   shelf_location_car1: [[3.78, 0.682,  0.0],
                         [1.4, 1.16, 3.1416]]
-  shelf_location_car2: [[3.74, 1.91,  0.0],
+  shelf_location_car2: [[3.74, 1.5,  0.0], # 1.91
                         [1.4, 1.16, 3.1416]]
   # Wait_location is dummy for double_AMR
   wait_location_car1: [[0.0, 0.0, 0.0]]
